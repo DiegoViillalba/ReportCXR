@@ -1,0 +1,77 @@
+# ReportCXR — versioned hyperparameters
+# All quantitative decisions logged here; never hardcoded in src/.
+
+data:
+  raw_dir: data/raw
+  processed_dir: data/processed
+  images_dir: data/raw/images
+  reports_file: indiana_reports.csv
+  projections_file: indiana_projections.csv
+
+labels:
+  uncertain_policy: present   # 'present' (U→1) | 'absent' (U→0, ablation)
+  cache_path: data/processed/chexbert_labels.parquet
+  device: cpu                 # 'cpu' for EDA; 'cuda' for batch runs
+
+split:
+  test_size: 0.15
+  val_size: 0.10
+  random_state: 42
+  min_test_count: 600
+
+model:
+  base_model_id: google/medgemma-4b-it
+  quantization: 4bit          # '4bit' (NF4 QLoRA) | '8bit'
+  max_new_tokens: 256
+  temperature: 0.0            # fixed for eval reproducibility (MedGemma 1.5 §3.1)
+
+lora:
+  rank: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules: [q_proj, k_proj, v_proj, o_proj]
+
+training:
+  batch_size: 4
+  gradient_accumulation_steps: 4
+  num_epochs: 3
+  learning_rate: 2.0e-4
+  warmup_ratio: 0.03
+  weight_decay: 0.01
+
+sampler:
+  weight_clip: 10.0           # max(w_i) / mean(w) cap
+  p_target:                   # null = dataset prevalence (no correction)
+    Enlarged Cardiomediastinum: null
+    Cardiomegaly: null
+    Lung Opacity: null
+    Lung Lesion: null
+    Edema: null
+    Consolidation: null
+    Pneumonia: null
+    Atelectasis: null
+    Pneumothorax: null
+    Pleural Effusion: null
+    Pleural Other: null
+    Fracture: null
+    Support Devices: null
+    No Finding: null
+
+eval:
+  bertscore_model: microsoft/deberta-xlarge-mnli
+  bleu_max_order: 4
+  uncertain_policy_ablation: absent   # ablation: compare vs labels.uncertain_policy
+
+acquisition_shift:
+  perturbations: [brightness, contrast, gamma, gaussian_noise, jpeg_compression]
+  seed: 42
+  magnitudes:
+    brightness: [0.5, 0.7, 1.0, 1.3, 1.6]
+    contrast: [0.5, 0.7, 1.0, 1.5, 2.0]
+    gamma: [0.5, 0.75, 1.0, 1.5, 2.0]
+    gaussian_noise: [0.0, 5.0, 15.0, 30.0, 50.0]
+    jpeg_compression: [95, 75, 50, 25, 10]
+
+wandb:
+  project: reportcxr
+  entity: null                # set via WANDB_ENTITY env var

@@ -1,0 +1,80 @@
+stages:
+  load:
+    cmd: python -m src.data.load
+    deps:
+      - src/data/load.py
+      - data/raw/indiana_reports.csv
+      - data/raw/indiana_projections.csv
+    outs:
+      - data/processed/dataset.parquet
+
+  labels:
+    cmd: python -m src.data.labels
+    deps:
+      - src/data/labels.py
+      - data/processed/dataset.parquet
+    params:
+      - labels
+    outs:
+      - data/processed/dataset_labeled.parquet
+
+  split:
+    cmd: python -m src.data.split
+    deps:
+      - src/data/split.py
+      - data/processed/dataset_labeled.parquet
+    params:
+      - split
+    outs:
+      - data/processed/train.parquet
+      - data/processed/val.parquet
+      - data/processed/test.parquet
+
+  eda:
+    cmd: python -m src.eda.distribution_audit
+    deps:
+      - src/eda/distribution_audit.py
+      - data/processed/dataset_labeled.parquet
+    outs:
+      - reports/figures/label_prevalences.png
+      - reports/figures/cooccurrence_matrix.png
+      - reports/figures/class_ess.png
+
+  cache_features:
+    cmd: python -m src.training.cache_features
+    deps:
+      - src/training/cache_features.py
+      - data/processed/train.parquet
+    params:
+      - model
+    outs:
+      - data/processed/train_embeddings.pt
+
+  train:
+    cmd: python -m src.training.train
+    deps:
+      - src/training/train.py
+      - src/training/sampler.py
+      - src/training/model.py
+      - data/processed/train_embeddings.pt
+      - data/processed/train.parquet
+      - data/processed/val.parquet
+    params:
+      - model
+      - lora
+      - training
+      - sampler
+    outs:
+      - checkpoints/best_model/
+
+  eval:
+    cmd: python -m src.eval.metrics
+    deps:
+      - src/eval/metrics.py
+      - checkpoints/best_model/
+      - data/processed/test.parquet
+    params:
+      - eval
+      - model
+    outs:
+      - reports/eval_results.json
