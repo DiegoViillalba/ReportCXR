@@ -44,11 +44,27 @@ def compute_f1_chexbert(
 ) -> dict:
     """Compute micro and macro F1-CheXbert.
 
-    Returns dict with keys: micro_f1, macro_f1, per_label_f1.
+    Returns dict with keys: f1_chexbert_micro, f1_chexbert_macro, per_label_f1.
+
+    Implementation notes for Phase 5 (f1chexbert 0.0.2):
+      Option A (only "present" policy, no ablation):
+        scorer = F1CheXbert(device=device)
+        accuracy, pe_accuracy, cr, cr_5 = scorer(hypotheses, references)
+        # cr is sklearn classification_report dict over 14 labels
+        micro = cr['micro avg']['f1-score']
+        macro = cr['macro avg']['f1-score']
+
+      Option B (supports both uncertainty policies — preferred):
+        from src.data.labels import run_chexbert, CHEXBERT_LABELS
+        from sklearn.metrics import classification_report
+        hyp_labels = run_chexbert(hypotheses, uncertain_policy, device)  # (n, 14)
+        ref_labels = run_chexbert(references, uncertain_policy, device)  # (n, 14)
+        cr = classification_report(ref_labels, hyp_labels,
+                                   target_names=CHEXBERT_LABELS, output_dict=True)
+        # Then extract micro avg, macro avg, per-label f1-score from cr.
     """
     raise NotImplementedError(
-        "Implement in Phase 5 using f1chexbert.F1CheXbert. "
-        "Run with both uncertain_policy values as per handout ablation."
+        "Implement in Phase 5. See docstring for correct f1chexbert 0.0.2 API."
     )
 
 

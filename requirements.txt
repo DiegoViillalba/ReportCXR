@@ -21,7 +21,7 @@ peft>=0.10
 bitsandbytes>=0.43          # 4-bit NF4 quantization for QLoRA
 
 # ── Clinical NLP metrics ─────────────────────────────────────────────────────
-f1chexbert>=0.1.0           # CheXbert labeler + F1-CheXbert metric
+f1chexbert>=0.0.2           # CheXbert labeler + F1-CheXbert metric
 bert-score>=0.3.13          # BERTScore
 evaluate>=0.4.1             # HuggingFace evaluate hub (BLEU, ROUGE)
 rouge-score>=0.1.2
