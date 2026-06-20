@@ -58,6 +58,26 @@ def _raw_preds_to_binary(preds: np.ndarray, uncertain_policy: UncertaintyPolicy)
         return (preds == 1).astype(np.int8)
 
 
+def _tokenize(impressions: pd.Series, tokenizer) -> list[list[int]]:
+    """Tokenize impressions using the modern transformers API.
+
+    Replaces f1chexbert.tokenize, which called the removed encode_plus method.
+    Equivalent: tokenize → convert_tokens_to_ids → prepend CLS / append SEP.
+    """
+    all_tokens = []
+    for i in range(len(impressions)):
+        subwords = tokenizer.tokenize(impressions.iloc[i])
+        if subwords:
+            ids = tokenizer.convert_tokens_to_ids(subwords)
+            res = [tokenizer.cls_token_id] + ids + [tokenizer.sep_token_id]
+            if len(res) > 512:
+                res = res[:511] + [tokenizer.sep_token_id]
+        else:
+            res = [tokenizer.cls_token_id, tokenizer.sep_token_id]
+        all_tokens.append(res)
+    return all_tokens
+
+
 def _run_chexbert_batched(
     findings_texts: list[str],
     uncertain_policy: UncertaintyPolicy,
@@ -71,12 +91,12 @@ def _run_chexbert_batched(
     """
     import torch
     from f1chexbert import F1CheXbert
-    from f1chexbert.f1chexbert import generate_attention_masks, tokenize
+    from f1chexbert.f1chexbert import generate_attention_masks
 
     scorer = F1CheXbert(device=device)
 
     impressions = pd.Series(findings_texts).fillna("").str.strip().replace("", "normal")
-    tokenized = tokenize(impressions, scorer.tokenizer)
+    tokenized = _tokenize(impressions, scorer.tokenizer)
 
     all_labels: list[np.ndarray] = []
     for start in range(0, len(tokenized), batch_size):
