@@ -40,23 +40,22 @@ stages:
       - reports/figures/cooccurrence_matrix.png
       - reports/figures/class_ess.png
 
-  cache_features:
-    cmd: python -m src.training.cache_features
-    deps:
-      - src/training/cache_features.py
-      - data/processed/train.parquet
-    params:
-      - model
-    outs:
-      - data/processed/train_embeddings.pt
+  # cache_features is listed as an optional optimization in handout §1.
+  # Skipped for now: training passes images directly to the frozen vision encoder.
+  # Uncomment and implement src/training/cache_features.py to enable.
+  #
+  # cache_features:
+  #   cmd: python -m src.training.cache_features
+  #   deps: [src/training/cache_features.py, data/processed/train.parquet]
+  #   params: [model]
+  #   outs: [data/processed/train_embeddings.pt]
 
-  train:
-    cmd: python -m src.training.train
+  train_uniform:
+    cmd: python -m src.training.train --sampler uniform --run_name qlora_uniform
     deps:
       - src/training/train.py
       - src/training/sampler.py
       - src/training/model.py
-      - data/processed/train_embeddings.pt
       - data/processed/train.parquet
       - data/processed/val.parquet
     params:
@@ -65,13 +64,29 @@ stages:
       - training
       - sampler
     outs:
-      - checkpoints/best_model/
+      - checkpoints/qlora_uniform/best_model/
+
+  train_weighted:
+    cmd: python -m src.training.train --sampler weighted --run_name qlora_weighted
+    deps:
+      - src/training/train.py
+      - src/training/sampler.py
+      - src/training/model.py
+      - data/processed/train.parquet
+      - data/processed/val.parquet
+    params:
+      - model
+      - lora
+      - training
+      - sampler
+    outs:
+      - checkpoints/qlora_weighted/best_model/
 
   eval:
-    cmd: python -m src.eval.metrics
+    cmd: python -m src.eval.metrics --checkpoint checkpoints/qlora_weighted/best_model
     deps:
       - src/eval/metrics.py
-      - checkpoints/best_model/
+      - checkpoints/qlora_weighted/best_model/
       - data/processed/test.parquet
     params:
       - eval

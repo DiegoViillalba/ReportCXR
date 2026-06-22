@@ -31,11 +31,53 @@ def load_model_and_processor(
         quantization: '4bit' (NF4 QLoRA) | '8bit' | 'none'.
         device_map: Passed to from_pretrained (use 'auto' for multi-GPU).
     """
-    raise NotImplementedError(
-        "Implement in Phase 4. "
-        "Use BitsAndBytesConfig for 4-bit NF4, AutoModelForCausalLM.from_pretrained, "
-        "and AutoProcessor. Freeze the vision tower after loading."
+    import torch
+    from transformers import AutoModelForCausalLM, AutoProcessor, BitsAndBytesConfig
+
+    if quantization == "4bit":
+        bnb_cfg = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.bfloat16,
+            bnb_4bit_use_double_quant=True,
+        )
+    elif quantization == "8bit":
+        bnb_cfg = BitsAndBytesConfig(load_in_8bit=True)
+    else:
+        bnb_cfg = None
+
+    logger.info("Loading processor from %s", model_id)
+    processor = AutoProcessor.from_pretrained(model_id)
+
+    logger.info("Loading model (%s quantization) from %s", quantization, model_id)
+    model = AutoModelForCausalLM.from_pretrained(
+        model_id,
+        quantization_config=bnb_cfg,
+        device_map=device_map if bnb_cfg is not None else None,
+        torch_dtype=torch.bfloat16,
+        attn_implementation="eager",
     )
+
+    # Freeze vision encoder by name — LoRA handles decoder-only gradients.
+    # With PEFT this is redundant (only LoRA params get requires_grad=True),
+    # but explicit freezing documents intent and avoids surprises.
+    frozen_params = 0
+    for name, param in model.named_parameters():
+        if any(s in name.lower() for s in ("vision_tower", "vision_model", "siglip", "image_encoder", "visual")):
+            param.requires_grad = False
+            frozen_params += param.numel()
+    if frozen_params:
+        logger.info("Frozen %.2fM vision encoder parameters", frozen_params / 1e6)
+    else:
+        logger.warning("No vision parameters found to freeze — verify architecture name")
+
+    if quantization in ("4bit", "8bit"):
+        from peft import prepare_model_for_kbit_training
+        model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
+
+    n_total = sum(p.numel() for p in model.parameters())
+    logger.info("Model loaded: %.2fB logical parameters", n_total / 1e9)
+    return model, processor
 
 
 def apply_qlora(
@@ -54,14 +96,29 @@ def apply_qlora(
         dropout: LoRA dropout rate.
         target_modules: Projection layers to adapt. Defaults to handout spec.
     """
+    from peft import LoraConfig, TaskType, get_peft_model
+
     if target_modules is None:
         target_modules = ["q_proj", "k_proj", "v_proj", "o_proj"]
 
-    raise NotImplementedError(
-        "Implement in Phase 4. "
-        "Use peft.LoraConfig + get_peft_model. "
-        "Log total trainable parameters to W&B."
+    lora_cfg = LoraConfig(
+        task_type=TaskType.CAUSAL_LM,
+        r=rank,
+        lora_alpha=alpha,
+        lora_dropout=dropout,
+        target_modules=target_modules,
+        bias="none",
     )
+
+    model = get_peft_model(model, lora_cfg)
+
+    trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    total = sum(p.numel() for p in model.parameters())
+    logger.info(
+        "QLoRA applied: %d trainable / %d total params (%.4f%%)",
+        trainable, total, 100.0 * trainable / max(total, 1),
+    )
+    return model
 
 
 def build_prompt(indication: str | None, findings: str | None = None) -> str:
