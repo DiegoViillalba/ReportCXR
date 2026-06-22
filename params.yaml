@@ -11,7 +11,7 @@ data:
 labels:
   uncertain_policy: present   # 'present' (U→1) | 'absent' (U→0, ablation)
   cache_path: data/processed/chexbert_labels.parquet
-  device: cpu                 # 'cpu' for EDA; 'cuda' for batch runs
+  device: cuda                 # 'cpu' for EDA; 'cuda' for batch runs
 
 split:
   test_size: 0.15
