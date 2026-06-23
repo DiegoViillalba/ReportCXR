@@ -38,6 +38,7 @@ training:
   learning_rate: 2.0e-4
   warmup_ratio: 0.03
   weight_decay: 0.01
+  max_seq_length: 512
 
 sampler:
   weight_clip: 10.0           # max(w_i) / mean(w) cap

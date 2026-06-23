@@ -498,23 +498,30 @@ def train(args: argparse.Namespace) -> None:
     debug_run = args.max_steps is not None
     num_epochs = 1 if debug_run else tp["num_epochs"]
 
+    # ── DDP / multi-GPU setup ─────────────────────────────────────────────────
+    local_rank = int(os.environ.get("LOCAL_RANK", -1))
+    is_main_process = local_rank in (-1, 0)
+    # device_map="auto" conflicts with DDP (model parallelism vs data parallelism).
+    # With torchrun each process must own exactly one GPU.
+    device_map: str | dict = {"": local_rank} if local_rank >= 0 else "auto"
+
     # Scale batch size up if more VRAM is available than the T4 baseline.
-    # Keeps effective batch (per_device × grad_acc) constant.
+    # Keeps effective batch (per_device × n_gpus × grad_acc) constant.
     if torch.cuda.is_available():
-        vram_gb = torch.cuda.get_device_properties(0).total_memory / 1e9
+        vram_gb = torch.cuda.get_device_properties(0 if local_rank < 0 else local_rank).total_memory / 1e9
         effective = tp["batch_size"] * tp["gradient_accumulation_steps"]
         if vram_gb >= 18:        # Ada / A10 / L4 (20 GB+)
             tp["batch_size"] = min(4, effective)
-        elif vram_gb >= 14:      # T4 16 GB (no change needed; keeps user value)
+        elif vram_gb >= 14:      # T4 15 GB
             tp["batch_size"] = min(2, effective)
         tp["gradient_accumulation_steps"] = max(1, effective // tp["batch_size"])
         logger.info("VRAM %.1f GB → batch_size=%d, grad_acc=%d (effective=%d)",
                     vram_gb, tp["batch_size"], tp["gradient_accumulation_steps"],
                     tp["batch_size"] * tp["gradient_accumulation_steps"])
 
-    # 2. W&B
+    # 2. W&B — only main process (rank 0) initialises logging
     wandb_run = None
-    if not args.no_wandb:
+    if not args.no_wandb and is_main_process:
         import wandb
 
         run_name = args.run_name or f"qlora_{args.sampler}"
@@ -558,7 +565,7 @@ def train(args: argparse.Namespace) -> None:
     model, processor = load_model_and_processor(
         model_id=params["model"]["base_model_id"],
         quantization=params["model"]["quantization"],
-        device_map="auto",
+        device_map=device_map,
     )
     model = apply_qlora(
         model,
@@ -596,12 +603,14 @@ def train(args: argparse.Namespace) -> None:
         logger.info("Uniform sampler (no shift correction)")
 
     # 6. Dataset + collator
-    max_seq_len = 768
+    max_seq_len = tp.get("max_seq_length", 512)
     train_dataset = CXRReportDataset(train_df, images_dir)
     val_dataset = CXRReportDataset(val_df, images_dir)
     collate_fn = make_collate_fn(processor, max_length=max_seq_len)
 
-    # 7. F1 callback (skipped during debug runs to save time)
+    # 7. F1 callback — only main process evaluates and saves checkpoints.
+    # In DDP mode non-rank-0 processes skip the callback to avoid redundant
+    # inference and conflicting checkpoint writes.
     f1_callback = F1CheckpointCallback(
         model=model,
         processor=processor,
@@ -612,11 +621,19 @@ def train(args: argparse.Namespace) -> None:
         uncertain_policy=params["labels"]["uncertain_policy"],
         wandb_run=wandb_run,
     )
-    callbacks = [] if debug_run else [f1_callback]
+    callbacks = [] if (debug_run or not is_main_process) else [f1_callback]
     eval_strategy = "no" if debug_run else "epoch"
 
     # 8. TrainingArguments
-    supports_bf16 = torch.cuda.is_available() and torch.cuda.is_bf16_supported()
+    # T4 (Turing, cc 7.5) has native fp16 tensor cores but bf16 is software-emulated → slower.
+    # Force fp16 on T4; use bf16 on Ampere+ (cc >= 8.0) where it's hardware-native.
+    gpu_cc = torch.cuda.get_device_properties(0).major if torch.cuda.is_available() else 0
+    use_bf16 = torch.cuda.is_available() and torch.cuda.is_bf16_supported() and gpu_cc >= 8
+    use_fp16 = torch.cuda.is_available() and not use_bf16
+    logger.info("Precision: %s (GPU cc %d.%d)",
+                "bf16" if use_bf16 else "fp16" if use_fp16 else "fp32",
+                gpu_cc,
+                torch.cuda.get_device_properties(0).minor if torch.cuda.is_available() else 0)
     training_args = TrainingArguments(
         output_dir=str(checkpoint_dir),
         num_train_epochs=num_epochs,
@@ -629,12 +646,12 @@ def train(args: argparse.Namespace) -> None:
         weight_decay=tp["weight_decay"],
         lr_scheduler_type="cosine",
         optim="paged_adamw_8bit",
-        bf16=supports_bf16,
-        fp16=(torch.cuda.is_available() and not supports_bf16),
+        bf16=use_bf16,
+        fp16=use_fp16,
         logging_steps=10,
         eval_strategy=eval_strategy,
         save_strategy="no",  # manual save on best F1 in callback
-        dataloader_num_workers=2,
+        dataloader_num_workers=4,
         dataloader_pin_memory=True,
         remove_unused_columns=False,
         report_to="wandb" if not args.no_wandb else "none",
