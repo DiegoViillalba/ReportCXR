@@ -116,7 +116,8 @@ def make_collate_fn(processor, max_length: int = 768):
     )
 
     def collate(batch: list[dict]) -> dict:
-        all_input_ids, all_attn_masks, all_labels, all_pixel_values = [], [], [], []
+        all_input_ids, all_attn_masks, all_labels = [], [], []
+        all_pixel_values, all_token_type_ids = [], []
 
         for item in batch:
             content = [{"type": "image"}, {"type": "text", "text": item["user_text"]}]
@@ -147,6 +148,8 @@ def make_collate_fn(processor, max_length: int = 768):
             all_labels.append(labels[0])
             if "pixel_values" in enc_full:
                 all_pixel_values.append(enc_full["pixel_values"][0])
+            if "token_type_ids" in enc_full:
+                all_token_type_ids.append(enc_full["token_type_ids"][0])
 
         max_len = max(t.shape[0] for t in all_input_ids)
 
@@ -162,6 +165,8 @@ def make_collate_fn(processor, max_length: int = 768):
         }
         if all_pixel_values:
             result["pixel_values"] = torch.stack(all_pixel_values)
+        if all_token_type_ids:
+            result["token_type_ids"] = pad_right(all_token_type_ids, 0)
         return result
 
     return collate
