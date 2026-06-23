@@ -74,6 +74,18 @@ def load_model_and_processor(
     if quantization in ("4bit", "8bit"):
         from peft import prepare_model_for_kbit_training
         model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
+        # Frozen vision tower doesn't need gradient checkpointing — disable it to save VRAM.
+        # prepare_model_for_kbit_training enables it globally; undo it for the vision submodule.
+        for attr_chain in [("vision_tower",), ("model", "vision_tower")]:
+            obj = model
+            for attr in attr_chain:
+                obj = getattr(obj, attr, None)
+                if obj is None:
+                    break
+            if obj is not None and hasattr(obj, "gradient_checkpointing_disable"):
+                obj.gradient_checkpointing_disable()
+                logger.info("Disabled gradient checkpointing on vision tower (frozen)")
+                break
 
     n_total = sum(p.numel() for p in model.parameters())
     logger.info("Model loaded: %.2fB logical parameters", n_total / 1e9)

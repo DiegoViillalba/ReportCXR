@@ -32,8 +32,8 @@ lora:
   target_modules: [q_proj, k_proj, v_proj, o_proj]
 
 training:
-  batch_size: 4
-  gradient_accumulation_steps: 4
+  batch_size: 2
+  gradient_accumulation_steps: 8
   num_epochs: 3
   learning_rate: 2.0e-4
   warmup_ratio: 0.03

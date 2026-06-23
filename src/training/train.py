@@ -26,8 +26,12 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Optional
+
+# Reduce CUDA allocator fragmentation — helps on T4 with large vision-encoder activations
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
 import matplotlib
 matplotlib.use("Agg")  # non-interactive backend for server/Kaggle
