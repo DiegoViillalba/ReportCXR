@@ -170,10 +170,10 @@ class CXRTrainer(Trainer):
         super().__init__(*args, **kwargs)
         self._custom_sampler = custom_sampler
 
-    def _get_train_sampler(self):
+    def _get_train_sampler(self, dataset=None):
         if self._custom_sampler is not None:
             return self._custom_sampler
-        return super()._get_train_sampler()
+        return super()._get_train_sampler(dataset) if dataset is not None else super()._get_train_sampler()
 
 
 # ── Inference helper ──────────────────────────────────────────────────────────
