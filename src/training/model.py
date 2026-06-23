@@ -19,6 +19,24 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
+def _best_attn_impl() -> str:
+    """Pick the fastest available attention implementation for the current GPU.
+
+    Priority: flash_attention_2 (Ampere+, requires flash-attn package)
+              → sdpa (PyTorch built-in, works on most GPUs)
+              → eager (fallback for T4 / old PyTorch)
+    """
+    try:
+        import flash_attn  # noqa: F401
+        return "flash_attention_2"
+    except ImportError:
+        pass
+    import torch
+    if int(torch.__version__.split(".")[0]) >= 2:
+        return "sdpa"
+    return "eager"
+
+
 def load_model_and_processor(
     model_id: str = "google/medgemma-4b-it",
     quantization: str = "4bit",
@@ -49,13 +67,14 @@ def load_model_and_processor(
     logger.info("Loading processor from %s", model_id)
     processor = AutoProcessor.from_pretrained(model_id)
 
-    logger.info("Loading model (%s quantization) from %s", quantization, model_id)
+    attn_impl = _best_attn_impl()
+    logger.info("Loading model (%s quantization, attn=%s) from %s", quantization, attn_impl, model_id)
     model = AutoModelForCausalLM.from_pretrained(
         model_id,
         quantization_config=bnb_cfg,
         device_map=device_map if bnb_cfg is not None else None,
-        torch_dtype=torch.bfloat16,
-        attn_implementation="eager",
+        dtype=torch.bfloat16,
+        attn_implementation=attn_impl,
     )
 
     # Freeze vision encoder by name — LoRA handles decoder-only gradients.

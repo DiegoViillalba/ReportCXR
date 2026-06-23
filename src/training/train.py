@@ -493,10 +493,24 @@ def train(args: argparse.Namespace) -> None:
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
     lp = params["lora"]
-    tp = params["training"]
+    tp = dict(params["training"])  # copy so we can mutate
     sp = params["sampler"]
     debug_run = args.max_steps is not None
     num_epochs = 1 if debug_run else tp["num_epochs"]
+
+    # Scale batch size up if more VRAM is available than the T4 baseline.
+    # Keeps effective batch (per_device × grad_acc) constant.
+    if torch.cuda.is_available():
+        vram_gb = torch.cuda.get_device_properties(0).total_memory / 1e9
+        effective = tp["batch_size"] * tp["gradient_accumulation_steps"]
+        if vram_gb >= 18:        # Ada / A10 / L4 (20 GB+)
+            tp["batch_size"] = min(4, effective)
+        elif vram_gb >= 14:      # T4 16 GB (no change needed; keeps user value)
+            tp["batch_size"] = min(2, effective)
+        tp["gradient_accumulation_steps"] = max(1, effective // tp["batch_size"])
+        logger.info("VRAM %.1f GB → batch_size=%d, grad_acc=%d (effective=%d)",
+                    vram_gb, tp["batch_size"], tp["gradient_accumulation_steps"],
+                    tp["batch_size"] * tp["gradient_accumulation_steps"])
 
     # 2. W&B
     wandb_run = None
