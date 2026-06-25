@@ -250,10 +250,11 @@ def _generate_reports(
 # ── Per-epoch F1 callback + checkpoint ───────────────────────────────────────
 
 class F1CheckpointCallback(TrainerCallback):
-    """Compute F1-CheXbert on the val set at the end of each epoch.
+    """Evaluate the val set at the end of each epoch and save the best checkpoint.
 
-    Saves the best checkpoint by val micro-F1 to {checkpoint_dir}/best_model/.
-    Logs micro/macro F1 + per-label breakdown to W&B.
+    Primary metric: BERTScore-F1 (language-agnostic, robust to IU X-ray vocabulary).
+    Diagnostic metric: CheXbert micro/macro F1 (kept for comparison; unreliable on
+    IU X-ray due to vocabulary mismatch with CheXpert/MIMIC training data).
     """
 
     def __init__(
@@ -266,6 +267,7 @@ class F1CheckpointCallback(TrainerCallback):
         checkpoint_dir: Path,
         uncertain_policy: str = "present",
         wandb_run=None,
+        bertscore_model: str = "microsoft/deberta-xlarge-mnli",
     ) -> None:
         self.model = model
         self.processor = processor
@@ -275,7 +277,8 @@ class F1CheckpointCallback(TrainerCallback):
         self.checkpoint_dir = Path(checkpoint_dir)
         self.uncertain_policy = uncertain_policy
         self.wandb_run = wandb_run
-        self.best_f1 = -1.0
+        self.bertscore_model = bertscore_model
+        self.best_bertscore_f1 = -1.0
         self.best_epoch = -1
         self.history: list[dict] = []
 
@@ -283,57 +286,76 @@ class F1CheckpointCallback(TrainerCallback):
         self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs
     ) -> None:
         epoch = round(state.epoch)
-        logger.info("=== Epoch %d — val F1-CheXbert evaluation ===", epoch)
+        logger.info("=== Epoch %d — val evaluation (BERTScore + CheXbert) ===", epoch)
 
         hypotheses = _generate_reports(
             self.model, self.processor, self.val_df, self.images_dir, self.params
         )
         references = self.val_df["findings"].str.strip().tolist()
 
-        from sklearn.metrics import classification_report
+        device = "cuda" if torch.cuda.is_available() else "cpu"
 
+        # ── Primary metric: BERTScore-F1 ──────────────────────────────────────
+        # Language-model-based text similarity — robust to IU X-ray vocabulary.
+        # CheXbert was trained on CheXpert/MIMIC phrasing and fails to extract
+        # labels from IU X-ray reports ("hyperexpanded" ≠ "emphysema" to CheXbert).
+        from bert_score import score as _bert_score
+        _, _, F = _bert_score(
+            hypotheses, references,
+            model_type=self.bertscore_model,
+            lang="en",
+            device=device,
+            verbose=False,
+            batch_size=32,
+        )
+        bertscore_f1 = float(F.mean())
+        logger.info("Epoch %d | val_bertscore_f1=%.4f", epoch, bertscore_f1)
+
+        # ── Diagnostic metric: CheXbert F1 ───────────────────────────────────
+        from sklearn.metrics import classification_report
         from src.data.labels import run_chexbert
 
-        chex_device = "cuda" if torch.cuda.is_available() else "cpu"
-        hyp_mat = run_chexbert(hypotheses, uncertain_policy=self.uncertain_policy, device=chex_device)
-        ref_mat = run_chexbert(references, uncertain_policy=self.uncertain_policy, device=chex_device)
-
+        hyp_mat = run_chexbert(hypotheses, uncertain_policy=self.uncertain_policy, device=device)
+        ref_mat = run_chexbert(references, uncertain_policy=self.uncertain_policy, device=device)
         cr = classification_report(
             ref_mat, hyp_mat, target_names=CHEXBERT_LABELS, output_dict=True, zero_division=0
         )
         micro_f1 = cr["micro avg"]["f1-score"]
         macro_f1 = cr["macro avg"]["f1-score"]
         per_label = {lbl: cr[lbl]["f1-score"] for lbl in CHEXBERT_LABELS}
+        logger.info(
+            "Epoch %d | chexbert_micro=%.4f | chexbert_macro=%.4f (diagnostic only)",
+            epoch, micro_f1, macro_f1,
+        )
 
         record = {
             "epoch": epoch,
+            "val_bertscore_f1": bertscore_f1,
             "val_f1_chexbert_micro": micro_f1,
             "val_f1_chexbert_macro": macro_f1,
             "per_label_f1": per_label,
         }
         self.history.append(record)
-        logger.info(
-            "Epoch %d | val_micro=%.4f | val_macro=%.4f", epoch, micro_f1, macro_f1
-        )
 
         if self.wandb_run is not None:
             log_payload = {
                 "epoch": epoch,
+                "val/bertscore_f1": bertscore_f1,
                 "val/f1_chexbert_micro": micro_f1,
                 "val/f1_chexbert_macro": macro_f1,
             }
             log_payload.update({f"val/per_label_f1/{lbl}": v for lbl, v in per_label.items()})
             self.wandb_run.log(log_payload)
 
-        if micro_f1 > self.best_f1:
-            self.best_f1 = micro_f1
+        if bertscore_f1 > self.best_bertscore_f1:
+            self.best_bertscore_f1 = bertscore_f1
             self.best_epoch = epoch
             best_path = self.checkpoint_dir / "best_model"
             self.model.save_pretrained(str(best_path))
             self.processor.save_pretrained(str(best_path))
             logger.info(
-                "New best → epoch %d, micro F1=%.4f, saved to %s",
-                epoch, micro_f1, best_path,
+                "New best → epoch %d, BERTScore F1=%.4f, saved to %s",
+                epoch, bertscore_f1, best_path,
             )
 
         torch.cuda.empty_cache()
@@ -367,21 +389,23 @@ def plot_training_figures(
         plt.close(fig)
         logger.info("Saved %s", p)
 
-    # 2. Val F1-CheXbert per epoch
+    # 2. Val metrics per epoch (BERTScore primary + CheXbert diagnostic)
     if callback_history:
         epochs = [r["epoch"] for r in callback_history]
+        bertscore_f1s = [r.get("val_bertscore_f1", float("nan")) for r in callback_history]
         micro_f1s = [r["val_f1_chexbert_micro"] for r in callback_history]
         macro_f1s = [r["val_f1_chexbert_macro"] for r in callback_history]
 
         fig, ax = plt.subplots(figsize=(8, 4))
-        ax.plot(epochs, micro_f1s, "o-", color="#1f77b4", label="Micro F1", linewidth=2)
-        ax.plot(epochs, macro_f1s, "s--", color="#ff7f0e", label="Macro F1", linewidth=2)
+        ax.plot(epochs, bertscore_f1s, "D-",  color="#2ca02c", label="BERTScore F1 (primary)", linewidth=2, markersize=8)
+        ax.plot(epochs, micro_f1s,     "o--", color="#1f77b4", label="CheXbert micro F1 (diagnostic)", linewidth=1.5, alpha=0.7)
+        ax.plot(epochs, macro_f1s,     "s--", color="#ff7f0e", label="CheXbert macro F1 (diagnostic)", linewidth=1.5, alpha=0.7)
         ax.set_xlabel("Epoch")
-        ax.set_ylabel("F1-CheXbert")
-        ax.set_title(f"Val F1-CheXbert per Epoch — sampler={sampler_variant}")
+        ax.set_ylabel("F1")
+        ax.set_title(f"Val Metrics per Epoch — sampler={sampler_variant}")
         ax.set_xticks(epochs)
         ax.set_ylim(0, 1.0)
-        ax.legend()
+        ax.legend(fontsize=9)
         plt.tight_layout()
         p = figures_dir / f"train_val_f1_{sampler_variant}.png"
         fig.savefig(p, dpi=150, bbox_inches="tight")
@@ -620,6 +644,7 @@ def train(args: argparse.Namespace) -> None:
         checkpoint_dir=checkpoint_dir,
         uncertain_policy=params["labels"]["uncertain_policy"],
         wandb_run=wandb_run,
+        bertscore_model=params.get("eval", {}).get("bertscore_model", "microsoft/deberta-xlarge-mnli"),
     )
     callbacks = [] if (debug_run or not is_main_process) else [f1_callback]
     eval_strategy = "no" if debug_run else "epoch"
@@ -696,7 +721,10 @@ def train(args: argparse.Namespace) -> None:
     results = {
         "sampler": args.sampler,
         "best_epoch": f1_callback.best_epoch,
-        "best_val_f1_chexbert_micro": f1_callback.best_f1,
+        "best_val_bertscore_f1": f1_callback.best_bertscore_f1,
+        "best_val_f1_chexbert_micro": max(  # kept for backward-compat readers
+            (h.get("val_f1_chexbert_micro", 0.0) for h in f1_callback.history), default=0.0
+        ),
         "history": f1_callback.history,
         "log_history": [
             e for e in trainer.state.log_history if "loss" in e or "eval_loss" in e
@@ -709,13 +737,13 @@ def train(args: argparse.Namespace) -> None:
     if wandb_run:
         wandb_run.log({
             "best_epoch": f1_callback.best_epoch,
-            "best_val_f1_chexbert_micro": f1_callback.best_f1,
+            "best_val_bertscore_f1": f1_callback.best_bertscore_f1,
         })
         wandb_run.finish()
 
     logger.info(
-        "Done. Best checkpoint at %s/best_model/ (epoch=%d, micro F1=%.4f)",
-        checkpoint_dir, f1_callback.best_epoch, f1_callback.best_f1,
+        "Done. Best checkpoint at %s/best_model/ (epoch=%d, BERTScore F1=%.4f)",
+        checkpoint_dir, f1_callback.best_epoch, f1_callback.best_bertscore_f1,
     )
 
 
