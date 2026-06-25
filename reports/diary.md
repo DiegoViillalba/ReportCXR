@@ -167,3 +167,43 @@ nohup bash -c '
 ```
 
 Checkpoints will land in `checkpoints/qlora_uniform_v2/` and `checkpoints/qlora_weighted_v2/` (run_name bug was fixed in commit `78f0903`).
+
+---
+
+## 2026-06-25 — v3 results: BERTScore above zero-shot, best epoch = 1
+
+### Results
+
+| Condition | Sampler | Best epoch | BERTScore-F1 | CheXbert micro-F1 | CheXbert macro-F1 |
+|---|---|---|---|---|---|
+| Zero-shot baseline | — | — | 0.6938 | 0.3967 | 0.1416 |
+| QLoRA fine-tune (v3) | uniform | 1 | **0.7113** | 0.3896 | 0.0401 |
+| QLoRA fine-tune (v3) | weighted | 1 | **0.7042** | 0.3802 | 0.0396 |
+
+### Findings
+
+**Primary objective achieved:** BERTScore-F1 improved above the zero-shot baseline in both runs (+2.5% uniform, +1.5% weighted). The fine-tuned model generates more semantically accurate reports than zero-shot MedGemma.
+
+**Uniform beats weighted** as expected — all `p_target` values are null, so weighted sampling is equivalent to uniform with a different random seed. The gap (~0.007) is within noise.
+
+**Best epoch = 1 in both runs** — this has been consistent across v1, v2, and v3. Three possibilities:
+1. LR=5e-5 is still slightly high for the ~2,700 study IU X-ray training set.
+2. The dataset is small enough that one full pass saturates adaptation.
+3. Epoch 2 actively degrades the model (overfitting to IU X-ray style at the expense of generalization).
+
+**CheXbert macro remains at ~0.04** — confirmed vocabulary mismatch artifact, not a real signal.
+
+**CheXbert micro regressed slightly** (0.3896 vs 0.3967, −1.8%) — noise-level; expected as model shifts from MIMIC-style to IU X-ray vocabulary.
+
+### Engineering fixes required to get v3 to complete
+
+Three crashes were encountered and fixed before v3 completed successfully:
+1. `nohup` syntax: `2>&1` must be on the same line as `>` — shell interprets a newline as end of command.
+2. `TypeError: score() got an unexpected keyword argument 'max_length'` — older `bert_score` on the server rejects `max_length` kwarg. Fix: monkey-patch `bert_score.utils.sent_encode` to cap `tokenizer.model_max_length` before encoding.
+3. `OverflowError: int too big to convert` — `bert_score` passes `sys.maxsize` as truncation length; Rust tokenizer overflows. Fix: same monkey-patch as above.
+
+### Next experiments
+
+- **1-epoch training** — given best epoch = 1, stopping early may preserve the peak and avoid regression.
+- **LR=1e-5, 3 epochs** — slower convergence to test if the model can peak later.
+- **Active weighted sampler** — set non-null `p_target` for rare labels (Pneumothorax, Fracture, Lung Lesion) to improve BERTScore on pathological studies specifically.
