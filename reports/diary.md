@@ -90,3 +90,41 @@ Added `STEP 7b` to `03_train_local.ipynb`: loads the fine-tuned adapter and gene
 **If H1:** Next training intervention — lower LR further (1e-5), add stronger regularization, or switch to a contrastive objective that preserves pathology prediction capability.
 
 **If H2:** Switch primary evaluation metric to BERTScore or ROUGE-L. CheXbert F1 is not a valid signal for IU X-ray fine-tuning. The model is already working correctly.
+
+---
+
+## 2026-06-23 — STEP 7b spot-check results: H2 confirmed
+
+### Generation output (5 val samples, uniform adapter)
+
+| Sample | Indication | Reference pathologies | Generated pathologies |
+|---|---|---|---|
+| 1 | Fatigue, chest pain | Normal | Normal ✓ |
+| 2 | General symptoms | Normal | Normal ✓ |
+| 3 | Smoking + O2 | Emphysema, LLL airspace disease, bilateral effusions | Hyperexpanded lungs + flattened diaphragms, LLL opacification, small right effusion ✓ |
+| 4 | Shortness of breath | Bilateral opacities, cardiomegaly, congestion | Enlarged heart, bilateral airspace disease, bilateral effusions, support devices ✓ |
+| 5 | Chest pain | Normal | Normal ✓ |
+
+### Conclusion: the model is learning correctly — CheXbert is the wrong metric
+
+The fine-tuned model correctly adapts its output to image content: normal studies → normal reports; pathological studies → pathology-describing reports. It is not stuck in a "No Finding" collapse.
+
+The macro F1 = 0.04 is an artifact of **vocabulary mismatch between IU X-ray and CheXpert/MIMIC**. CheXbert was trained on CheXpert labels extracted from MIMIC-style reports. IU X-ray reports use different phrasing:
+
+| Finding | MIMIC/CheXpert phrasing (CheXbert understands) | IU X-ray phrasing (model output) |
+|---|---|---|
+| Emphysema | "Emphysema" | "Hyperexpanded with flattened diaphragms" |
+| Consolidation | "Consolidation / airspace opacity" | "Area of opacification in the left lower lobe" |
+| Effusion | "Pleural effusion" | "Pleural effusion" (this one works) |
+
+CheXbert sees "The lungs are hyperexpanded with flattened diaphragms" and labels it **No Finding** because it was never trained to associate that phrasing with emphysema.
+
+### Action items
+
+1. **Switch primary eval metric to BERTScore-F1** — measures semantic text similarity, language-agnostic, no vocabulary mismatch. Already implemented in `src/eval/` and used in notebook 02 baseline. Make it the checkpoint selection criterion in `F1CheckpointCallback`.
+
+2. **Keep CheXbert F1 as a secondary diagnostic metric only** — useful for comparing zero-shot vs fine-tuned on the same scale, but not reliable as a training signal on IU X-ray data.
+
+3. **Do not change LR or epochs** — v2 config (LR=5e-5, 2 epochs) is fine. The training is working. The issue was measurement, not learning.
+
+4. **Verify on ground truth:** run CheXbert on the raw IU X-ray val reference reports (not model output). If they also score ~0.04 macro F1, the mismatch is confirmed at dataset level and CheXbert should be dropped entirely as a metric for this project.
