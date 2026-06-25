@@ -69,10 +69,20 @@ def load_model_and_processor(
 
     attn_impl = _best_attn_impl()
     logger.info("Loading model (%s quantization, attn=%s) from %s", quantization, attn_impl, model_id)
+
+    # For quantized models, force all layers onto a single GPU instead of using "auto".
+    # device_map="auto" tries to split across GPU+CPU when VRAM is tight, but 4-bit
+    # quantization does not support CPU offload and raises ValueError in that case.
+    # {"": 0} tells accelerate "put everything on cuda:0" unconditionally.
+    if bnb_cfg is not None:
+        resolved_device_map = {"": 0}
+    else:
+        resolved_device_map = None
+
     model = AutoModelForCausalLM.from_pretrained(
         model_id,
         quantization_config=bnb_cfg,
-        device_map=device_map if bnb_cfg is not None else None,
+        device_map=resolved_device_map,
         dtype=torch.bfloat16,
         attn_implementation=attn_impl,
     )
