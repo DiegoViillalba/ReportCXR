@@ -300,20 +300,31 @@ class F1CheckpointCallback(TrainerCallback):
         # CheXbert was trained on CheXpert/MIMIC phrasing and fails to extract
         # labels from IU X-ray reports ("hyperexpanded" ≠ "emphysema" to CheXbert).
         from bert_score import score as _bert_score
-        # Pre-truncate to ~512 tokens (by words) to avoid OverflowError when bert_score
-        # passes sys.maxsize as max_length to Rust-backed tokenizers on newer versions.
-        # Older bert_score versions don't accept max_length as a kwarg, so we truncate here.
-        _MAX_WORDS = 400
-        hyp_trunc = [" ".join(h.split()[:_MAX_WORDS]) for h in hypotheses]
-        ref_trunc = [" ".join(r.split()[:_MAX_WORDS]) for r in references]
-        _, _, F = _bert_score(
-            hyp_trunc, ref_trunc,
-            model_type=self.bertscore_model,
-            lang="en",
-            device=device,
-            verbose=False,
-            batch_size=32,
-        )
+        import bert_score.utils as _bsu
+
+        # bert_score.utils.sent_encode calls tokenizer.encode() without max_length.
+        # The tokenizer sets model_max_length=sys.maxsize as the "no truncation"
+        # sentinel, but Rust-backed tokenizers (tokenizers>=0.14) can't convert that
+        # to a usize and raise OverflowError. Monkey-patch sent_encode to cap it.
+        _orig_sent_encode = _bsu.sent_encode
+
+        def _safe_sent_encode(tokenizer, sent):
+            if getattr(tokenizer, "model_max_length", 0) > 10_000:
+                tokenizer.model_max_length = 512
+            return _orig_sent_encode(tokenizer, sent)
+
+        _bsu.sent_encode = _safe_sent_encode
+        try:
+            _, _, F = _bert_score(
+                hypotheses, references,
+                model_type=self.bertscore_model,
+                lang="en",
+                device=device,
+                verbose=False,
+                batch_size=32,
+            )
+        finally:
+            _bsu.sent_encode = _orig_sent_encode
         bertscore_f1 = float(F.mean())
         logger.info("Epoch %d | val_bertscore_f1=%.4f", epoch, bertscore_f1)
 
