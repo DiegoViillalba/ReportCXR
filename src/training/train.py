@@ -300,14 +300,19 @@ class F1CheckpointCallback(TrainerCallback):
         # CheXbert was trained on CheXpert/MIMIC phrasing and fails to extract
         # labels from IU X-ray reports ("hyperexpanded" ≠ "emphysema" to CheXbert).
         from bert_score import score as _bert_score
+        # Pre-truncate to ~512 tokens (by words) to avoid OverflowError when bert_score
+        # passes sys.maxsize as max_length to Rust-backed tokenizers on newer versions.
+        # Older bert_score versions don't accept max_length as a kwarg, so we truncate here.
+        _MAX_WORDS = 400
+        hyp_trunc = [" ".join(h.split()[:_MAX_WORDS]) for h in hypotheses]
+        ref_trunc = [" ".join(r.split()[:_MAX_WORDS]) for r in references]
         _, _, F = _bert_score(
-            hypotheses, references,
+            hyp_trunc, ref_trunc,
             model_type=self.bertscore_model,
             lang="en",
             device=device,
             verbose=False,
             batch_size=32,
-            max_length=512,  # prevents OverflowError in newer tokenizers (sys.maxsize → Rust usize)
         )
         bertscore_f1 = float(F.mean())
         logger.info("Epoch %d | val_bertscore_f1=%.4f", epoch, bertscore_f1)
