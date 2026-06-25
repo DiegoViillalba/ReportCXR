@@ -1,0 +1,39 @@
+---
+title: "Code Architecture Overview"
+author: "Diego Villalba (Applied Research Candidate)"
+date: "2026-06-25"
+---
+
+::: {.non-technical-summary}
+##### Section Summary (Non-Technical)
+This page describes the organization of the code repository. We explain what each folder does, show how data flows through our modular Python files, and discuss why we avoid writing all of our logic in single, massive Jupyter Notebooks. Instead, we write clean, reusable Python scripts, using notebooks only to orchestrate and visualize results.
+:::
+
+## Directory Structure
+
+The codebase is organized into modules to ensure a strict separation of concerns. All core logic resides in `src/`, while notebooks are strictly reserved for orchestration and visualization:
+
+```
+ReportCXR/
+│
+├── params.yaml                    # Single source of truth for all parameters
+├── dvc.yaml                       # Pipeline stages and dependency tracking
+├── pyproject.toml                 # Package configuration
+│
+├── src/
+│   ├── data/                      # Data downloading, processing, splitting
+│   ├── eda/                       # Distribution auditing
+│   ├── training/                  # Model loading, sampling, training loops
+│   ├── eval/                      # Metrics and evaluation scripts
+│   └── domain_shift_audit/        # Stress-testing infrastructure
+│
+├── notebooks/                     # Orchestration notebooks
+└── reports/                       # Generated figures, logs, baseline JSONs
+```
+
+## Modular Design Principles
+
+*   **Logic in Python Modules**: We avoid monolithic notebooks. Scripts in `src/` are imported into notebooks. This allows for unit testing, easier git diffing, and cleaner refactoring.
+*   **Versioned Configuration**: All numerical constants, paths, and hyperparameters are housed in `params.yaml`. Scripts read parameters at runtime, preventing silent configuration drift.
+*   **Pipeline Reproducibility**: The `dvc.yaml` file defines explicit data lineage. This ensures that change in code or parameter will trigger only the necessary downstream stages.
+*   **Experiment Tracking**: The HuggingFace trainer logs to Weights & Biases automatically. This logs the complete history of training losses, learning rates, validation BERTScore, and CheXbert classification F1.

@@ -1,0 +1,59 @@
+---
+title: "Training Pipeline Modules"
+author: "Diego Villalba (Applied Research Candidate)"
+date: "2026-06-25"
+---
+
+::: {.non-technical-summary}
+##### Section Summary (Non-Technical)
+This page documents the components used to configure, sample, and train the AI model. We explain the modules that load the MedGemma weights in a compressed format, compute the study sampling weights for balancing, build training prompts, and run the training loop. It also documents the callback that evaluates the model after every epoch and saves the best version based on semantic score.
+:::
+
+## Module: model.py
+
+Located at `src/training/model.py`.
+
+### Purpose
+Handles loading `google/medgemma-4b-it` from Hugging Face with 4-bit NF4 quantization, sets up the Parameter-Efficient Fine-Tuning (PEFT) LoRA configurations, and constructs prompt structures.
+
+### Key Functions
+
+*   `load_model_and_processor(model_id: str, quantization: str, device_map: str) -> Tuple[Any, Any]`: Loads the model and the associated image/text processor. Initializes `BitsAndBytesConfig` for 4-bit NF4 representation.
+*   `apply_qlora(model: Any, lora_config: dict) -> Any`: Injects trainable LoRA matrices into attention projections (`q_proj`, `k_proj`, `v_proj`, `o_proj`) with configured rank, alpha, and dropout.
+*   `build_prompt(indication: str) -> str`: Formats clinical context into MedGemma chat template format.
+*   `_best_attn_impl() -> str`: Selects the optimal attention implementation (`flash_attention_2`, `sdpa`, or `eager`) depending on local package support.
+
+---
+
+## Module: sampler.py
+
+Located at `src/training/sampler.py`.
+
+### Purpose
+Calculates per-study training weights based on target prevalences and instantiates `WeightedRandomSampler` instances.
+
+### Key Functions
+
+*   `build_sample_weights(label_matrix: np.ndarray, p_target: dict, weight_clip: float) -> np.ndarray`: Computes the geometric mean of importance ratios for positive labels on each study:
+    
+    $$w_j = \left( \prod_{l \in L_j} \frac{p_{\text{target}}(l)}{p_{\text{dataset}}(l)} \right)^{\frac{1}{|L_j|}}$$
+    
+    Weights are clipped at `weight_clip × mean_weight` to prevent high gradient variance.
+*   `build_sampler(weights: np.ndarray) -> WeightedRandomSampler`: Returns a PyTorch sampler that selects batch items based on the calculated weight distribution.
+
+---
+
+## Module: train.py
+
+Located at `src/training/train.py`.
+
+### Purpose
+Orchestrates the SFT (Supervised Fine-Tuning) loop using the HuggingFace `Trainer` interface. It manages datasets, prompt collators, and checkpoint callbacks.
+
+### Key Classes & Functions
+
+*   `CXRReportDataset(Dataset)`: PyTorch dataset. Loads parquet split data and pairs each study with its corresponding chest X-ray image.
+*   `make_collate_fn(processor: Any, max_len: int) -> Callable`: Collator function that tokenizes the text prompt and full generation, builds the completion mask by setting label indices before the Findings token length to `-100`, and handles fallback blank gray images when frontal images are missing.
+*   `F1CheckpointCallback(TrainerCallback)`: Runs greedy validation text generation at the end of each training epoch, computes DeBERTa BERTScore-F1 and CheXbert classification scores, logs metrics to Weights & Biases, and saves the adapter checkpoint if BERTScore improves.
+*   `CXRTrainer(Trainer)`: Extension of HuggingFace `Trainer` to inject the custom `WeightedRandomSampler` into the training dataloader.
+*   `plot_training_figures(...)`: Automatically plots training loss decay, validation metric curves, and sampler weight distributions.

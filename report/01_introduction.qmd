@@ -1,0 +1,24 @@
+---
+title: "1. Introduction & Strategic Thesis"
+author: "Diego Villalba (Applied Research Candidate)"
+date: "2026-06-25"
+---
+
+::: {.non-technical-summary}
+##### Section Summary (Non-Technical)
+This section introduces the core clinical motivation of the project. Chest X-ray models are usually trained on massive datasets from large US hospitals, which contain mostly English reports and a very high percentage of normal X-rays. When trying to deploy these models in Latin American (LATAM) clinics, they face three major changes: different image properties from different X-ray machines, different languages (Spanish instead of English), and different rates of disease. We frame this problem not as a simple translation or accuracy task, but as a systematic domain shift diagnostic challenge.
+:::
+
+## Clinical Domain Shift
+
+The Eden AI technical challenge focuses on developing a multimodal medical vision-language foundation model that generates chest X-ray findings. However, deploying such a model in a real clinical setting—particularly across distinct geographic regions like Latin America—introduces severe out-of-distribution (OOD) shifts:
+
+1.  **Acquisition Shift**: Differences in scanner hardware manufacturers, kVp exposure calibrations, and sensor resolutions produce raw image distributions that diverge from the clean datasets used during pre-training.
+2.  **Prevalence Shift**: Regional epidemiological patterns result in different baseline frequencies of pathologies. For example, Latin American public clinics may exhibit higher prevalences of Tuberculosis or Chagas disease compared to standard Western benchmarks.
+3.  **Language Shift**: Pre-trained clinical vision-language models like MedGemma are pre-trained predominantly on English corpora (e.g., MIMIC-CXR). Clinicians in LATAM dictate findings and indications in Spanish.
+
+## The Strategic Thesis
+
+Our thesis is that **cross-geographic deployment must be framed as a distributional discrepancy audit**. Rather than optimizing a model to achieve maximum accuracy on a single dataset, we construct a reusable diagnostic infrastructure—the `DomainShiftAudit` class—capable of auditing models under simulated shifts. 
+
+By validating this diagnostic protocol on controlled, synthetic perturbations within the Indiana University Chest X-ray (IU CXR) dataset, we ensure that the auditing infrastructure is fully developed and ready to be run on real, local clinical data from day one.

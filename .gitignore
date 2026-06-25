@@ -49,3 +49,6 @@ Thumbs.db
 # Secrets
 *.key
 .env.local
+
+/.quarto/
+**/*.quarto_ipynb

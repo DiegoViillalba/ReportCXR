@@ -1,0 +1,68 @@
+---
+title: "ReportCXR"
+subtitle: "Automated Radiological Report Generation and Domain Shift Auditing under Distributional Discrepancy"
+author: "Diego Villalba (Applied Research Candidate)"
+date: "2026-06-25"
+---
+
+::: {.non-technical-summary}
+##### Executive Summary (Non-Technical)
+This project is an advanced AI system built for automated chest X-ray interpretation. Instead of simply fine-tuning a general-purpose model, this work addresses a critical, real-world challenge in healthcare AI: domain shift. Medical AI models trained on United States clinical datasets (which are predominantly English and heavily biased towards normal findings) often fail when deployed in Latin American (LATAM) hospitals due to differences in scanner equipment, local patient populations (prevalences of disease), and local reporting languages.
+
+Here, we build a robust, reproducible clinical language model based on Google's MedGemma 4B-it, construct a data pipeline using DVC (Data Version Control) and Weights & Biases (W&B) for full MLOps auditing, and establish a Domain Shift Audit Protocol to systematically test and quantify model degradation under simulated equipment, language, and epidemiological shifts.
+:::
+
+## Project Overview
+
+The ReportCXR project is developed as part of the Eden AI technical challenge for the Applied Research role. The system fine-tunes a medical vision-language model, google/medgemma-4b-it (which combines a frozen medical SigLIP image encoder and a Gemma 3 4B-it language decoder), to generate radiological reports (specifically the Findings section) conditioned on Clinical Indications.
+
+### The Strategic Thesis: Domain Shift Auditing
+
+Our central premise is that deploying medical models across geographies is a distributional shift problem. Rather than reporting static accuracy metrics on a clean dataset, this project designs and validates a reusable diagnostic infrastructure—the DomainShiftAudit framework—on simulated shifts inside the Indiana University Chest X-ray (IU CXR) dataset.
+
+This protocol acts as a diagnostic suite. It measures the robustness of models before they go live:
+1. **Acquisition Shift**: Simulates older equipment or different scanner manufacturers by applying synthetic noise, contrast adjustments, and compression.
+2. **Language Shift**: Assesses how a model trained in English performs when prompting and generating in Spanish.
+3. **Prevalence Shift**: Simulates different disease rates using importance sampling to evaluate how the model handles a LATAM patient distribution.
+
+---
+
+## Website Structure
+
+Use the navigation menu at the top to explore the work:
+
+*   **Technical Report**: A modular, multi-part deep dive into the strategic thesis, data distribution, model training, evaluation metrics, domain shift experiments, and production scaling.
+*   **Code Documentation**: Detailed module-by-module documentation of every component in the codebase (data loading, label extraction, QLoRA training, metric evaluation, and synthetic shifts).
+*   **Notebooks**: Step-by-step interactive implementations of our entire pipeline (EDA, baseline zero-shot, training, and evaluation).
+
+---
+
+## MLOps Setup and Reproducibility
+
+This project is built for complete mathematical reproducibility. Data, parameters, and pipelines are versioned.
+
+### 1. Versioned Parameters (params.yaml)
+Every parameter—from QLoRA rank to target sampler disease prevalences—is declared in a single source of truth: [params.yaml](file:///Users/diegovillaba/Code/ReportCXR/params.yaml). No thresholds or weights are hardcoded inside the code in `src/`.
+
+### 2. DVC Pipeline (dvc.yaml)
+The data pipeline is managed via DVC (Data Version Control). To reproduce the pipeline stages, run:
+
+```bash
+# Verify status of data and steps
+dvc status
+
+# Reproduce the entire pipeline (loading -> labeling -> splitting -> training -> evaluation)
+dvc repro
+```
+
+The pipeline contains the following stages defined in [dvc.yaml](file:///Users/diegovillaba/Code/ReportCXR/dvc.yaml):
+*   `load`: Joins reports and projections CSVs and links images.
+*   `labels`: Processes free-text findings with a CheXbert labeler to build a 14-dimensional pathology matrix.
+*   `split`: Employs iterative multi-label stratification to split studies cleanly without patient leakage.
+*   `eda`: Computes prevalences and class statistics, outputting training distribution plots.
+*   `train_uniform`: Trains QLoRA on a uniform distribution.
+*   `train_weighted`: Trains QLoRA with active sampling weights.
+*   `eval`: Computes test metrics on the best saved models.
+
+### 3. Experiment Tracking (Weights and Biases)
+All training runs, validation curves, and sampler weight distributions are synced to Weights and Biases under the project `reportcxr`.

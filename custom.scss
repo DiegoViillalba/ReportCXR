@@ -1,0 +1,174 @@
+/*-- scss:defaults --*/
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+// Typography
+$font-family-sans-serif: "Outfit", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+$font-family-monospace: "JetBrains Mono", monospace;
+
+$presentation-font-size-root: 16px;
+$body-font-size: 1.05rem;
+$line-height-base: 1.6;
+
+// Google-like minimalistic color palette
+$primary: #1a73e8;       // Google Blue
+$success: #1e8e3e;       // Google Green
+$info: #1aa260;          // Alternative green
+$warning: #f9ab00;       // Google Yellow
+$danger: #d93025;        // Google Red
+
+$body-bg: #ffffff;
+$body-color: #3c4043;    // Google dark text (soft black)
+$link-color: #1a73e8;
+$border-color: #dadce0;  // Google-like light gray border
+
+// Headings
+$headings-color: #1f1f1f; // High contrast dark charcoal for headers
+
+// Sidebar and Navbar
+$navbar-bg: #ffffff;
+$navbar-fg: #5f6368;
+$navbar-hl: #1a73e8;
+
+$sidebar-bg: #ffffff;
+$sidebar-fg: #3c4043;
+$sidebar-hl: #1a73e8;
+
+/*-- scss:rules --*/
+
+// Minimalist Navbar styling (Google Style)
+.navbar {
+  border-bottom: 1px solid #dadce0 !important;
+  box-shadow: none !important;
+  font-weight: 500;
+  background-color: #ffffff !important;
+}
+
+.navbar-brand {
+  font-weight: 600;
+  color: #1f1f1f !important;
+  letter-spacing: -0.5px;
+}
+
+.navbar-nav .nav-link {
+  color: #5f6368 !important;
+  transition: color 0.15s ease;
+  
+  &:hover, &.active {
+    color: #1a73e8 !important;
+  }
+}
+
+// Global page layouts
+body {
+  letter-spacing: -0.1px;
+}
+
+// Minimalistic sidebar
+.sidebar {
+  border-right: 1px solid #dadce0 !important;
+  background-color: #ffffff !important;
+}
+
+// Callouts styling
+.callout {
+  border-left-width: 4px !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  background-color: #f8f9fa !important;
+  border-color: #dadce0;
+  
+  &.callout-style-default {
+    border-right: 1px solid #dadce0 !important;
+    border-top: 1px solid #dadce0 !important;
+    border-bottom: 1px solid #dadce0 !important;
+  }
+  
+  &.callout-note {
+    border-left-color: #1a73e8 !important;
+    background-color: #f8fafd !important; // very light blue tint
+  }
+  
+  &.callout-important {
+    border-left-color: #d93025 !important;
+    background-color: #fdf8f7 !important; // very light red tint
+  }
+  
+  &.callout-tip {
+    border-left-color: #1e8e3e !important;
+    background-color: #f7fdf8 !important; // very light green tint
+  }
+
+  &.callout-warning {
+    border-left-color: #f9ab00 !important;
+    background-color: #fefcf3 !important; // very light yellow tint
+  }
+}
+
+// Technical summary blocks styling
+.non-technical-summary {
+  background-color: #f8f9fa;
+  border: 1px solid #dadce0;
+  border-left: 4px solid #1a73e8;
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+  color: #3c4043;
+  
+  h5 {
+    color: #1a73e8;
+    margin-top: 0;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+// Code blocks styling
+pre {
+  background-color: #f8f9fa !important;
+  border: 1px solid #dadce0 !important;
+  border-radius: 8px !important;
+}
+
+code {
+  color: #d93025;
+  background-color: #f8f9fa;
+  padding: 0.15em 0.3em;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+// Table styling
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+  
+  th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dadce0 !important;
+    color: #1f1f1f;
+    font-weight: 600;
+    padding: 10px;
+    text-align: left;
+  }
+  
+  td {
+    border-bottom: 1px solid #dadce0 !important;
+    padding: 10px;
+    color: #3c4043;
+  }
+  
+  tr:hover {
+    background-color: #fdfdfd;
+  }
+}
+
+// Sidebar title
+.sidebar-title {
+  font-weight: 600;
+  color: #1f1f1f;
+}

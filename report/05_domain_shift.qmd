@@ -1,0 +1,40 @@
+---
+title: "5. Domain Shift Audit Protocol"
+author: "Diego Villalba (Applied Research Candidate)"
+date: "2026-06-25"
+---
+
+::: {.non-technical-summary}
+##### Section Summary (Non-Technical)
+This section outlines our system stress-testing infrastructure. Rather than hoping the model works when moved to a new hospital, we write a diagnostic program that simulates three types of shifts: scanner machinery changes (adding noise and changing brightness/contrast), language transitions (evaluating Spanish generations), and epidemiological changes (simulating different rates of diseases). We leave placeholders for the exact degradation curves, as this represents our testing protocol.
+:::
+
+## Overview of the Audit Protocol
+
+To evaluate the system's readiness for Latin American clinical environments, we construct the `DomainShiftAudit` suite. This module simulates the three core axes of distributional shift.
+
+## Axis A: Acquisition & Equipment Shift
+
+We apply controlled synthetic image perturbations to simulate differences in scanner hardware, sensor noise, or digitization quality (e.g., older equipment in LATAM public hospitals). We sweep over:
+*   **Gaussian Noise**: Adding noise with standard deviation $\sigma \in [0, 50]$ in pixel units.
+*   **Contrast Scaling**: Factors $c \in [0.5, 2.0]$.
+*   **Gamma Correction**: $\gamma \in [0.5, 2.0]$ (simulating exposure discrepancies).
+*   **JPEG Compression**: Qualities $q \in [95, 75, 50, 25, 10]$ (simulating network bandwith saving compression).
+
+*Space left for remaining experimental degradation curves.*
+
+## Axis B: Language Shift
+
+Since `MedGemma` was pre-trained primarily on English medical text, deploying it in a Spanish-speaking hospital represents a severe vocabulary shift. We test the model's Spanish generation by prompting it to output findings in Spanish and evaluate the output against automatic Spanish translations of the ground-truth findings.
+
+*Space left for remaining language degradation metrics.*
+
+## Axis C: Prevalence Shift
+
+Medical centers in LATAM exhibit different prevalence distributions of diseases compared to US datasets (e.g., higher rates of Tuberculosis or Chagas). We simulate this shift by re-weighting our test set using importance sampling. We compute weighted test metrics and report the **Effective Sample Size (ESS)** to ensure our estimators remain statistically stable:
+
+$$ESS = \frac{\left( \sum_{j=1}^N w_j \right)^2}{\sum_{j=1}^N w_j^2}$$
+
+If the $ESS$ falls below a safety threshold (e.g., $ESS < 50$), we flag the evaluation as statistically unreliable due to extreme distribution divergence.
+
+*Space left for remaining importance-weighted test curves.*

@@ -1,0 +1,60 @@
+---
+title: "Data Pipeline Modules"
+author: "Diego Villalba (Applied Research Candidate)"
+date: "2026-06-25"
+---
+
+::: {.non-technical-summary}
+##### Section Summary (Non-Technical)
+This page documents the code responsible for loading the raw chest X-ray reports, extracting 14 standard disease labels from free-text using a clinical language tool (CheXbert), and dividing the data into training, validation, and test splits. It ensures that multiple images belonging to the same patient are kept in the same split to prevent training leakage.
+:::
+
+## Module: load.py
+
+Located at `src/data/load.py`.
+
+### Purpose
+Loads the tabular CSV files from the raw dataset, merges them by study identifier (`uid`), collapses multi-projection images (frontal and lateral views) into grouped lists, and performs integrity checks.
+
+### Key Functions
+
+*   `load_reports(raw_dir: Path) -> pd.DataFrame`: Reads `indiana_reports.csv` which contains study free-text columns (Findings, Impression, Indication, Problems).
+*   `load_projections(raw_dir: Path) -> pd.DataFrame`: Reads `indiana_projections.csv` linking each study `uid` to image filenames and their perspective (Frontal or Lateral).
+*   `build_study_df(reports: pd.DataFrame, projections: pd.DataFrame) -> pd.DataFrame`: Performs a left-join grouping images by study. Filenames are aggregated into lists in columns `frontal` and `lateral`.
+*   `validate_integrity(df: pd.DataFrame) -> dict`: Audits the merged DataFrame for missing reports or cases without frontal views. It outputs counts but does not drop entries.
+
+---
+
+## Module: labels.py
+
+Located at `src/data/labels.py`.
+
+### Purpose
+Extracts 14 binary clinical labels from free-text report findings using the CheXbert classification model. It manages uncertain findings based on a versioned policy.
+
+### Uncertainty Policies
+*   `present`: Uncertain findings (CheXbert output 3) are mapped to 1 (positive). This is the default policy.
+*   `absent`: Uncertain findings and unmentioned findings are mapped to 0 (negative). This is used for ablation analysis.
+
+### Key Functions
+
+*   `extract_labels_batch(texts: list[str], policy: UncertaintyPolicy) -> np.ndarray`: Processes list of findings using CheXbert, returning an $(n, 14)$ binary numpy matrix. It uses token-level batching for high throughput.
+*   `_raw_preds_to_binary(preds: np.ndarray, policy: UncertaintyPolicy) -> np.ndarray`: Converts the four CheXbert classes (0=blank, 1=positive, 2=negative, 3=uncertain) into binary outputs based on the policy.
+
+---
+
+## Module: split.py
+
+Located at `src/data/split.py`.
+
+### Purpose
+Divides the study cohort into training, validation, and test sets. It prevents patient-level data leakage and preserves the label distributions.
+
+### Design Decisions
+*   **Study-Level Splitting**: Patients can have multiple images in a study. Splitting is done by study `uid` so that both frontal and lateral views for a study are kept in the same split.
+*   **Iterative Multi-label Stratification**: We use `iterative_train_test_split` from `scikit-multilearn` to ensure the percentage of rare pathologies remains consistent across training, validation, and testing.
+
+### Key Functions
+
+*   `split_dataset(df: pd.DataFrame, test_size: float, val_size: float, random_state: int, min_test_count: int) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]`: Orchestrates the stratification. Ensures the test set has at least `min_test_count` studies (default 600).
+*   `_iterative_split(df: pd.DataFrame, label_matrix: np.ndarray, test_fraction: float, random_state: int) -> Tuple[pd.DataFrame, pd.DataFrame]`: Wrapper function for the `scikit-multilearn` algorithm.

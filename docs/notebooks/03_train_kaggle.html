@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>03 — QLoRA Fine-Tuning (Kaggle 2×T4) – ReportCXR</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-edad393940abb5f3c6973fe701e515d2.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-e9614ef202455b86b71b0557e717d80d.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">ReportCXR</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../index.html"> 
+<span class="menu-text">Overview</span></a>
+  </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-technical-report" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Technical Report</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-technical-report">    
+        <li>
+    <a class="dropdown-item" href="../report/01_introduction.html">
+ <span class="dropdown-text">1. Introduction &amp; Strategic Thesis</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../report/02_data.html">
+ <span class="dropdown-text">2. Data Distribution &amp; Sampler</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../report/03_model_training.html">
+ <span class="dropdown-text">3. Model &amp; QLoRA Config</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../report/04_evaluation.html">
+ <span class="dropdown-text">4. Evaluation &amp; Metric Pivot</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../report/05_domain_shift.html">
+ <span class="dropdown-text">5. Domain Shift Audit Protocol</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../report/06_production_scaling.html">
+ <span class="dropdown-text">6. Production Scaling</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-code-documentation" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Code Documentation</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-code-documentation">    
+        <li>
+    <a class="dropdown-item" href="../doc/architecture.html">
+ <span class="dropdown-text">Architecture Overview</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../doc/data_pipeline.html">
+ <span class="dropdown-text">Data Pipeline</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../doc/training_pipeline.html">
+ <span class="dropdown-text">Model &amp; Training</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../doc/evaluation_modules.html">
+ <span class="dropdown-text">Evaluation Modules</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../doc/domain_shift_modules.html">
+ <span class="dropdown-text">Domain Shift Audit</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-notebooks" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Notebooks</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-notebooks">    
+        <li>
+    <a class="dropdown-item" href="../notebooks/01_eda.html">
+ <span class="dropdown-text">01: Exploratory Data Analysis</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../notebooks/02_baseline_zero_shot.html">
+ <span class="dropdown-text">02: Zero-Shot Baseline</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../notebooks/03_train_local.html">
+ <span class="dropdown-text">03: Training (Local)</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../notebooks/03_train_kaggle.html">
+ <span class="dropdown-text">03: Training (Kaggle)</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../notebooks/04_eval_and_figures.html">
+ <span class="dropdown-text">04: Evaluation</span></a>
+  </li>  
+    </ul>
+  </li>
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active" data-toc-expanded="99">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#step-1-environment-detection-and-path-setup" id="toc-step-1-environment-detection-and-path-setup" class="nav-link active" data-scroll-target="#step-1-environment-detection-and-path-setup">STEP 1 — Environment detection and path setup</a></li>
+  <li><a href="#step-2-install-dependencies" id="toc-step-2-install-dependencies" class="nav-link" data-scroll-target="#step-2-install-dependencies">STEP 2 — Install dependencies</a></li>
+  <li><a href="#step-3-huggingface-wb-login" id="toc-step-3-huggingface-wb-login" class="nav-link" data-scroll-target="#step-3-huggingface-wb-login">STEP 3 — HuggingFace + W&amp;B login</a></li>
+  <li><a href="#step-4-verify-data-and-gpu" id="toc-step-4-verify-data-and-gpu" class="nav-link" data-scroll-target="#step-4-verify-data-and-gpu">STEP 4 — Verify data and GPU</a></li>
+  <li><a href="#step-5-run-1-uniform-sampling-no-shift-correction" id="toc-step-5-run-1-uniform-sampling-no-shift-correction" class="nav-link" data-scroll-target="#step-5-run-1-uniform-sampling-no-shift-correction">STEP 5 — Run 1: Uniform sampling (no shift correction)</a></li>
+  <li><a href="#step-6-run-2-importance-weighted-sampling-shift-correction" id="toc-step-6-run-2-importance-weighted-sampling-shift-correction" class="nav-link" data-scroll-target="#step-6-run-2-importance-weighted-sampling-shift-correction">STEP 6 — Run 2: Importance-weighted sampling (shift correction)</a></li>
+  <li><a href="#step-7-load-training-results-from-both-runs" id="toc-step-7-load-training-results-from-both-runs" class="nav-link" data-scroll-target="#step-7-load-training-results-from-both-runs">STEP 7 — Load training results from both runs</a></li>
+  <li><a href="#step-8-figure-training-loss-comparison" id="toc-step-8-figure-training-loss-comparison" class="nav-link" data-scroll-target="#step-8-figure-training-loss-comparison">STEP 8 — Figure: Training loss comparison</a></li>
+  <li><a href="#step-9-figure-val-f1-chexbert-per-epoch" id="toc-step-9-figure-val-f1-chexbert-per-epoch" class="nav-link" data-scroll-target="#step-9-figure-val-f1-chexbert-per-epoch">STEP 9 — Figure: Val F1-CheXbert per epoch</a></li>
+  <li><a href="#step-10-figure-sampler-weight-distribution" id="toc-step-10-figure-sampler-weight-distribution" class="nav-link" data-scroll-target="#step-10-figure-sampler-weight-distribution">STEP 10 — Figure: Sampler weight distribution</a></li>
+  <li><a href="#step-11-figure-per-label-f1-comparison" id="toc-step-11-figure-per-label-f1-comparison" class="nav-link" data-scroll-target="#step-11-figure-per-label-f1-comparison">STEP 11 — Figure: Per-label F1 comparison</a></li>
+  <li><a href="#step-12-metric-summary-table" id="toc-step-12-metric-summary-table" class="nav-link" data-scroll-target="#step-12-metric-summary-table">STEP 12 — Metric summary table</a></li>
+  <li><a href="#done" id="toc-done" class="nav-link" data-scroll-target="#done">Done</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<div class="quarto-title-block"><div><h1 class="title">03 — QLoRA Fine-Tuning (Kaggle 2×T4)</h1><button type="button" class="btn code-tools-button dropdown-toggle" id="quarto-code-tools-menu" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi"></i> Code</button><ul class="dropdown-menu dropdown-menu-end" aria-labelelledby="quarto-code-tools-menu"><li><a id="quarto-show-all-code" class="dropdown-item" href="javascript:void(0)" role="button">Show All Code</a></li><li><a id="quarto-hide-all-code" class="dropdown-item" href="javascript:void(0)" role="button">Hide All Code</a></li></ul></div></div>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p><strong>Purpose:</strong> Orchestrate the QLoRA training job.<br>
+All training logic lives in <code>src/training/train.py</code>; this notebook handles Kaggle-specific setup and produces report figures.</p>
+<p><strong>Two runs (both logged to W&amp;B):</strong> | Run | Sampler | Goal | |—–|———|——| | <code>qlora_uniform</code> | <code>--sampler uniform</code> | No shift correction — fine-tuned baseline | | <code>qlora_weighted</code> | <code>--sampler weighted</code> | Importance-weighted — shift-corrected |</p>
+<p><strong>Instructions for Kaggle:</strong> 1. Upload this repo as a Kaggle Dataset <strong>or</strong> <code>!git clone &lt;repo&gt;</code> in the working dir. 2. Attach the IU CXR dataset: <code>raddar/chest-xrays-indiana-university</code>. 3. Enable GPU <strong>2×T4</strong>, enable internet (for HuggingFace Hub + W&amp;B). 4. Set <code>WANDB_API_KEY</code> in Kaggle Secrets, or run <code>wandb login</code> in cell 4. 5. Set <code>HF_TOKEN</code> in Kaggle Secrets (required for <code>google/medgemma-4b-it</code>). 6. Run all cells in order.</p>
+<p><strong>T4 optimisations applied automatically by <code>train.py</code>:</strong> - <code>fp16</code> (T4 native tensor cores — bf16 is software-emulated on Turing) - <code>torchrun --nproc_per_node=2</code> when 2 GPUs detected (DDP data parallelism, not pipeline) - <code>max_seq_length=512</code> (shorter than default — IU reports are ~150-300 tokens) - <code>batch_size=2</code> per GPU, <code>grad_acc=8</code> → effective batch 32</p>
+<p><strong>Expected runtime:</strong> ~10–13 h total on 2×T4 (vs ~34 h without these optimisations).</p>
+<section id="step-1-environment-detection-and-path-setup" class="level2">
+<h2 class="anchored" data-anchor-id="step-1-environment-detection-and-path-setup">STEP 1 — Environment detection and path setup</h2>
+<p>Detect Kaggle vs Lightning AI; resolve all paths without hardcoding.</p>
+<div id="nb03-env" class="cell">
+<details open="" class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sys</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>ON_KAGGLE <span class="op">=</span> Path(<span class="st">'/kaggle'</span>).exists()</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> ON_KAGGLE:</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="co"># --- Kaggle layout ---</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Clone repo if not present (e.g. if uploaded as a dataset, just point to it)</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    REPO_ROOT <span class="op">=</span> Path(<span class="st">'/kaggle/working/ReportCXR'</span>)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> REPO_ROOT.exists():</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        <span class="im">import</span> subprocess</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        subprocess.run([<span class="st">'git'</span>, <span class="st">'clone'</span>, <span class="st">'https://github.com/YOUR_USER/ReportCXR.git'</span>,</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>                        <span class="bu">str</span>(REPO_ROOT)], check<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Raw IU dataset is at this Kaggle input path:</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    DATA_ROOT <span class="op">=</span> Path(<span class="st">'/kaggle/input/chest-xrays-indiana-university'</span>)</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    IMAGES_DIR <span class="op">=</span> DATA_ROOT <span class="op">/</span> <span class="st">'images'</span> <span class="op">/</span> <span class="st">'images_normalized'</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    os.chdir(REPO_ROOT)</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    sys.path.insert(<span class="dv">0</span>, <span class="bu">str</span>(REPO_ROOT))</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    <span class="co"># --- Lightning AI / local layout ---</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    REPO_ROOT <span class="op">=</span> Path(<span class="st">'..'</span>).resolve()   <span class="co"># notebook is in notebooks/</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    DATA_ROOT <span class="op">=</span> REPO_ROOT <span class="op">/</span> <span class="st">'data'</span> <span class="op">/</span> <span class="st">'raw'</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    IMAGES_DIR <span class="op">=</span> DATA_ROOT <span class="op">/</span> <span class="st">'images'</span> <span class="op">/</span> <span class="st">'images_normalized'</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    os.chdir(REPO_ROOT)</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>    sys.path.insert(<span class="dv">0</span>, <span class="bu">str</span>(REPO_ROOT))</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>PROCESSED_DIR  <span class="op">=</span> REPO_ROOT <span class="op">/</span> <span class="st">'data'</span> <span class="op">/</span> <span class="st">'processed'</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>FIGURES_DIR    <span class="op">=</span> REPO_ROOT <span class="op">/</span> <span class="st">'reports'</span> <span class="op">/</span> <span class="st">'figures'</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>CHECKPOINT_DIR <span class="op">=</span> REPO_ROOT <span class="op">/</span> <span class="st">'checkpoints'</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>FIGURES_DIR.mkdir(parents<span class="op">=</span><span class="va">True</span>, exist_ok<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Environment : </span><span class="sc">{</span><span class="st">"Kaggle"</span> <span class="cf">if</span> ON_KAGGLE <span class="cf">else</span> <span class="st">"Local/Lightning"</span><span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Repo root   : </span><span class="sc">{</span>REPO_ROOT<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Images dir  : </span><span class="sc">{</span>IMAGES_DIR<span class="sc">}</span><span class="ss">  (exists=</span><span class="sc">{</span>IMAGES_DIR<span class="sc">.</span>exists()<span class="sc">}</span><span class="ss">)'</span>)</span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Processed   : </span><span class="sc">{</span>PROCESSED_DIR<span class="sc">}</span><span class="ss">  (exists=</span><span class="sc">{</span>PROCESSED_DIR<span class="sc">.</span>exists()<span class="sc">}</span><span class="ss">)'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="step-2-install-dependencies" class="level2">
+<h2 class="anchored" data-anchor-id="step-2-install-dependencies">STEP 2 — Install dependencies</h2>
+<div id="nb03-install" class="cell">
+<details open="" class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Install / upgrade dependencies not pre-installed on Kaggle.# Pin lower bounds that are known-good with MedGemma + bitsandbytes on T4/CUDA 12.!pip install -q \    "transformers&gt;=4.47.0" \    "peft&gt;=0.13.0" \    "bitsandbytes&gt;=0.44.0" \    "accelerate&gt;=0.34.0" \    "trl&gt;=0.12.0" \    f1chexbert \    scikit-multilearn \    wandb \    evaluate \    bert_score \    rouge_score \    nltk</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="step-3-huggingface-wb-login" class="level2">
+<h2 class="anchored" data-anchor-id="step-3-huggingface-wb-login">STEP 3 — HuggingFace + W&amp;B login</h2>
+<p>Set <code>HF_TOKEN</code> and <code>WANDB_API_KEY</code> via Kaggle Secrets (recommended) or paste directly.</p>
+<div id="nb03-secrets" class="cell">
+<details open="" class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># ── HuggingFace ──────────────────────────────────────────────────────────────</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Required to download google/medgemma-4b-it (gated model).</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co"># On Kaggle: add HF_TOKEN to Secrets &gt; Environment Variables.</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>hf_token <span class="op">=</span> os.environ.get(<span class="st">'HF_TOKEN'</span>, <span class="st">''</span>)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> hf_token:</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="im">from</span> huggingface_hub <span class="im">import</span> login</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    login(token<span class="op">=</span>hf_token, add_to_git_credential<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">'HuggingFace: logged in via HF_TOKEN secret'</span>)</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">'WARNING: HF_TOKEN not set — medgemma download may fail on first run'</span>)</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">'         Set it in Kaggle Secrets or run: !huggingface-cli login'</span>)</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="co"># ── W&amp;B ──────────────────────────────────────────────────────────────────────</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> wandb</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>wandb_key <span class="op">=</span> os.environ.get(<span class="st">'WANDB_API_KEY'</span>, <span class="st">''</span>)</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> wandb_key:</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>    wandb.login(key<span class="op">=</span>wandb_key, relogin<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">'W&amp;B: logged in via WANDB_API_KEY secret'</span>)</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>    wandb.login()  <span class="co"># prompts interactively</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">'W&amp;B: logged in interactively'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="step-4-verify-data-and-gpu" class="level2">
+<h2 class="anchored" data-anchor-id="step-4-verify-data-and-gpu">STEP 4 — Verify data and GPU</h2>
+<p>Check that processed parquet files exist, images are accessible, and GPU is available. If processed parquets are missing, regenerate them from the raw CSVs.</p>
+<div id="nb03-verify" class="cell">
+<details open="" class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> loggingimport torchimport yamlimport pandas <span class="im">as</span> pdlogging.basicConfig(level<span class="op">=</span>logging.INFO, <span class="bu">format</span><span class="op">=</span><span class="st">'</span><span class="sc">%(levelname)s</span><span class="st"> </span><span class="sc">%(message)s</span><span class="st">'</span>)<span class="cf">with</span> <span class="bu">open</span>(REPO_ROOT <span class="op">/</span> <span class="st">'params.yaml'</span>) <span class="im">as</span> f:    params <span class="op">=</span> yaml.safe_load(f)<span class="co"># GPU info — detect count for DDP decisionN_GPUS = torch.cuda.device_count()print(f'GPUs available: {N_GPUS}')for i in range(N_GPUS):    props = torch.cuda.get_device_properties(i)    cc = f'{props.major}.{props.minor}'    prec = 'bf16' if props.major &gt;= 8 else 'fp16 (Turing native — bf16 is slow here)'    print(f'  GPU {i}: {props.name}  {props.total_memory/1e9:.1f} GB  cc={cc}  [{prec}]')if N_GPUS &gt; 1:    print(f'\nDDP enabled: torchrun --nproc_per_node={N_GPUS} → ~{N_GPUS}x throughput')else:    print('\nSingle GPU — training sequentially')# Parquet checksfor split in ('train', 'val', 'test'):    p = PROCESSED_DIR / f'{split}.parquet'    if p.exists():        df = pd.read_parquet(p)        print(f'{split}.parquet : {len(df)} studies — OK')    else:        print(f'MISSING: {p}')# Regenerate if missingTRAIN_OK = (PROCESSED_DIR / 'train.parquet').exists()if not TRAIN_OK:    print('\nProcessed parquets missing — regenerating...')    if ON_KAGGLE:        os.environ['RAW_DIR_OVERRIDE'] = str(DATA_ROOT)    !python -m src.data.load    !python -m src.data.labels    !python -m src.data.split    print('Regeneration complete.')# Image spot-check — use hasattr/__len__ instead of isinstance(x, list)# because pyarrow reads list columns as a non-list type when loaded back from parquettrain_df = pd.read_parquet(PROCESSED_DIR / 'train.parquet')has_frontal = train_df['frontal'].apply(lambda x: hasattr(x, '__len__') and len(x) &gt; 0)print(f'\nStudies with frontal image: {has_frontal.sum()}/{len(train_df)}')if has_frontal.sum() &gt; 0:    sample_frontal = list(train_df[has_frontal].iloc[0]['frontal'])[0]    img_path = IMAGES_DIR / sample_frontal    print(f'Image spot-check: {img_path}  (exists={img_path.exists()})')    if not img_path.exists():        print('WARNING: images not found — check symlink / IMAGES_DIR')else:    print('WARNING: 0 frontal images — check src.data.load build_study_df')</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="step-5-run-1-uniform-sampling-no-shift-correction" class="level2">
+<h2 class="anchored" data-anchor-id="step-5-run-1-uniform-sampling-no-shift-correction">STEP 5 — Run 1: Uniform sampling (no shift correction)</h2>
+<p>Fine-tunes MedGemma with standard sequential sampling.<br>
+This is the <strong>fine-tuned baseline</strong> — no distributional correction.</p>
+<p>Logs to W&amp;B run <code>qlora_uniform</code>. Best checkpoint saved to <code>checkpoints/qlora_uniform/best_model/</code>.</p>
+<div id="nb03-run1-check" class="cell">
+<details open="" class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>UNIFORM_RESULTS <span class="op">=</span> CHECKPOINT_DIR <span class="op">/</span> <span class="st">'qlora_uniform'</span> <span class="op">/</span> <span class="st">'training_results.json'</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> UNIFORM_RESULTS.exists():</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> <span class="bu">open</span>(UNIFORM_RESULTS) <span class="im">as</span> f:</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>        res <span class="op">=</span> json.load(f)</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f'Uniform run already done — best epoch=</span><span class="sc">{</span>res[<span class="st">"best_epoch"</span>]<span class="sc">}</span><span class="ss">, '</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>          <span class="ss">f'best micro F1=</span><span class="sc">{</span>res[<span class="st">"best_val_f1_chexbert_micro"</span>]<span class="sc">:.4f}</span><span class="ss">'</span>)</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">'Delete checkpoints/qlora_uniform/ to re-run.'</span>)</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    RUN_UNIFORM <span class="op">=</span> <span class="va">False</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">'No cached results found — will train.'</span>)</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    RUN_UNIFORM <span class="op">=</span> <span class="va">True</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+<div id="nb03-run1" class="cell">
+<details open="" class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> RUN_UNIFORM:    images_dir_arg <span class="op">=</span> <span class="ss">f'--images_dir </span><span class="sc">{</span>IMAGES_DIR<span class="sc">}</span><span class="ss">'</span> <span class="cf">if</span> ON_KAGGLE <span class="cf">else</span> <span class="st">''</span>    <span class="co"># Use torchrun for DDP when 2 GPUs are available (each GPU processes batches in parallel).    # device_map="auto" (model parallelism) is replaced automatically by train.py when LOCAL_RANK is set.    if N_GPUS &gt; 1:        !torchrun --nproc_per_node={N_GPUS} -m src.training.train \            --sampler uniform \            --run_name qlora_uniform \            {images_dir_arg}    else:        !python -m src.training.train \            --sampler uniform \            --run_name qlora_uniform \            {images_dir_arg}else:    print('Skipped (cached).')</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="step-6-run-2-importance-weighted-sampling-shift-correction" class="level2">
+<h2 class="anchored" data-anchor-id="step-6-run-2-importance-weighted-sampling-shift-correction">STEP 6 — Run 2: Importance-weighted sampling (shift correction)</h2>
+<p>Fine-tunes with <code>WeightedRandomSampler</code> using <code>p_target</code> from <code>params.yaml</code>.<br>
+Up-weights rare-label studies so the model doesn’t collapse to predicting “No Finding”.</p>
+<p>Logs to W&amp;B run <code>qlora_weighted</code>. Best checkpoint saved to <code>checkpoints/qlora_weighted/best_model/</code>.</p>
+<div id="nb03-run2-check" class="cell">
+<details open="" class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>WEIGHTED_RESULTS <span class="op">=</span> CHECKPOINT_DIR <span class="op">/</span> <span class="st">'qlora_weighted'</span> <span class="op">/</span> <span class="st">'training_results.json'</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> WEIGHTED_RESULTS.exists():</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> <span class="bu">open</span>(WEIGHTED_RESULTS) <span class="im">as</span> f:</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>        res <span class="op">=</span> json.load(f)</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f'Weighted run already done — best epoch=</span><span class="sc">{</span>res[<span class="st">"best_epoch"</span>]<span class="sc">}</span><span class="ss">, '</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>          <span class="ss">f'best micro F1=</span><span class="sc">{</span>res[<span class="st">"best_val_f1_chexbert_micro"</span>]<span class="sc">:.4f}</span><span class="ss">'</span>)</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">'Delete checkpoints/qlora_weighted/ to re-run.'</span>)</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    RUN_WEIGHTED <span class="op">=</span> <span class="va">False</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">'No cached results found — will train.'</span>)</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>    RUN_WEIGHTED <span class="op">=</span> <span class="va">True</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+<div id="nb03-run2" class="cell">
+<details open="" class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> RUN_WEIGHTED:    images_dir_arg <span class="op">=</span> <span class="ss">f'--images_dir </span><span class="sc">{</span>IMAGES_DIR<span class="sc">}</span><span class="ss">'</span> <span class="cf">if</span> ON_KAGGLE <span class="cf">else</span> <span class="st">''</span>    <span class="cf">if</span> N_GPUS <span class="op">&gt;</span> <span class="dv">1</span>:        <span class="op">!</span>torchrun <span class="op">--</span>nproc_per_node<span class="op">=</span>{N_GPUS} <span class="op">-</span>m src.training.train \            <span class="op">--</span>sampler weighted \            <span class="op">--</span>run_name qlora_weighted \            {images_dir_arg}    <span class="cf">else</span>:        <span class="op">!</span>python <span class="op">-</span>m src.training.train \            <span class="op">--</span>sampler weighted \            <span class="op">--</span>run_name qlora_weighted \            {images_dir_arg}<span class="cf">else</span>:    <span class="bu">print</span>(<span class="st">'Skipped (cached).'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="step-7-load-training-results-from-both-runs" class="level2">
+<h2 class="anchored" data-anchor-id="step-7-load-training-results-from-both-runs">STEP 7 — Load training results from both runs</h2>
+<div id="nb03-load" class="cell">
+<details open="" class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>results <span class="op">=</span> {}</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> variant <span class="kw">in</span> (<span class="st">'uniform'</span>, <span class="st">'weighted'</span>):</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    rpath <span class="op">=</span> CHECKPOINT_DIR <span class="op">/</span> <span class="ss">f'qlora_</span><span class="sc">{</span>variant<span class="sc">}</span><span class="ss">'</span> <span class="op">/</span> <span class="st">'training_results.json'</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> rpath.exists():</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">with</span> <span class="bu">open</span>(rpath) <span class="im">as</span> f:</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>            results[variant] <span class="op">=</span> json.load(f)</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f'[</span><span class="sc">{</span>variant<span class="sc">}</span><span class="ss">] best_epoch=</span><span class="sc">{</span>results[variant][<span class="st">"best_epoch"</span>]<span class="sc">}</span><span class="ss">  '</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>              <span class="ss">f'best_micro_F1=</span><span class="sc">{</span>results[variant][<span class="st">"best_val_f1_chexbert_micro"</span>]<span class="sc">:.4f}</span><span class="ss">'</span>)</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f'[</span><span class="sc">{</span>variant<span class="sc">}</span><span class="ss">] results not found — run STEP 5/6 first'</span>)</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Also load baseline results for comparison</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>baseline_path <span class="op">=</span> REPO_ROOT <span class="op">/</span> <span class="st">'reports'</span> <span class="op">/</span> <span class="st">'baseline_results.json'</span></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>baseline_results <span class="op">=</span> json.loads(baseline_path.read_text()) <span class="cf">if</span> baseline_path.exists() <span class="cf">else</span> <span class="va">None</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> baseline_results:</span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>    m <span class="op">=</span> baseline_results[<span class="st">'metrics'</span>]</span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f'[zero-shot] micro F1=</span><span class="sc">{</span>m[<span class="st">"f1_chexbert_micro_present"</span>]<span class="sc">:.4f}</span><span class="ss">  '</span></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>          <span class="ss">f'macro F1=</span><span class="sc">{</span>m[<span class="st">"f1_chexbert_macro_present"</span>]<span class="sc">:.4f}</span><span class="ss">'</span>)</span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">'[zero-shot] baseline_results.json not found — run notebook 02 first'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="step-8-figure-training-loss-comparison" class="level2">
+<h2 class="anchored" data-anchor-id="step-8-figure-training-loss-comparison">STEP 8 — Figure: Training loss comparison</h2>
+<p>Overlay loss curves for both sampler variants on the same axes.</p>
+<div id="nb03-fig-loss" class="cell">
+<details open="" class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>matplotlib.rcParams[<span class="st">'figure.dpi'</span>] <span class="op">=</span> <span class="dv">120</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">11</span>, <span class="dv">4</span>))</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>colors <span class="op">=</span> {<span class="st">'uniform'</span>: <span class="st">'#1f77b4'</span>, <span class="st">'weighted'</span>: <span class="st">'#d62728'</span>}</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> variant, color <span class="kw">in</span> colors.items():</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> variant <span class="kw">not</span> <span class="kw">in</span> results:</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">continue</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>    log <span class="op">=</span> results[variant].get(<span class="st">'log_history'</span>, [])</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>    steps  <span class="op">=</span> [e[<span class="st">'step'</span>]  <span class="cf">for</span> e <span class="kw">in</span> log <span class="cf">if</span> <span class="st">'loss'</span> <span class="kw">in</span> e]</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>    losses <span class="op">=</span> [e[<span class="st">'loss'</span>]  <span class="cf">for</span> e <span class="kw">in</span> log <span class="cf">if</span> <span class="st">'loss'</span> <span class="kw">in</span> e]</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> steps:</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>        ax.plot(steps, losses, color<span class="op">=</span>color, linewidth<span class="op">=</span><span class="fl">1.5</span>, label<span class="op">=</span><span class="ss">f'sampler=</span><span class="sc">{</span>variant<span class="sc">}</span><span class="ss">'</span>, alpha<span class="op">=</span><span class="fl">0.9</span>)</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>ax.set_xlabel(<span class="st">'Training step'</span>)</span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>ax.set_ylabel(<span class="st">'Loss (causal LM)'</span>)</span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>ax.set_title(<span class="st">'QLoRA Training Loss — Uniform vs Weighted Sampler'</span>)</span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>ax.legend(fontsize<span class="op">=</span><span class="dv">11</span>)</span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>fig_path <span class="op">=</span> FIGURES_DIR <span class="op">/</span> <span class="st">'train_loss_comparison.png'</span></span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>fig.savefig(fig_path, dpi<span class="op">=</span><span class="dv">150</span>, bbox_inches<span class="op">=</span><span class="st">'tight'</span>)</span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Saved </span><span class="sc">{</span>fig_path<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="step-9-figure-val-f1-chexbert-per-epoch" class="level2">
+<h2 class="anchored" data-anchor-id="step-9-figure-val-f1-chexbert-per-epoch">STEP 9 — Figure: Val F1-CheXbert per epoch</h2>
+<p>Micro and macro F1 over epochs for both runs, with zero-shot baseline reference lines.</p>
+<div id="nb03-fig-f1" class="cell">
+<details open="" class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>fig, axes <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">2</span>, figsize<span class="op">=</span>(<span class="dv">14</span>, <span class="dv">5</span>), sharey<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>metric_names <span class="op">=</span> [<span class="st">'val_f1_chexbert_micro'</span>, <span class="st">'val_f1_chexbert_macro'</span>]</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>titles       <span class="op">=</span> [<span class="st">'Micro F1-CheXbert'</span>, <span class="st">'Macro F1-CheXbert'</span>]</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>zs_values    <span class="op">=</span> [<span class="va">None</span>, <span class="va">None</span>]</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> baseline_results:</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>    m <span class="op">=</span> baseline_results[<span class="st">'metrics'</span>]</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>    zs_values <span class="op">=</span> [m[<span class="st">'f1_chexbert_micro_present'</span>], m[<span class="st">'f1_chexbert_macro_present'</span>]]</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>colors_v <span class="op">=</span> {<span class="st">'uniform'</span>: <span class="st">'#1f77b4'</span>, <span class="st">'weighted'</span>: <span class="st">'#d62728'</span>}</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>markers  <span class="op">=</span> {<span class="st">'uniform'</span>: <span class="st">'o'</span>, <span class="st">'weighted'</span>: <span class="st">'s'</span>}</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ax, metric, title, zs_val <span class="kw">in</span> <span class="bu">zip</span>(axes, metric_names, titles, zs_values):</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> variant <span class="kw">in</span> (<span class="st">'uniform'</span>, <span class="st">'weighted'</span>):</span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> variant <span class="kw">not</span> <span class="kw">in</span> results:</span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>            <span class="cf">continue</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>        hist <span class="op">=</span> results[variant].get(<span class="st">'history'</span>, [])</span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>        epochs <span class="op">=</span> [r[<span class="st">'epoch'</span>] <span class="cf">for</span> r <span class="kw">in</span> hist]</span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>        vals   <span class="op">=</span> [r[metric]  <span class="cf">for</span> r <span class="kw">in</span> hist]</span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>        ax.plot(epochs, vals, marker<span class="op">=</span>markers[variant], color<span class="op">=</span>colors_v[variant],</span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>                linewidth<span class="op">=</span><span class="dv">2</span>, label<span class="op">=</span><span class="ss">f'</span><span class="sc">{</span>variant<span class="sc">}</span><span class="ss">'</span>, markersize<span class="op">=</span><span class="dv">8</span>)</span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> zs_val <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span>:</span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a>        ax.axhline(zs_val, color<span class="op">=</span><span class="st">'gray'</span>, linestyle<span class="op">=</span><span class="st">'--'</span>, linewidth<span class="op">=</span><span class="fl">1.2</span>,</span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a>                   label<span class="op">=</span><span class="ss">f'zero-shot = </span><span class="sc">{</span>zs_val<span class="sc">:.3f}</span><span class="ss">'</span>)</span>
+<span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a>    ax.set_xlabel(<span class="st">'Epoch'</span>)</span>
+<span id="cb11-28"><a href="#cb11-28" aria-hidden="true" tabindex="-1"></a>    ax.set_ylabel(<span class="st">'F1'</span>)</span>
+<span id="cb11-29"><a href="#cb11-29" aria-hidden="true" tabindex="-1"></a>    ax.set_title(title)</span>
+<span id="cb11-30"><a href="#cb11-30" aria-hidden="true" tabindex="-1"></a>    ax.set_ylim(<span class="dv">0</span>, <span class="fl">1.0</span>)</span>
+<span id="cb11-31"><a href="#cb11-31" aria-hidden="true" tabindex="-1"></a>    ax.legend(fontsize<span class="op">=</span><span class="dv">10</span>)</span>
+<span id="cb11-32"><a href="#cb11-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-33"><a href="#cb11-33" aria-hidden="true" tabindex="-1"></a>fig.suptitle(<span class="st">'Val F1-CheXbert per Epoch — QLoRA Fine-Tuning'</span>, fontsize<span class="op">=</span><span class="dv">13</span>)</span>
+<span id="cb11-34"><a href="#cb11-34" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb11-35"><a href="#cb11-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-36"><a href="#cb11-36" aria-hidden="true" tabindex="-1"></a>fig_path <span class="op">=</span> FIGURES_DIR <span class="op">/</span> <span class="st">'train_val_f1_comparison.png'</span></span>
+<span id="cb11-37"><a href="#cb11-37" aria-hidden="true" tabindex="-1"></a>fig.savefig(fig_path, dpi<span class="op">=</span><span class="dv">150</span>, bbox_inches<span class="op">=</span><span class="st">'tight'</span>)</span>
+<span id="cb11-38"><a href="#cb11-38" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Saved </span><span class="sc">{</span>fig_path<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb11-39"><a href="#cb11-39" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="step-10-figure-sampler-weight-distribution" class="level2">
+<h2 class="anchored" data-anchor-id="step-10-figure-sampler-weight-distribution">STEP 10 — Figure: Sampler weight distribution</h2>
+<p>Shows how the importance weighting shifts sampling mass toward rare-label studies.</p>
+<div id="nb03-fig-weights" class="cell">
+<details open="" class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> src.data.labels <span class="im">import</span> CHEXBERT_LABELS</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> src.training.sampler <span class="im">import</span> build_sample_weights</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>train_df <span class="op">=</span> pd.read_parquet(PROCESSED_DIR <span class="op">/</span> <span class="st">'train.parquet'</span>)</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>train_df <span class="op">=</span> train_df[train_df[<span class="st">'findings'</span>].notna() <span class="op">&amp;</span> (train_df[<span class="st">'findings'</span>].<span class="bu">str</span>.strip() <span class="op">!=</span> <span class="st">''</span>)]</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>label_matrix <span class="op">=</span> train_df[CHEXBERT_LABELS].values.astype(<span class="bu">float</span>)</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>p_target   <span class="op">=</span> params[<span class="st">'sampler'</span>].get(<span class="st">'p_target'</span>, {})</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>weight_clip <span class="op">=</span> <span class="bu">float</span>(params[<span class="st">'sampler'</span>].get(<span class="st">'weight_clip'</span>, <span class="fl">10.0</span>))</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>weights_uniform  <span class="op">=</span> build_sample_weights(label_matrix, p_target<span class="op">=</span><span class="va">None</span>, weight_clip<span class="op">=</span>weight_clip)</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>weights_weighted <span class="op">=</span> build_sample_weights(label_matrix, p_target<span class="op">=</span>p_target, weight_clip<span class="op">=</span>weight_clip)</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>fig, axes <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">2</span>, figsize<span class="op">=</span>(<span class="dv">14</span>, <span class="dv">4</span>))</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ax, weights, title, color <span class="kw">in</span> [</span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>    (axes[<span class="dv">0</span>], weights_uniform,  <span class="st">'Uniform sampler weights'</span>, <span class="st">'#1f77b4'</span>),</span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>    (axes[<span class="dv">1</span>], weights_weighted, <span class="st">'Importance weights (weighted sampler)'</span>, <span class="st">'#d62728'</span>),</span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>]:</span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>    ax.hist(weights, bins<span class="op">=</span><span class="dv">60</span>, color<span class="op">=</span>color, alpha<span class="op">=</span><span class="fl">0.8</span>, edgecolor<span class="op">=</span><span class="st">'white'</span>, linewidth<span class="op">=</span><span class="fl">0.3</span>)</span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>    ax.axvline(weights.mean(), color<span class="op">=</span><span class="st">'black'</span>, linestyle<span class="op">=</span><span class="st">'--'</span>, linewidth<span class="op">=</span><span class="fl">1.5</span>,</span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>               label<span class="op">=</span><span class="ss">f'mean=</span><span class="sc">{</span>weights<span class="sc">.</span>mean()<span class="sc">:.2f}</span><span class="ss">'</span>)</span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>    ax.axvline(np.median(weights), color<span class="op">=</span><span class="st">'red'</span>, linestyle<span class="op">=</span><span class="st">':'</span>, linewidth<span class="op">=</span><span class="fl">1.5</span>,</span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a>               label<span class="op">=</span><span class="ss">f'median=</span><span class="sc">{</span>np<span class="sc">.</span>median(weights)<span class="sc">:.2f}</span><span class="ss">'</span>)</span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a>    ax.set_xlabel(<span class="st">'Sample weight'</span>)</span>
+<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a>    ax.set_ylabel(<span class="st">'Training studies'</span>)</span>
+<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a>    ax.set_title(title)</span>
+<span id="cb12-28"><a href="#cb12-28" aria-hidden="true" tabindex="-1"></a>    ax.legend(fontsize<span class="op">=</span><span class="dv">10</span>)</span>
+<span id="cb12-29"><a href="#cb12-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-30"><a href="#cb12-30" aria-hidden="true" tabindex="-1"></a><span class="co"># Annotate ESS for weighted sampler</span></span>
+<span id="cb12-31"><a href="#cb12-31" aria-hidden="true" tabindex="-1"></a>ess <span class="op">=</span> weights_weighted.<span class="bu">sum</span>()<span class="op">**</span><span class="dv">2</span> <span class="op">/</span> (weights_weighted<span class="op">**</span><span class="dv">2</span>).<span class="bu">sum</span>()</span>
+<span id="cb12-32"><a href="#cb12-32" aria-hidden="true" tabindex="-1"></a>n   <span class="op">=</span> <span class="bu">len</span>(weights_weighted)</span>
+<span id="cb12-33"><a href="#cb12-33" aria-hidden="true" tabindex="-1"></a>axes[<span class="dv">1</span>].set_title(</span>
+<span id="cb12-34"><a href="#cb12-34" aria-hidden="true" tabindex="-1"></a>    <span class="ss">f'Importance weights — ESS=</span><span class="sc">{</span>ess<span class="sc">:.0f}</span><span class="ss">/</span><span class="sc">{</span>n<span class="sc">}</span><span class="ss"> (</span><span class="sc">{</span><span class="dv">100</span><span class="op">*</span>ess<span class="op">/</span>n<span class="sc">:.1f}</span><span class="ss">%)'</span></span>
+<span id="cb12-35"><a href="#cb12-35" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb12-36"><a href="#cb12-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-37"><a href="#cb12-37" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb12-38"><a href="#cb12-38" aria-hidden="true" tabindex="-1"></a>fig_path <span class="op">=</span> FIGURES_DIR <span class="op">/</span> <span class="st">'train_sampler_weights_comparison.png'</span></span>
+<span id="cb12-39"><a href="#cb12-39" aria-hidden="true" tabindex="-1"></a>fig.savefig(fig_path, dpi<span class="op">=</span><span class="dv">150</span>, bbox_inches<span class="op">=</span><span class="st">'tight'</span>)</span>
+<span id="cb12-40"><a href="#cb12-40" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Saved </span><span class="sc">{</span>fig_path<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb12-41"><a href="#cb12-41" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="step-11-figure-per-label-f1-comparison" class="level2">
+<h2 class="anchored" data-anchor-id="step-11-figure-per-label-f1-comparison">STEP 11 — Figure: Per-label F1 comparison</h2>
+<p>Side-by-side per-label F1 for zero-shot vs uniform fine-tune vs weighted fine-tune, at the best checkpoint of each run.</p>
+<div id="nb03-fig-perlabel" class="cell">
+<details open="" class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Collect per-label F1 from each run's best epoch</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _best_per_label(results_dict: <span class="bu">dict</span>) <span class="op">-&gt;</span> <span class="bu">dict</span>:</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Return per_label_f1 dict from the best epoch in history."""</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    hist <span class="op">=</span> results_dict.get(<span class="st">'history'</span>, [])</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> hist:</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> {}</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>    best <span class="op">=</span> <span class="bu">max</span>(hist, key<span class="op">=</span><span class="kw">lambda</span> r: r[<span class="st">'val_f1_chexbert_micro'</span>])</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> best.get(<span class="st">'per_label_f1'</span>, {})</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>series <span class="op">=</span> {}</span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> baseline_results:</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>    series[<span class="st">'zero-shot'</span>] <span class="op">=</span> pd.Series(baseline_results[<span class="st">'metrics'</span>][<span class="st">'per_label_f1_present'</span>])</span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> variant <span class="kw">in</span> (<span class="st">'uniform'</span>, <span class="st">'weighted'</span>):</span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> variant <span class="kw">in</span> results:</span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>        pl <span class="op">=</span> _best_per_label(results[variant])</span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> pl:</span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>            series[variant] <span class="op">=</span> pd.Series(pl)</span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> series:</span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">'No results to plot — run training first.'</span>)</span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a>    df_plot <span class="op">=</span> pd.DataFrame(series).reindex(CHEXBERT_LABELS).fillna(<span class="dv">0</span>)</span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a>    x <span class="op">=</span> np.arange(<span class="bu">len</span>(CHEXBERT_LABELS))</span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a>    n_cols <span class="op">=</span> <span class="bu">len</span>(df_plot.columns)</span>
+<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a>    w <span class="op">=</span> <span class="fl">0.8</span> <span class="op">/</span> n_cols</span>
+<span id="cb13-27"><a href="#cb13-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-28"><a href="#cb13-28" aria-hidden="true" tabindex="-1"></a>    col_colors <span class="op">=</span> {<span class="st">'zero-shot'</span>: <span class="st">'#aec7e8'</span>, <span class="st">'uniform'</span>: <span class="st">'#1f77b4'</span>, <span class="st">'weighted'</span>: <span class="st">'#d62728'</span>}</span>
+<span id="cb13-29"><a href="#cb13-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-30"><a href="#cb13-30" aria-hidden="true" tabindex="-1"></a>    fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">14</span>, <span class="dv">6</span>))</span>
+<span id="cb13-31"><a href="#cb13-31" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i, col <span class="kw">in</span> <span class="bu">enumerate</span>(df_plot.columns):</span>
+<span id="cb13-32"><a href="#cb13-32" aria-hidden="true" tabindex="-1"></a>        offset <span class="op">=</span> (i <span class="op">-</span> n_cols <span class="op">/</span> <span class="dv">2</span> <span class="op">+</span> <span class="fl">0.5</span>) <span class="op">*</span> w</span>
+<span id="cb13-33"><a href="#cb13-33" aria-hidden="true" tabindex="-1"></a>        ax.bar(x <span class="op">+</span> offset, df_plot[col].values, w,</span>
+<span id="cb13-34"><a href="#cb13-34" aria-hidden="true" tabindex="-1"></a>               label<span class="op">=</span>col, color<span class="op">=</span>col_colors.get(col, <span class="ss">f'C</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">'</span>), alpha<span class="op">=</span><span class="fl">0.85</span>)</span>
+<span id="cb13-35"><a href="#cb13-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-36"><a href="#cb13-36" aria-hidden="true" tabindex="-1"></a>    ax.set_xticks(x)</span>
+<span id="cb13-37"><a href="#cb13-37" aria-hidden="true" tabindex="-1"></a>    ax.set_xticklabels(CHEXBERT_LABELS, rotation<span class="op">=</span><span class="dv">40</span>, ha<span class="op">=</span><span class="st">'right'</span>, fontsize<span class="op">=</span><span class="dv">9</span>)</span>
+<span id="cb13-38"><a href="#cb13-38" aria-hidden="true" tabindex="-1"></a>    ax.set_ylabel(<span class="st">'F1-CheXbert'</span>)</span>
+<span id="cb13-39"><a href="#cb13-39" aria-hidden="true" tabindex="-1"></a>    ax.set_ylim(<span class="dv">0</span>, <span class="fl">1.0</span>)</span>
+<span id="cb13-40"><a href="#cb13-40" aria-hidden="true" tabindex="-1"></a>    ax.set_title(<span class="st">'Per-Label F1-CheXbert: Zero-Shot vs Fine-Tuned (Uniform vs Weighted)'</span>)</span>
+<span id="cb13-41"><a href="#cb13-41" aria-hidden="true" tabindex="-1"></a>    ax.legend(fontsize<span class="op">=</span><span class="dv">11</span>)</span>
+<span id="cb13-42"><a href="#cb13-42" aria-hidden="true" tabindex="-1"></a>    plt.tight_layout()</span>
+<span id="cb13-43"><a href="#cb13-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-44"><a href="#cb13-44" aria-hidden="true" tabindex="-1"></a>    fig_path <span class="op">=</span> FIGURES_DIR <span class="op">/</span> <span class="st">'train_per_label_f1_comparison.png'</span></span>
+<span id="cb13-45"><a href="#cb13-45" aria-hidden="true" tabindex="-1"></a>    fig.savefig(fig_path, dpi<span class="op">=</span><span class="dv">150</span>, bbox_inches<span class="op">=</span><span class="st">'tight'</span>)</span>
+<span id="cb13-46"><a href="#cb13-46" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f'Saved </span><span class="sc">{</span>fig_path<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb13-47"><a href="#cb13-47" aria-hidden="true" tabindex="-1"></a>    plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="step-12-metric-summary-table" class="level2">
+<h2 class="anchored" data-anchor-id="step-12-metric-summary-table">STEP 12 — Metric summary table</h2>
+<p>Compare all three conditions: zero-shot / uniform fine-tune / weighted fine-tune. Only clinical metrics shown here (NLG metrics are in notebook 04).</p>
+<div id="nb03-summary" class="cell">
+<details open="" class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>rows <span class="op">=</span> []</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> baseline_results:</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    m <span class="op">=</span> baseline_results[<span class="st">'metrics'</span>]</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>    rows.append({</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>        <span class="st">'Condition'</span>        : <span class="st">'Zero-shot (no fine-tune)'</span>,</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>        <span class="st">'Sampler'</span>          : <span class="st">'—'</span>,</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>        <span class="st">'Best epoch'</span>       : <span class="st">'—'</span>,</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>        <span class="st">'Micro F1 (present)'</span>: <span class="bu">round</span>(m[<span class="st">'f1_chexbert_micro_present'</span>], <span class="dv">4</span>),</span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>        <span class="st">'Macro F1 (present)'</span>: <span class="bu">round</span>(m[<span class="st">'f1_chexbert_macro_present'</span>], <span class="dv">4</span>),</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>        <span class="st">'BERTScore F1'</span>     : <span class="bu">round</span>(m.get(<span class="st">'bertscore_f1'</span>, <span class="bu">float</span>(<span class="st">'nan'</span>)), <span class="dv">4</span>),</span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>    })</span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> variant <span class="kw">in</span> (<span class="st">'uniform'</span>, <span class="st">'weighted'</span>):</span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> variant <span class="kw">not</span> <span class="kw">in</span> results:</span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>        <span class="cf">continue</span></span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>    r <span class="op">=</span> results[variant]</span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>    best_hist <span class="op">=</span> <span class="bu">max</span>(r.get(<span class="st">'history'</span>, [{}]), key<span class="op">=</span><span class="kw">lambda</span> x: x.get(<span class="st">'val_f1_chexbert_micro'</span>, <span class="op">-</span><span class="dv">1</span>))</span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>    rows.append({</span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>        <span class="st">'Condition'</span>        : <span class="ss">f'QLoRA fine-tune'</span>,</span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a>        <span class="st">'Sampler'</span>          : variant,</span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a>        <span class="st">'Best epoch'</span>       : r.get(<span class="st">'best_epoch'</span>, <span class="st">'—'</span>),</span>
+<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a>        <span class="st">'Micro F1 (present)'</span>: <span class="bu">round</span>(best_hist.get(<span class="st">'val_f1_chexbert_micro'</span>, <span class="bu">float</span>(<span class="st">'nan'</span>)), <span class="dv">4</span>),</span>
+<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a>        <span class="st">'Macro F1 (present)'</span>: <span class="bu">round</span>(best_hist.get(<span class="st">'val_f1_chexbert_macro'</span>, <span class="bu">float</span>(<span class="st">'nan'</span>)), <span class="dv">4</span>),</span>
+<span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a>        <span class="st">'BERTScore F1'</span>     : <span class="bu">float</span>(<span class="st">'nan'</span>),  <span class="co"># computed in notebook 04</span></span>
+<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a>    })</span>
+<span id="cb14-27"><a href="#cb14-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-28"><a href="#cb14-28" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> rows:</span>
+<span id="cb14-29"><a href="#cb14-29" aria-hidden="true" tabindex="-1"></a>    summary_df <span class="op">=</span> pd.DataFrame(rows).set_index([<span class="st">'Condition'</span>, <span class="st">'Sampler'</span>])</span>
+<span id="cb14-30"><a href="#cb14-30" aria-hidden="true" tabindex="-1"></a>    display(summary_df)</span>
+<span id="cb14-31"><a href="#cb14-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-32"><a href="#cb14-32" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Save as figure</span></span>
+<span id="cb14-33"><a href="#cb14-33" aria-hidden="true" tabindex="-1"></a>    fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">12</span>, <span class="fl">1.5</span> <span class="op">+</span> <span class="fl">0.6</span> <span class="op">*</span> <span class="bu">len</span>(rows)))</span>
+<span id="cb14-34"><a href="#cb14-34" aria-hidden="true" tabindex="-1"></a>    ax.axis(<span class="st">'off'</span>)</span>
+<span id="cb14-35"><a href="#cb14-35" aria-hidden="true" tabindex="-1"></a>    summary_df_reset <span class="op">=</span> summary_df.reset_index()</span>
+<span id="cb14-36"><a href="#cb14-36" aria-hidden="true" tabindex="-1"></a>    tbl <span class="op">=</span> ax.table(</span>
+<span id="cb14-37"><a href="#cb14-37" aria-hidden="true" tabindex="-1"></a>        cellText<span class="op">=</span>summary_df_reset.values,</span>
+<span id="cb14-38"><a href="#cb14-38" aria-hidden="true" tabindex="-1"></a>        colLabels<span class="op">=</span>summary_df_reset.columns.tolist(),</span>
+<span id="cb14-39"><a href="#cb14-39" aria-hidden="true" tabindex="-1"></a>        cellLoc<span class="op">=</span><span class="st">'center'</span>, loc<span class="op">=</span><span class="st">'center'</span>,</span>
+<span id="cb14-40"><a href="#cb14-40" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb14-41"><a href="#cb14-41" aria-hidden="true" tabindex="-1"></a>    tbl.auto_set_font_size(<span class="va">False</span>)</span>
+<span id="cb14-42"><a href="#cb14-42" aria-hidden="true" tabindex="-1"></a>    tbl.set_fontsize(<span class="dv">10</span>)</span>
+<span id="cb14-43"><a href="#cb14-43" aria-hidden="true" tabindex="-1"></a>    tbl.scale(<span class="fl">1.0</span>, <span class="fl">1.8</span>)</span>
+<span id="cb14-44"><a href="#cb14-44" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> j <span class="kw">in</span> <span class="bu">range</span>(<span class="bu">len</span>(summary_df_reset.columns)):</span>
+<span id="cb14-45"><a href="#cb14-45" aria-hidden="true" tabindex="-1"></a>        tbl[(<span class="dv">0</span>, j)].set_facecolor(<span class="st">'#2c5f8a'</span>)</span>
+<span id="cb14-46"><a href="#cb14-46" aria-hidden="true" tabindex="-1"></a>        tbl[(<span class="dv">0</span>, j)].set_text_props(color<span class="op">=</span><span class="st">'white'</span>, fontweight<span class="op">=</span><span class="st">'bold'</span>)</span>
+<span id="cb14-47"><a href="#cb14-47" aria-hidden="true" tabindex="-1"></a>    ax.set_title(<span class="st">'QLoRA Training — Metric Summary (val set)'</span>, fontsize<span class="op">=</span><span class="dv">12</span>, pad<span class="op">=</span><span class="dv">12</span>)</span>
+<span id="cb14-48"><a href="#cb14-48" aria-hidden="true" tabindex="-1"></a>    plt.tight_layout()</span>
+<span id="cb14-49"><a href="#cb14-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-50"><a href="#cb14-50" aria-hidden="true" tabindex="-1"></a>    fig_path <span class="op">=</span> FIGURES_DIR <span class="op">/</span> <span class="st">'train_metric_summary.png'</span></span>
+<span id="cb14-51"><a href="#cb14-51" aria-hidden="true" tabindex="-1"></a>    fig.savefig(fig_path, dpi<span class="op">=</span><span class="dv">150</span>, bbox_inches<span class="op">=</span><span class="st">'tight'</span>)</span>
+<span id="cb14-52"><a href="#cb14-52" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f'Saved </span><span class="sc">{</span>fig_path<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb14-53"><a href="#cb14-53" aria-hidden="true" tabindex="-1"></a>    plt.show()</span>
+<span id="cb14-54"><a href="#cb14-54" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb14-55"><a href="#cb14-55" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">'No results to display — run training first.'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="done" class="level2">
+<h2 class="anchored" data-anchor-id="done">Done</h2>
+<p>Best checkpoints are in:</p>
+<pre><code>checkpoints/qlora_uniform/best_model/
+checkpoints/qlora_weighted/best_model/</code></pre>
+<p>Figures saved to <code>reports/figures/</code>:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 47%">
+<col style="width: 52%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Figure</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>train_loss_comparison.png</code></td>
+<td>Training loss curves</td>
+</tr>
+<tr class="even">
+<td><code>train_val_f1_comparison.png</code></td>
+<td>Val F1-CheXbert per epoch</td>
+</tr>
+<tr class="odd">
+<td><code>train_sampler_weights_comparison.png</code></td>
+<td>Uniform vs importance weight distribution</td>
+</tr>
+<tr class="even">
+<td><code>train_per_label_f1_comparison.png</code></td>
+<td>Per-label F1: zero-shot vs both fine-tuned variants</td>
+</tr>
+<tr class="odd">
+<td><code>train_metric_summary.png</code></td>
+<td>Summary table</td>
+</tr>
+<tr class="even">
+<td><code>train_loss_{variant}.png</code></td>
+<td>Per-run loss (also generated by train.py)</td>
+</tr>
+<tr class="odd">
+<td><code>train_val_f1_{variant}.png</code></td>
+<td>Per-run F1 (also generated by train.py)</td>
+</tr>
+<tr class="even">
+<td><code>train_sampler_weights.png</code></td>
+<td>Weight histogram (generated by train.py)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Next step:</strong> <code>notebooks/04_eval_and_figures.ipynb</code> — full metric stack on test set, shift experiment, calibration analysis.</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+    const viewSource = window.document.getElementById('quarto-view-source') ||
+                       window.document.getElementById('quarto-code-tools-source');
+    if (viewSource) {
+      const sourceUrl = viewSource.getAttribute("data-quarto-source-url");
+      viewSource.addEventListener("click", function(e) {
+        if (sourceUrl) {
+          // rstudio viewer pane
+          if (/\bcapabilities=\b/.test(window.location)) {
+            window.open(sourceUrl);
+          } else {
+            window.location.href = sourceUrl;
+          }
+        } else {
+          const modal = new bootstrap.Modal(document.getElementById('quarto-embedded-source-code-modal'));
+          modal.show();
+        }
+        return false;
+      });
+    }
+    function toggleCodeHandler(show) {
+      return function(e) {
+        const detailsSrc = window.document.querySelectorAll(".cell > details > .sourceCode");
+        for (let i=0; i<detailsSrc.length; i++) {
+          const details = detailsSrc[i].parentElement;
+          if (show) {
+            details.open = true;
+          } else {
+            details.removeAttribute("open");
+          }
+        }
+        const cellCodeDivs = window.document.querySelectorAll(".cell > .sourceCode");
+        const fromCls = show ? "hidden" : "unhidden";
+        const toCls = show ? "unhidden" : "hidden";
+        for (let i=0; i<cellCodeDivs.length; i++) {
+          const codeDiv = cellCodeDivs[i];
+          if (codeDiv.classList.contains(fromCls)) {
+            codeDiv.classList.remove(fromCls);
+            codeDiv.classList.add(toCls);
+          } 
+        }
+        return false;
+      }
+    }
+    const hideAllCode = window.document.getElementById("quarto-hide-all-code");
+    if (hideAllCode) {
+      hideAllCode.addEventListener("click", toggleCodeHandler(false));
+    }
+    const showAllCode = window.document.getElementById("quarto-show-all-code");
+    if (showAllCode) {
+      showAllCode.addEventListener("click", toggleCodeHandler(true));
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/diegovillaba\.github\.io\/ReportCXR");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>ReportCXR Technical Challenge</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+<p>Built with Quarto</p>
+</div>
+  </div>
+</footer>
+
+
+
+
+</body></html>

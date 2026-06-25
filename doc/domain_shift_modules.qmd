@@ -1,0 +1,73 @@
+---
+title: "Domain Shift Audit Modules"
+author: "Diego Villalba (Applied Research Candidate)"
+date: "2026-06-25"
+---
+
+::: {.non-technical-summary}
+##### Section Summary (Non-Technical)
+This page documents the Stress-Testing and Audit suite. The codebase packages individual stress-tests (scanner noise, Spanish translation evaluation, and epidemiological shifts) under a single, unified class called `DomainShiftAudit`. This class acts as a reusable tool. Instead of running separate experiments, developers can run this audit tool on any model-data pair to analyze degradation behavior before deployment.
+:::
+
+## Module: audit.py
+
+Located at `src/domain_shift_audit/audit.py`.
+
+### Purpose
+Acts as the central orchestrator for the domain shift audit. It unifies the three sub-experiments under a common interface:
+
+```python
+auditor = DomainShiftAudit(model, processor)
+result = auditor.audit(dataset, images, shift_type='acquisition', perturb_type='gaussian_noise')
+```
+
+### Key Classes
+*   `ShiftAuditResult`: Dataclass container returning:
+    *   `shift_type`: Axis probed (`acquisition`, `language`, or `prevalence`).
+    *   `degradation_curve`: DataFrame containing columns `[magnitude, metric, relative_degradation]`.
+    *   `ess`: Effective Sample Size series (populated for prevalence sweeps).
+    *   `ci_low` / `ci_high`: Bootstrap confidence intervals.
+*   `DomainShiftAudit`: The runner class. Orchestrates the pipeline and delegates execution to specialized shift modules depending on the configuration.
+
+---
+
+## Module: acquisition_shift.py
+
+Located at `src/domain_shift_audit/acquisition_shift.py`.
+
+### Purpose
+Simulates scanner-level perturbations on input images to evaluate visual encoder robustness under hardware discrepancies.
+
+### Supported Perturbations
+*   `perturb_brightness(img, factor)`: Scales pixel intensities.
+*   `perturb_contrast(img, factor)`: Adjusts contrast scaling.
+*   `perturb_gamma(img, gamma)`: Power-law correction $I_{out} = (I_{in}/255)^{\gamma} \times 255$.
+*   `perturb_gaussian_noise(img, std)`: Adds zero-mean Gaussian noise.
+*   `perturb_jpeg_compression(img, quality)`: Performs lossy compression.
+
+### Key Functions
+*   `run_acquisition_sweep(images: list, perturb_type: PerturbType, magnitudes: list, metric_fn: Callable) -> AcquisitionSweepResult`: Iterates over magnitudes, applies image transforms, runs the metric evaluation function, and compiles the degradation curve.
+
+---
+
+## Module: language_shift.py
+
+Located at `src/domain_shift_audit/language_shift.py`.
+
+### Purpose
+Evaluates MedGemma's generation when prompting and outputting reports in Spanish.
+
+### Key Functions
+*   `run_language_shift(model: Any, processor: Any, dataset: pd.DataFrame, target_language: str) -> dict`: Evaluates predictions generated in Spanish against translated reference findings. It reports BLEU, ROUGE, and BERTScore variations relative to the English baseline.
+
+---
+
+## Module: prevalence_shift.py
+
+Located at `src/domain_shift_audit/prevalence_shift.py`.
+
+### Purpose
+Re-envisions the importance-weighted test set sweep as an audit of model robustness under regional epidemiological changes (e.g., target LATAM clinical environments).
+
+### Key Functions
+*   `run_prevalence_audit(predictions: list, references: list, label_matrix: np.ndarray, target_scenarios: list[dict]) -> dict`: Evaluates model degradation across clinical scenarios, matching predictions against simulated target disease prevalences, and tracking ESS.

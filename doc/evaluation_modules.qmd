@@ -1,0 +1,63 @@
+---
+title: "Evaluation Modules"
+author: "Diego Villalba (Applied Research Candidate)"
+date: "2026-06-25"
+---
+
+::: {.non-technical-summary}
+##### Section Summary (Non-Technical)
+This page documents the modules used to evaluate the model's reports. It details the functions that compute standard natural language metrics (BLEU, ROUGE, BERTScore) and clinical classification metrics (CheXbert). It also documents the code that calculates confidence calibration (how well the model's confidence aligns with actual accuracy) and importance-weighted test evaluation.
+:::
+
+## Module: metrics.py
+
+Located at `src/eval/metrics.py`.
+
+### Purpose
+Implements the core metric evaluation stack. It handles natural language generation (NLG) overlap, semantic embedding matching, and clinical classification labelling.
+
+### Key Metrics Supported
+*   **CheXbert F1**: Runs CheXbert on generated vs. reference text, generating 14-dimensional pathology vectors, and computes micro and macro F1 scores.
+*   **BERTScore**: Computes contextual similarity using a DeBERTa language model (`microsoft/deberta-xlarge-mnli`). It is robust to vocabulary changes.
+*   **BLEU-4 / ROUGE-L**: Measures token overlap and common subsequences, used primarily for comparison with existing literature.
+
+### Key Functions
+*   `compute_all_metrics(predictions: list[str], references: list[str], policy: UncertaintyPolicy) -> dict`: Evaluates the generated findings against reference text using the full metric stack.
+*   `_patch_bert_score_overflow()`: Workaround function that patches `bert_score.utils.sent_encode` to prevent tokenizer length conversion overflows.
+
+---
+
+## Module: calibration.py
+
+Located at `src/eval/calibration.py`.
+
+### Purpose
+Measures the calibration gap between the generated report distribution and the reference reports.
+
+### Key Calculations
+*   **Prevalence Gap**: The absolute difference between the prevalence of a pathology in the generated reports vs. the reference reports.
+*   **Maximum Mean Discrepancy (MMD)**: Measures divergence between the joint multi-label distributions of the generated and reference report datasets.
+
+### Key Functions
+*   `compute_prevalence_gaps(pred_matrix: np.ndarray, ref_matrix: np.ndarray) -> pd.Series`: Computes absolute classification prevalence errors per clinical pathology.
+*   `evaluate_multilabel_calibration(pred_matrix: np.ndarray, ref_matrix: np.ndarray) -> dict`: Returns the overall MMD metric and divergence statistics.
+
+---
+
+## Module: shift_experiment.py
+
+Located at `src/eval/shift_experiment.py`.
+
+### Purpose
+Implements the importance-weighted test set evaluation to simulate different epidemiology mixes (prevalence shifts) without requiring distinct test sets.
+
+### Key Mathematical Formulations
+When re-weighting the test set to represent a target prevalence, each study $j$ is assigned a test weight $v_j$. Weighted classification metrics use these weights to compute weighted precision and recall.
+
+To verify the statistical stability of the weighted estimates, we calculate the **Effective Sample Size (ESS)**:
+
+$$ESS = \frac{\left( \sum_{j=1}^N v_j \right)^2}{\sum_{j=1}^N v_j^2}$$
+
+### Key Functions
+*   `compute_weighted_metrics(predictions: list[str], references: list[str], weights: np.ndarray) -> dict`: Calculates weighted classification and BERTScore statistics.
+*   `run_prevalence_sweep(predictions: list[str], references: list[str], target_prevalences: list[dict]) -> pd.DataFrame`: Sweeps across multiple target prevalence profiles, reporting performance degradation curves along with the corresponding ESS values.

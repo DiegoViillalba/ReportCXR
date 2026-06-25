@@ -1,0 +1,27 @@
+---
+title: "6. Production Scaling"
+author: "Diego Villalba (Applied Research Candidate)"
+date: "2026-06-25"
+---
+
+::: {.non-technical-summary}
+##### Section Summary (Non-Technical)
+This section looks at what happens when we move from research to production. We discuss the speed (latency) and cost of running a 4-billion parameter model in real-time, explain how we can build safety systems that let the AI say "I don't know" when its confidence is low, and introduce advanced medical metrics that evaluate clinical errors (such as swapping left and right) rather than just looking at sentence similarity.
+:::
+
+## Advanced Clinical Metrics
+
+While BLEU, ROUGE, and BERTScore measure token overlap and semantic similarity, they do not guarantee clinical accuracy. In production, we propose evaluating:
+
+1.  **GREEN (LLM-as-a-Judge)**: A GPT-4 based metric trained to identify and categorize clinically significant errors (e.g., misidentifying lateralities, missing critical findings, or hallucinating devices).
+2.  **RadCliQ (Radiology Report Clinical Quality)**: A metric that combines lexical overlap and clinical entity matching, calibrated directly to match human radiologist error ratings.
+3.  **RaTEScore**: A semantic metric specifically designed for medical report generation, showing robust handling of clinical synonyms and negation detection.
+
+## Production Serving Considerations
+
+Serving a 4B parameter model in real-time clinical workflows requires careful infrastructure design:
+
+*   **Latency**: Average token generation for 256 tokens on a modern GPU takes ~1-3 seconds. For real-time radiologist dictation assistance, streaming generation tokens via WebSockets is required.
+*   **Abstention & Selective Prediction**: A clinical model must know when to say "I don't know." We propose implementing an abstention threshold based on output token entropy. If the model's confidence falls below a threshold, the study is automatically escalated to a senior radiologist without AI output.
+*   **OOD (Out-of-Distribution) Guardrails**: A production pipeline should run our `DomainShiftAudit` tests on a small batch of incoming hospital data weekly. If the computed image noise or disease prevalence shifts drastically, the system flags a warning to the MLOps team.
+*   **Real OOD Validation**: A single dataset can never prove generalization. We discuss why validating on a second independent clinical dataset from a separate hospital system is a mandatory prerequisite for clinical deployment.

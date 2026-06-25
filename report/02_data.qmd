@@ -1,0 +1,44 @@
+---
+title: "2. Data Distribution & Sampler Correction"
+author: "Diego Villalba (Applied Research Candidate)"
+date: "2026-06-25"
+---
+
+::: {.non-technical-summary}
+##### Section Summary (Non-Technical)
+This section explains how we handle the huge imbalance in clinical data. Most X-rays are completely normal, meaning that an AI trained on this data would quickly learn to default to predicting "normal" to get easy high scores. We solve this by calculating mathematical weights for each study. When the AI trains, it is shown rare pathologies more frequently and normal X-rays less frequently. This forces the model to actually learn the signatures of rare diseases rather than taking lazy shortcuts.
+:::
+
+## Dataset Distribution
+
+The Indiana University Chest X-ray (IU CXR) dataset is heavily skewed toward normal findings. Out of ~3,300 training studies, **~56%** contain "No Finding." Rare diseases (such as Pneumothorax or Consolidation) account for less than 1% of the dataset.
+
+::: {#fig-dataset-dist layout="[[1, 1], [1]]"}
+![Label Prevalences in the IU CXR Dataset](../reports/figures/label_prevalences.png){#fig-prevalences}
+
+![Pathology Co-occurrence Matrix](../reports/figures/cooccurrence_matrix.png){#fig-cooccurrence}
+
+![Effective Sample Size (ESS) per Clinical Label](../reports/figures/class_ess.png){#fig-ess}
+
+Clinical data distributions and label statistics.
+:::
+
+The severe class imbalance is illustrated in @fig-prevalences and @fig-cooccurrence. To further quantify the representation of rare pathologies, we compute the Effective Sample Size (ESS) per class (see @fig-ess).
+
+## Importance Sampling & Sampler Correction
+
+To prevent the model from collapsing to the majority class and simply predicting "normal" for all patients, we implement a `WeightedRandomSampler`. For each study $j$, we compute an importance weight $w_j$ based on the target prevalences specified in `params.yaml`:
+
+$$w_j = \text{clip}\left( \left( \prod_{l \in L_j} \frac{p_{\text{target}}(l)}{p_{\text{dataset}}(l)} \right)^{\frac{1}{|L_j|}}, \text{clip\_val} \right)$$
+
+Where:
+*   $L_j$ is the set of positive pathologies present in study $j$.
+*   $p_{\text{target}}(l)$ is the user-specified target prevalence for pathology $l$.
+*   $p_{\text{dataset}}(l)$ is the empirical prevalence of pathology $l$ in the training set.
+*   $\text{clip\_val}$ is the clipping multiplier (`sampler.weight_clip = 10.0`) to avoid high-variance gradients from extremely rare combinations.
+
+For studies with no positive pathologies ("No Finding"), we assign a base weight:
+
+$$w_j = \frac{p_{\text{target}}(\text{No Finding})}{p_{\text{dataset}}(\text{No Finding})}$$
+
+Applying these weights at the batch-selection level forces the model to encounter rare pathology patterns during backpropagation without modifying the loss function, avoiding gradient-scale instabilities.
