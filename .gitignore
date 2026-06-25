@@ -2,8 +2,9 @@
 data/raw/
 data/processed/
 
-# Model checkpoints and caches
+# Model checkpoints and caches — weights gitignored, result JSONs tracked
 checkpoints/
+!checkpoints/**/training_results.json
 *.ckpt
 *.pt
 *.pth
