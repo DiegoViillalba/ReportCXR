@@ -307,6 +307,7 @@ class F1CheckpointCallback(TrainerCallback):
             device=device,
             verbose=False,
             batch_size=32,
+            max_length=512,  # prevents OverflowError in newer tokenizers (sys.maxsize → Rust usize)
         )
         bertscore_f1 = float(F.mean())
         logger.info("Epoch %d | val_bertscore_f1=%.4f", epoch, bertscore_f1)
