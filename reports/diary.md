@@ -128,3 +128,42 @@ CheXbert sees "The lungs are hyperexpanded with flattened diaphragms" and labels
 3. **Do not change LR or epochs** — v2 config (LR=5e-5, 2 epochs) is fine. The training is working. The issue was measurement, not learning.
 
 4. **Verify on ground truth:** run CheXbert on the raw IU X-ray val reference reports (not model output). If they also score ~0.04 macro F1, the mismatch is confirmed at dataset level and CheXbert should be dropped entirely as a metric for this project.
+
+---
+
+## 2026-06-23 — Switch primary eval metric to BERTScore-F1 (v3)
+
+### Motivation
+
+H2 was confirmed: the model generates clinically correct pathology descriptions in IU X-ray vocabulary that CheXbert cannot parse. Using CheXbert micro-F1 to select the best checkpoint means we were saving the worst model (the one that best learned to say "No Finding"), not the best one.
+
+### Changes implemented
+
+**`src/training/train.py` — `F1CheckpointCallback`:**
+- Added `bertscore_model` parameter (reads from `params.yaml → eval.bertscore_model`).
+- Each epoch now computes two metrics:
+  - **BERTScore-F1** (primary) — checkpoint selection. Language-model–based text similarity, robust to IU X-ray vocabulary. Uses `microsoft/deberta-xlarge-mnli`. Adds ~3–5 min per epoch.
+  - **CheXbert micro/macro F1** (diagnostic only) — still logged to W&B and saved in history for comparison, but no longer drives which model gets saved.
+- `training_results.json` now has `best_val_bertscore_f1` as primary key; `best_val_f1_chexbert_micro` kept for backward compat.
+- `plot_training_figures`: val F1 chart now shows all three curves (BERTScore primary in green, CheXbert micro/macro dashed).
+
+**`notebooks/03_train_local.ipynb`:**
+- STEP 7 (load results): reads `best_val_bertscore_f1` with fallback to old CheXbert key for pre-v3 result files.
+- STEP 12 (summary table): BERTScore F1 is now the first column and highlighted green; CheXbert micro/macro demoted to rightmost diagnostic columns.
+
+### Expected v3 outcome
+
+BERTScore-F1 for zero-shot baseline is **0.6938** (from notebook 02). Fine-tuning should push this above 0.70, since the model is learning IU X-ray style and generating more report-like text than zero-shot. If fine-tuned BERTScore < zero-shot, there is still a real training problem worth investigating.
+
+### How to launch v3 training on the remote server
+
+```bash
+git pull --rebase    # pulls BERTScore-as-primary-metric changes
+mkdir -p logs
+nohup bash -c '
+  python -m src.training.train --sampler uniform  --run_name qlora_uniform_v2  > logs/train_uniform_v2.log  2>&1 &&
+  python -m src.training.train --sampler weighted --run_name qlora_weighted_v2 > logs/train_weighted_v2.log 2>&1
+' &
+```
+
+Checkpoints will land in `checkpoints/qlora_uniform_v2/` and `checkpoints/qlora_weighted_v2/` (run_name bug was fixed in commit `78f0903`).
