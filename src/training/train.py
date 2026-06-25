@@ -489,7 +489,7 @@ def train(args: argparse.Namespace) -> None:
         else root / params["data"]["images_dir"] / "images_normalized"
     )
     figures_dir = root / "reports" / "figures"
-    checkpoint_dir = root / "checkpoints" / f"qlora_{args.sampler}"
+    checkpoint_dir = root / "checkpoints" / (args.run_name or f"qlora_{args.sampler}")
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
     lp = params["lora"]
@@ -714,9 +714,8 @@ def train(args: argparse.Namespace) -> None:
         wandb_run.finish()
 
     logger.info(
-        "Done. Best checkpoint at checkpoints/qlora_%s/best_model/ "
-        "(epoch=%d, micro F1=%.4f)",
-        args.sampler, f1_callback.best_epoch, f1_callback.best_f1,
+        "Done. Best checkpoint at %s/best_model/ (epoch=%d, micro F1=%.4f)",
+        checkpoint_dir, f1_callback.best_epoch, f1_callback.best_f1,
     )
 
 
