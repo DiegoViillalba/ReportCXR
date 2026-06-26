@@ -52,3 +52,4 @@ Thumbs.db
 
 /.quarto/
 **/*.quarto_ipynb
+.claude/worktrees/
