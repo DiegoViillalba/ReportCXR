@@ -116,21 +116,21 @@ def generate_report(image: Image.Image, indication: str) -> str:
 
 @GPU
 def free_chat(image: Image.Image, history: list, user_message: str) -> tuple[list, str]:
+    """history is a list of (user, assistant) tuples (gradio 4 format)."""
     _load_model()
 
     if not user_message.strip():
         return history, ""
 
     if image is None:
-        history.append({"role": "assistant", "content": "Please upload an X-ray image to start the conversation."})
-        return history, ""
+        return history + [(user_message, "Please upload an X-ray image first.")], ""
 
-    # Build full message list from history
+    # Rebuild messages from tuple history
     messages = []
-    for turn in history:
-        messages.append({"role": turn["role"], "content": turn["content"]})
+    for user_turn, assistant_turn in history:
+        messages.append({"role": "user",      "content": user_turn})
+        messages.append({"role": "assistant", "content": assistant_turn})
 
-    # Current user turn (always includes the image for context)
     messages.append({
         "role": "user",
         "content": [
@@ -140,10 +140,7 @@ def free_chat(image: Image.Image, history: list, user_message: str) -> tuple[lis
     })
 
     reply = _run(messages, image, max_new_tokens=400)
-
-    history.append({"role": "user",      "content": user_message.strip()})
-    history.append({"role": "assistant", "content": reply})
-    return history, ""
+    return history + [(user_message.strip(), reply)], ""
 
 
 # ── UI ─────────────────────────────────────────────────────────────────────────
@@ -165,7 +162,7 @@ _REPORT_NOTE = (
     "Leave Indication blank if unknown."
 )
 
-with gr.Blocks(title="ReportCXR Demo", theme=gr.themes.Soft()) as demo:
+with gr.Blocks(title="ReportCXR Demo", theme=gr.themes.Soft(), analytics_enabled=False) as demo:
     gr.Markdown(_DESCRIPTION)
 
     with gr.Row():
@@ -206,7 +203,6 @@ with gr.Blocks(title="ReportCXR Demo", theme=gr.themes.Soft()) as demo:
                     )
                     chatbot = gr.Chatbot(
                         label="Conversation",
-                        type="messages",
                         height=320,
                     )
                     chat_state = gr.State([])
@@ -246,5 +242,7 @@ with gr.Blocks(title="ReportCXR Demo", theme=gr.themes.Soft()) as demo:
     )
 
 
+demo.queue()
+
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(show_api=False)
