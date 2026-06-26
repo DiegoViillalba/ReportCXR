@@ -243,3 +243,66 @@ Three crashes were encountered and fixed before v3 completed successfully:
 - **Association rules conditioner on v3** — inject soft diagnostic prior from label co-occurrence statistics. Cheap to try; orthogonal to training. (STEP 8)
 - **Epoch-1 checkpoint eval for v4** — if v4 epoch-1 BERTScore > v3 epoch-1, the sampler is universally better and v4 should be the default. Requires comparing v4 epoch-1 checkpoint directly.
 - **Per-study breakdown** — compute BERTScore on pathological vs normal studies separately. v4 likely wins on pathological subset, which is the only subset where the sampler should matter.
+
+---
+
+## 2026-06-26 — RAG k=3 results + label-noise diagnostic
+
+### Results (notebook 05, v3 checkpoint, fixed prompt)
+
+| Condition | BERTScore-F1 | CheXbert micro-F1 | CheXbert macro-F1 | BLEU-4 | ROUGE-L |
+|---|---|---|---|---|---|
+| QLoRA uniform (v3) — no RAG | 0.6925 | 0.4637 | 0.1651 | 0.1145 | 0.2915 |
+| RAG k=3 (v3) | **0.7076** | 0.3432 | 0.1160 | **0.1391** | **0.3051** |
+
+**Note on the baseline drop (0.7113 → 0.6925):** The prompt ordering fix (`SYSTEM_PROMPT\nIndication:` instead of `Indication:\nSYSTEM_PROMPT`) introduced a distribution shift for the fine-tuned model. The v3 checkpoint was trained with `Indication: {indication}\nFindings:` — no system prompt in the user message. Adding the system prompt at inference time is correct for zero-shot MedGemma (instruction-tuned), but deviates from the fine-tuning format and hurts the fine-tuned model slightly. All post-fix evaluations use the new baseline (0.6925).
+
+### RAG pattern: text metrics improve, label metrics degrade
+
+RAG k=3 shows a split outcome across metric families:
+
+| Metric family | Direction | Magnitude |
+|---|---|---|
+| BERTScore-F1 | ↑ | +0.0151 |
+| BLEU-4 | ↑ | +0.0246 (+21%) |
+| ROUGE-L | ↑ | +0.0136 (+5%) |
+| CheXbert micro-F1 | ↓ | −0.1205 (−26%) |
+| CheXbert macro-F1 | ↓ | −0.0491 (−30%) |
+
+### Label-noise diagnostic (label overlap analysis)
+
+To understand the CheXbert drop, a per-study Jaccard similarity analysis was run between each test study's label vector and its k=3 retrieved training studies.
+
+| Statistic | Value |
+|---|---|
+| Studies with successful retrieval | 586 / 600 |
+| Studies with any shared label | 249 (41.5%) |
+| Mean Jaccard | 0.181 |
+| Median Jaccard | 0.000 |
+| Studies with Jaccard = 0 | 57.5% |
+
+**57.5% of retrievals share zero labels with the test study.** TF-IDF over IU X-ray indications is clinically blind in the majority of cases — indications are too short or generic to discriminate pathology.
+
+BERTScore delta by label-overlap split (Jaccard ≥ 0.20 = high, < 0.20 = low):
+
+| Group | n | ΔBERT |
+|---|---|---|
+| High overlap | 197 | +0.0233 |
+| Low overlap | 389 | +0.0102 |
+
+Both groups show positive BERTScore delta — even zero-label-overlap retrievals improve the score. This means RAG improves report *style* universally (the examples teach the model to write more "report-like" text that BERTScore rewards) but introduces label noise when the pathologies differ. The CheXbert drop is explained by the 57.5% of cases where the model borrows findings vocabulary from clinically unrelated training examples.
+
+### Interpretation
+
+The RAG mechanism is sound: higher label overlap yields 2.3× larger BERTScore gain (+0.023 vs +0.010). The bottleneck is retrieval quality. TF-IDF over IU X-ray indications is not sufficient to recover clinically similar studies.
+
+**BERTScore improvement is partly spurious:** it reflects stylistic improvement (more structured, report-like output), not necessarily clinical accuracy. CheXbert drop is the honest signal for label precision.
+
+### Conclusion
+
+> RAG with TF-IDF retrieval improves textual fluency (+0.015 BERTScore, +21% BLEU) but degrades diagnostic label precision (−26% CheXbert micro-F1) due to clinically irrelevant retrievals in 57.5% of cases. The mechanism works when retrieval is accurate — label-aware retrieval would likely yield gains on both metric families.
+
+### Next experiment
+
+- **Association rules conditioner (notebook 06)** — uses TF-IDF label prior from retrieved training studies. Orthogonal to RAG; expected to be more robust because it reports label *prevalence* rather than injecting verbatim findings text.
+- **Label-aware retrieval** — retrieve by cosine similarity on label vectors (not indication text). Would require test-time label prediction (e.g. lightweight classifier on indication) but could fix the 57.5% noise problem.
