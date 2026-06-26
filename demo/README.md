@@ -21,6 +21,6 @@ tags:
 
 MedGemma 4B-it fine-tuned with QLoRA on the Indiana University Chest X-Ray dataset.
 
-**Adapter:** `DiegoViillalba/reportcxr-medgemma-weighted-v4`
+**Adapter:** `diegoi-io-0306/reportcxr-medgemma-weighted-v4`
 
 > ⚠️ Research demo only — not for clinical use.

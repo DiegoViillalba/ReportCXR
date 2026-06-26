@@ -15,7 +15,7 @@ from peft import PeftModel
 # ── Constants ─────────────────────────────────────────────────────────────────
 
 BASE_MODEL_ID = "google/medgemma-4b-it"
-ADAPTER_ID    = "DiegoViillalba/reportcxr-medgemma-weighted-v4"
+ADAPTER_ID    = "diegoi-io-0306/reportcxr-medgemma-weighted-v4"
 
 SYSTEM_PROMPT = (
     "You are an expert radiologist. "
@@ -147,7 +147,7 @@ _DESCRIPTION = """
 ## ReportCXR — Chest X-Ray Report Generation
 
 **Model:** MedGemma 4B-it fine-tuned with QLoRA on the IU X-Ray dataset
-**Adapter:** [`DiegoViillalba/reportcxr-medgemma-weighted-v4`](https://huggingface.co/DiegoViillalba/reportcxr-medgemma-weighted-v4)
+**Adapter:** [`diegoi-io-0306/reportcxr-medgemma-weighted-v4`](https://huggingface.co/diegoi-io-0306/reportcxr-medgemma-weighted-v4)
 
 > ⚠️ **Research demo only.** Not for clinical use.
 > MedGemma requires accepting [Google's Health AI Developer Foundations license](https://huggingface.co/google/medgemma-4b-it).
