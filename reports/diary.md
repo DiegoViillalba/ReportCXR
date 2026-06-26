@@ -237,6 +237,17 @@ Three crashes were encountered and fixed before v3 completed successfully:
 
 **Recommended default checkpoint: v3 (uniform).** BERTScore is the production metric; the macro F1 gap is partially masked by the vocabulary artifact and would need a CheXpert/MIMIC-style dataset to validate cleanly.
 
+### Final summary across all prompt engineering strategies
+
+See entries 2026-06-26 for full results. Short version:
+
+| Strategy | BERTScore vs fair | CheXbert macro vs fair | Best label gain |
+|---|---|---|---|
+| RAG k=3 | +0.020 | −0.028 | Lung Lesion +0.133 |
+| Assoc. rules | −0.003 | +0.030 | Edema +0.222, PE +0.059 |
+
+Opposite profiles — RAG for fluency, assoc. rules for rare-label coverage.
+
 ### Next experiments
 
 - **RAG-augmented inference on v3 checkpoint** — inject top-3 similar training reports via TF-IDF. Expected to close some of the gap between v3 and zero-shot on pathological studies without retraining. (STEP 7 in `04_eval_and_figures.ipynb`)
@@ -398,3 +409,53 @@ Cost is minimal; rare-label coverage gain is substantial.
 > The association rules conditioner is a **positive result** when evaluated with a fair baseline. The net effect is +30% CheXbert macro-F1 (0.1445 → 0.1745 vs fair baseline, +0.009 vs NB04 baseline) with minimal BERTScore cost (−0.003). The mechanism successfully activates rare-pathology detection — Edema goes from 0 to 0.222, Pleural Effusion gains +0.059. The previous negative assessment was caused by comparing against a baseline with a different prompt format.
 
 **What remains a real limitation:** the conditioner does not help Lung Lesion, Consolidation, Pneumonia, Pneumothorax, or Pleural Other. These labels remain at F1=0 under all conditions, consistent with the CheXbert vocabulary mismatch artifact (H2, confirmed 2026-06-23).
+
+### RAG fair comparison results (same session)
+
+Three-way comparison after loading `nohint_uniform_v3` as fair baseline for RAG:
+
+| Condition | BERTScore-F1 | CheXbert micro-F1 | CheXbert macro-F1 | BLEU-4 | ROUGE-L |
+|---|---|---|---|---|---|
+| v3 baseline (NB04 format) | 0.6925 | 0.4637 | 0.1651 | 0.1145 | 0.2915 |
+| v3 no-RAG (NB05 format) | 0.6879 | 0.4404 | 0.1445 | 0.1128 | 0.2852 |
+| RAG k=3 (v3) | **0.7076** | 0.3432 | 0.1160 | **0.1391** | **0.3051** |
+
+**True RAG effect vs fair baseline:**
+
+| Metric | Δ |
+|---|---|
+| BERTScore-F1 | **+0.0198** |
+| BLEU-4 | **+0.0262 (+23%)** |
+| ROUGE-L | **+0.0199 (+7%)** |
+| CheXbert micro-F1 | −0.0973 |
+| CheXbert macro-F1 | −0.0284 |
+
+**Per-label breakdown (rare pathologies):**
+
+| Label | no-RAG (fair) | RAG k=3 | Δ |
+|---|---|---|---|
+| Lung Lesion | 0.000 | **0.133** | +0.133 |
+| Pleural Effusion | 0.286 | 0.160 | −0.126 |
+| Support Devices | 0.377 | 0.211 | −0.166 |
+| Fracture | 0.069 | 0.069 | 0.000 |
+| All others | 0.000 | 0.000 | 0.000 |
+
+**RAG actively damages labels that were already working.** Pleural Effusion drops −0.126, Support Devices drops −0.166 — the largest single-label regressions observed across all experiments. The model borrows findings structure from retrieved examples; when those examples have different pathologies (57.5% Jaccard=0), it overwrites correct generation with incorrect labels.
+
+**Lung Lesion gain (+0.133):** the one positive signal. "Nodule/mass/lesion" is distinctive vocabulary that TF-IDF retrieves well when the indication explicitly mentions it.
+
+### Consolidated interpretation: RAG vs association rules
+
+The two prompt engineering strategies have opposite profiles:
+
+| Strategy | BERTScore vs fair | CheXbert macro vs fair | Profile |
+|---|---|---|---|
+| RAG k=3 | +0.020 | −0.028 | Better fluency, worse clinical precision |
+| Assoc. rules | −0.003 | +0.030 | Neutral fluency, better rare-label coverage |
+
+Neither dominates. The right choice is use-case driven:
+- **Clinical precision / triage**: association rules conditioner
+- **Text fluency / NLG benchmarks**: RAG
+- **Both**: neither alone; combination would require label-aware retrieval to fix RAG's noise problem
+
+This structure (two complementary strategies with distinct trade-offs) is the central finding of the prompt engineering section.
