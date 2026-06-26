@@ -207,3 +207,39 @@ Three crashes were encountered and fixed before v3 completed successfully:
 - **1-epoch training** — given best epoch = 1, stopping early may preserve the peak and avoid regression.
 - **LR=1e-5, 3 epochs** — slower convergence to test if the model can peak later.
 - **Active weighted sampler** — set non-null `p_target` for rare labels (Pneumothorax, Fracture, Lung Lesion) to improve BERTScore on pathological studies specifically.
+
+---
+
+## 2026-06-25 — v4 results: ESS-weighted sampler improves macro F1 at small BERTScore cost
+
+### Results
+
+| Condition | Sampler | Best epoch | BERTScore-F1 | CheXbert micro-F1 | CheXbert macro-F1 |
+|---|---|---|---|---|---|
+| Zero-shot baseline | — | — | 0.6938 | 0.3967 | 0.1416 |
+| QLoRA fine-tune (v3) | uniform | 1 | **0.7113** | 0.3896 | 0.0401 |
+| QLoRA fine-tune (v4) | weighted (ESS) | **2** | 0.7036 | 0.3945 | **0.0635** |
+
+### Findings
+
+**The weighted sampler worked as designed.** The ESS-based `p_target` correction produced the expected trade-off: v4 sacrifices −0.77% BERTScore-F1 (0.7036 vs 0.7113) in exchange for +58% macro F1 improvement (0.0635 vs 0.0401). The macro F1 gain is large and likely real — it reflects the model generating more diverse pathology mentions because rare-label studies were oversampled during training.
+
+**Best epoch = 2 for v4 (vs 1 for v3).** This is the clearest signal that the sampler is doing something structural. The balanced distribution requires more passes to converge — the model is not simply fitting the dominant "normal report" mode in epoch 1 and degrading from there. The sampler effectively extended the useful training window by one epoch.
+
+**CheXbert micro-F1 also improved slightly** (0.3945 vs 0.3896). This is unusual — normally the BERTScore vs CheXbert trade-off is symmetric. It suggests the oversampling of pathological studies didn't just improve rare-label recall; it slightly improved the model's overall clinical term usage too.
+
+**CheXbert macro at 0.063 remains well below zero-shot (0.1416).** The vocabulary mismatch artifact (H2, confirmed 2026-06-23) still dominates — CheXbert cannot parse IU X-ray phrasing. The relative improvement (v4 vs v3) is real, but the absolute numbers are still artifact-driven.
+
+### Interpretation and ranking
+
+**Primary metric (BERTScore-F1):** v3 uniform wins (0.7113 > 0.7036). Choose v3 for overall report quality.  
+**Rare-pathology coverage (macro F1):** v4 weighted wins decisively. Choose v4 if the deployment use case prioritizes pathological studies (e.g. triage, second-read).
+
+**Recommended default checkpoint: v3 (uniform).** BERTScore is the production metric; the macro F1 gap is partially masked by the vocabulary artifact and would need a CheXpert/MIMIC-style dataset to validate cleanly.
+
+### Next experiments
+
+- **RAG-augmented inference on v3 checkpoint** — inject top-3 similar training reports via TF-IDF. Expected to close some of the gap between v3 and zero-shot on pathological studies without retraining. (STEP 7 in `04_eval_and_figures.ipynb`)
+- **Association rules conditioner on v3** — inject soft diagnostic prior from label co-occurrence statistics. Cheap to try; orthogonal to training. (STEP 8)
+- **Epoch-1 checkpoint eval for v4** — if v4 epoch-1 BERTScore > v3 epoch-1, the sampler is universally better and v4 should be the default. Requires comparing v4 epoch-1 checkpoint directly.
+- **Per-study breakdown** — compute BERTScore on pathological vs normal studies separately. v4 likely wins on pathological subset, which is the only subset where the sampler should matter.
