@@ -182,12 +182,16 @@ window.Quarto = {
  <span class="dropdown-text">4. Evaluation &amp; Metric Pivot</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="../report/05_domain_shift.html">
- <span class="dropdown-text">5. Domain Shift Audit Protocol</span></a>
+    <a class="dropdown-item" href="../report/05_inference_conditioning.html">
+ <span class="dropdown-text">5. Inference Conditioning</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="../report/06_production_scaling.html">
- <span class="dropdown-text">6. Production Scaling</span></a>
+    <a class="dropdown-item" href="../report/06_domain_shift.html">
+ <span class="dropdown-text">6. Domain Shift Audit Protocol</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../report/07_production_scaling.html">
+ <span class="dropdown-text">7. Production Scaling</span></a>
   </li>  
     </ul>
   </li>
@@ -243,6 +247,14 @@ window.Quarto = {
     <a class="dropdown-item" href="../notebooks/04_eval_and_figures.html">
  <span class="dropdown-text">04: Evaluation</span></a>
   </li>  
+        <li>
+    <a class="dropdown-item" href="../notebooks/05_rag_retrieval.html">
+ <span class="dropdown-text">05: RAG Retrieval</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../notebooks/06_association_rules.html">
+ <span class="dropdown-text">06: Association Rules</span></a>
+  </li>  
     </ul>
   </li>
 </ul>
@@ -262,7 +274,10 @@ window.Quarto = {
    
   <ul>
   <li><a href="#dataset-distribution" id="toc-dataset-distribution" class="nav-link active" data-scroll-target="#dataset-distribution">Dataset Distribution</a></li>
-  <li><a href="#importance-sampling-sampler-correction" id="toc-importance-sampling-sampler-correction" class="nav-link" data-scroll-target="#importance-sampling-sampler-correction">Importance Sampling &amp; Sampler Correction</a></li>
+  <li><a href="#importance-sampling-sampler-correction" id="toc-importance-sampling-sampler-correction" class="nav-link" data-scroll-target="#importance-sampling-sampler-correction">Importance Sampling &amp; Sampler Correction</a>
+  <ul class="collapse">
+  <li><a href="#ess-based-sampler-settings-v4" id="toc-ess-based-sampler-settings-v4" class="nav-link" data-scroll-target="#ess-based-sampler-settings-v4">ESS-Based Sampler Settings (v4)</a></li>
+  </ul></li>
   </ul>
 </nav>
     </div>
@@ -362,14 +377,30 @@ Figure&nbsp;1: Clinical data distributions and label statistics.
 <h2 class="anchored" data-anchor-id="importance-sampling-sampler-correction">Importance Sampling &amp; Sampler Correction</h2>
 <p>To prevent the model from collapsing to the majority class and simply predicting “normal” for all patients, we implement a <code>WeightedRandomSampler</code>. For each study <span class="math inline">\(j\)</span>, we compute an importance weight <span class="math inline">\(w_j\)</span> based on the target prevalences specified in <code>params.yaml</code>:</p>
 <p><span class="math display">\[w_j = \text{clip}\left( \left( \prod_{l \in L_j} \frac{p_{\text{target}}(l)}{p_{\text{dataset}}(l)} \right)^{\frac{1}{|L_j|}}, \text{clip\_val} \right)\]</span></p>
-<p>Where: * <span class="math inline">\(L_j\)</span> is the set of positive pathologies present in study <span class="math inline">\(j\)</span>. * <span class="math inline">\(p_{\text{target}}(l)\)</span> is the user-specified target prevalence for pathology <span class="math inline">\(l\)</span>. * <span class="math inline">\(p_{\text{dataset}}(l)\)</span> is the empirical prevalence of pathology <span class="math inline">\(l\)</span> in the training set. * <span class="math inline">\(\text{clip\_val}\)</span> is the clipping multiplier (<code>sampler.weight_clip = 10.0</code>) to avoid high-variance gradients from extremely rare combinations.</p>
+<p>Where:</p>
+<ul>
+<li><span class="math inline">\(L_j\)</span> is the set of positive pathologies present in study <span class="math inline">\(j\)</span>.</li>
+<li><span class="math inline">\(p_{\text{target}}(l)\)</span> is the user-specified target prevalence for pathology <span class="math inline">\(l\)</span>.</li>
+<li><span class="math inline">\(p_{\text{dataset}}(l)\)</span> is the empirical prevalence of pathology <span class="math inline">\(l\)</span> in the training set.</li>
+<li><span class="math inline">\(\text{clip\_val}\)</span> is the clipping multiplier (<code>sampler.weight_clip = 10.0</code>) to avoid high-variance gradients from extremely rare combinations.</li>
+</ul>
 <p>For studies with no positive pathologies (“No Finding”), we assign a base weight:</p>
 <p><span class="math display">\[w_j = \frac{p_{\text{target}}(\text{No Finding})}{p_{\text{dataset}}(\text{No Finding})}\]</span></p>
 <p>Applying these weights at the batch-selection level forces the model to encounter rare pathology patterns during backpropagation without modifying the loss function, avoiding gradient-scale instabilities.</p>
+<section id="ess-based-sampler-settings-v4" class="level3">
+<h3 class="anchored" data-anchor-id="ess-based-sampler-settings-v4">ESS-Based Sampler Settings (v4)</h3>
+<p>In the v4 training run, we configured the target prevalences <span class="math inline">\(p_{\text{target}}\)</span> in <code>params.yaml</code> directly using the class Effective Sample Size (ESS) metrics computed in <a href="#fig-ess" class="quarto-xref">Figure&nbsp;1 (c)</a>:</p>
+<ol type="1">
+<li><strong>Common Pathologies (ESS &gt; 250)</strong>: No correction needed. Target prevalences set to null, defaulting to raw dataset prevalence (e.g.&nbsp;Enlarged Cardiomediastinum, Cardiomegaly, Lung Opacity, No Finding).</li>
+<li><strong>Moderate Pathologies (ESS 50–224)</strong>: Boosted to a 10% target prevalence (e.g.&nbsp;Atelectasis, Support Devices, Lung Lesion, Fracture, Pleural Effusion).</li>
+<li><strong>Rare Pathologies (ESS &lt; 50)</strong>: Aggressively boosted to a 5% target prevalence (e.g.&nbsp;Pleural Other, Edema, Pneumonia, Consolidation, Pneumothorax).</li>
+</ol>
+<p>This structured up-weighting guarantees that the backpropagated gradients contain meaningful representations of rare clinical conditions, preventing the training loop from defaulting to the dominant “normal” mode.</p>
 
 
 <!-- -->
 
+</section>
 </section>
 
 </main> <!-- /main -->
@@ -858,16 +889,26 @@ Figure&nbsp;1: Clinical data distributions and label statistics.
 <span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>$$w_j = \text{clip}\left( \left( \prod_{l \in L_j} \frac{p_{\text{target}}(l)}{p_{\text{dataset}}(l)} \right)^{\frac{1}{|L_j|}}, \text{clip<span class="sc">\_</span>val} \right)$$</span>
 <span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>Where:</span>
-<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>$L_j$ is the set of positive pathologies present in study $j$.</span>
-<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>$p_{\text{target}}(l)$ is the user-specified target prevalence for pathology $l$.</span>
-<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>$p_{\text{dataset}}(l)$ is the empirical prevalence of pathology $l$ in the training set.</span>
-<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>$\text{clip<span class="sc">\_</span>val}$ is the clipping multiplier (<span class="in">`sampler.weight_clip = 10.0`</span>) to avoid high-variance gradients from extremely rare combinations.</span>
-<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>For studies with no positive pathologies ("No Finding"), we assign a base weight:</span>
-<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>$$w_j = \frac{p_{\text{target}}(\text{No Finding})}{p_{\text{dataset}}(\text{No Finding})}$$</span>
-<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>Applying these weights at the batch-selection level forces the model to encounter rare pathology patterns during backpropagation without modifying the loss function, avoiding gradient-scale instabilities.</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>$L_j$ is the set of positive pathologies present in study $j$.</span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>$p_{\text{target}}(l)$ is the user-specified target prevalence for pathology $l$.</span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>$p_{\text{dataset}}(l)$ is the empirical prevalence of pathology $l$ in the training set.</span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>$\text{clip<span class="sc">\_</span>val}$ is the clipping multiplier (<span class="in">`sampler.weight_clip = 10.0`</span>) to avoid high-variance gradients from extremely rare combinations.</span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>For studies with no positive pathologies ("No Finding"), we assign a base weight:</span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>$$w_j = \frac{p_{\text{target}}(\text{No Finding})}{p_{\text{dataset}}(\text{No Finding})}$$</span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a>Applying these weights at the batch-selection level forces the model to encounter rare pathology patterns during backpropagation without modifying the loss function, avoiding gradient-scale instabilities.</span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a><span class="fu">### ESS-Based Sampler Settings (v4)</span></span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>In the v4 training run, we configured the target prevalences $p_{\text{target}}$ in <span class="in">`params.yaml`</span> directly using the class Effective Sample Size (ESS) metrics computed in @fig-ess:</span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a><span class="ss">1.  </span>**Common Pathologies (ESS &gt; 250)**: No correction needed. Target prevalences set to null, defaulting to raw dataset prevalence (e.g. Enlarged Cardiomediastinum, Cardiomegaly, Lung Opacity, No Finding).</span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a><span class="ss">2.  </span>**Moderate Pathologies (ESS 50–224)**: Boosted to a 10% target prevalence (e.g. Atelectasis, Support Devices, Lung Lesion, Fracture, Pleural Effusion).</span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a><span class="ss">3.  </span>**Rare Pathologies (ESS &lt; 50)**: Aggressively boosted to a 5% target prevalence (e.g. Pleural Other, Edema, Pneumonia, Consolidation, Pneumothorax).</span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a>This structured up-weighting guarantees that the backpropagated gradients contain meaningful representations of rare clinical conditions, preventing the training loop from defaulting to the dominant "normal" mode.</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
 </div></div></div></div></div>
 </div> <!-- /content -->
 <footer class="footer">

@@ -12,28 +12,30 @@ This section describes the AI model itself and how we train it. We use Google's 
 ## MedGemma Foundation Architecture
 
 We utilize `google/medgemma-4b-it` as our base model. This foundation architecture is composed of:
+
 1.  **Vision Encoder**: A frozen medical SigLIP model that extracts visual representation vectors directly from chest radiograph projections.
 2.  **Language Decoder**: A Gemma 3 4B instruction-tuned causal language model, which receives concatenated vision tokens and clinical text prompts.
 
-```mermaid
+```{mermaid}
 graph LR
-    CXR[CXR Image] --> SigLIP[SigLIP Encoder (Frozen)]
-    Prompt[Clinical Indication Prompt] --> Tokenizer[Tokenizer]
-    SigLIP --> Concat[Concat Tokens]
+    CXR["CXR Image"] --> SigLIP["SigLIP Encoder (Frozen)"]
+    Prompt["Clinical Indication Prompt"] --> Tokenizer["Tokenizer"]
+    SigLIP --> Concat["Concat Tokens"]
     Tokenizer --> Concat
-    Concat --> Gemma[Gemma 3 4B Decoder (QLoRA)]
-    Gemma --> Report[Generated Findings]
+    Concat --> Gemma["Gemma 3 4B Decoder (QLoRA)"]
+    Gemma --> Report["Generated Findings"]
 ```
 
 ## Low-Rank Adaptation (QLoRA)
 
-To train the model on a consumer GPU with limited VRAM (21 GB Ada RTX 4000), we employ **QLoRA (Quantized Low-Rank Adaptation)**. The base model weights are loaded in 4-bit NormalFloat (NF4) double quantization, while low-rank trainable adapter matrices are injected into the attention projection layers.
+To train the model on a consumer GPU provided by Kaggle with limited VRAM (2 x Tesla T4 16GB), we employ **QLoRA (Quantized Low-Rank Adaptation)**. The base model weights are loaded in 4-bit NormalFloat (NF4) double quantization, while low-rank trainable adapter matrices are injected into the attention projection layers.
 
 Mathematically, the forward pass for a projection layer with input $x \in \mathbb{R}^d$ is given by:
 
 $$h = W_0 x + \Delta W x = W_0 x + \frac{s}{r} B A x$$
 
 Where:
+
 *   $W_0 \in \mathbb{R}^{d \times k}$ represents the frozen base model weights in NF4 representation.
 *   $A \in \mathbb{R}^{r \times d}$ and $B \in \mathbb{R}^{k \times r}$ are the trainable LoRA adapter matrices.
 *   $r$ is the LoRA rank ($r = 16$).
@@ -57,6 +59,7 @@ A **completion mask** sets `labels[:prompt_len] = -100` so that cross-entropy lo
 ## Training Arguments
 
 Key training hyperparameters (`params.yaml → training`, v3):
+
 *   `learning_rate`: $5 \times 10^{-5}$
 *   `num_epochs`: 2
 *   `warmup_ratio`: 0.06

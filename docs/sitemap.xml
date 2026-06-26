@@ -1,16 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
+    <loc>https://diegovillaba.github.io/ReportCXR/notebooks/06_association_rules.html</loc>
+    <lastmod>2026-06-26T02:51:16.657Z</lastmod>
+  </url>
+  <url>
     <loc>https://diegovillaba.github.io/ReportCXR/notebooks/04_eval_and_figures.html</loc>
-    <lastmod>2026-06-19T20:19:35.132Z</lastmod>
+    <lastmod>2026-06-26T01:39:24.880Z</lastmod>
   </url>
   <url>
     <loc>https://diegovillaba.github.io/ReportCXR/notebooks/03_train_local.html</loc>
-    <lastmod>2026-06-25T18:20:56.998Z</lastmod>
+    <lastmod>2026-06-25T19:14:09.467Z</lastmod>
   </url>
   <url>
     <loc>https://diegovillaba.github.io/ReportCXR/notebooks/01_eda.html</loc>
-    <lastmod>2026-06-20T00:27:22.152Z</lastmod>
+    <lastmod>2026-06-26T02:47:55.680Z</lastmod>
   </url>
   <url>
     <loc>https://diegovillaba.github.io/ReportCXR/doc/evaluation_modules.html</loc>
@@ -21,32 +25,36 @@
     <lastmod>2026-06-25T18:44:45.167Z</lastmod>
   </url>
   <url>
-    <loc>https://diegovillaba.github.io/ReportCXR/report/06_production_scaling.html</loc>
-    <lastmod>2026-06-25T18:44:38.757Z</lastmod>
+    <loc>https://diegovillaba.github.io/ReportCXR/report/07_production_scaling.html</loc>
+    <lastmod>2026-06-26T02:26:39.561Z</lastmod>
   </url>
   <url>
-    <loc>https://diegovillaba.github.io/ReportCXR/report/04_evaluation.html</loc>
-    <lastmod>2026-06-25T18:44:34.375Z</lastmod>
-  </url>
-  <url>
-    <loc>https://diegovillaba.github.io/ReportCXR/report/02_data.html</loc>
-    <lastmod>2026-06-25T18:44:28.894Z</lastmod>
-  </url>
-  <url>
-    <loc>https://diegovillaba.github.io/ReportCXR/index.html</loc>
-    <lastmod>2026-06-25T18:44:22.055Z</lastmod>
-  </url>
-  <url>
-    <loc>https://diegovillaba.github.io/ReportCXR/report/01_introduction.html</loc>
-    <lastmod>2026-06-25T18:44:26.676Z</lastmod>
+    <loc>https://diegovillaba.github.io/ReportCXR/report/05_inference_conditioning.html</loc>
+    <lastmod>2026-06-26T02:27:14.693Z</lastmod>
   </url>
   <url>
     <loc>https://diegovillaba.github.io/ReportCXR/report/03_model_training.html</loc>
-    <lastmod>2026-06-25T18:44:31.415Z</lastmod>
+    <lastmod>2026-06-26T00:58:00.282Z</lastmod>
   </url>
   <url>
-    <loc>https://diegovillaba.github.io/ReportCXR/report/05_domain_shift.html</loc>
-    <lastmod>2026-06-25T18:44:36.462Z</lastmod>
+    <loc>https://diegovillaba.github.io/ReportCXR/report/01_introduction.html</loc>
+    <lastmod>2026-06-26T02:23:01.126Z</lastmod>
+  </url>
+  <url>
+    <loc>https://diegovillaba.github.io/ReportCXR/index.html</loc>
+    <lastmod>2026-06-26T02:18:14.272Z</lastmod>
+  </url>
+  <url>
+    <loc>https://diegovillaba.github.io/ReportCXR/report/02_data.html</loc>
+    <lastmod>2026-06-26T02:26:52.585Z</lastmod>
+  </url>
+  <url>
+    <loc>https://diegovillaba.github.io/ReportCXR/report/04_evaluation.html</loc>
+    <lastmod>2026-06-26T02:27:23.252Z</lastmod>
+  </url>
+  <url>
+    <loc>https://diegovillaba.github.io/ReportCXR/report/06_domain_shift.html</loc>
+    <lastmod>2026-06-26T02:26:37.697Z</lastmod>
   </url>
   <url>
     <loc>https://diegovillaba.github.io/ReportCXR/doc/architecture.html</loc>
@@ -67,5 +75,9 @@
   <url>
     <loc>https://diegovillaba.github.io/ReportCXR/notebooks/03_train_kaggle.html</loc>
     <lastmod>2026-06-23T08:24:32.444Z</lastmod>
+  </url>
+  <url>
+    <loc>https://diegovillaba.github.io/ReportCXR/notebooks/05_rag_retrieval.html</loc>
+    <lastmod>2026-06-26T01:39:24.883Z</lastmod>
   </url>
 </urlset>

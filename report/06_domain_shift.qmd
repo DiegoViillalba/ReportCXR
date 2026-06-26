@@ -1,5 +1,5 @@
 ---
-title: "5. Domain Shift Audit Protocol"
+title: "6. Domain Shift Audit Protocol"
 author: "Diego Villalba (Applied Research Candidate)"
 date: "2026-06-25"
 ---

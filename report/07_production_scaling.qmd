@@ -1,5 +1,5 @@
 ---
-title: "6. Production Scaling"
+title: "7. Production Scaling"
 author: "Diego Villalba (Applied Research Candidate)"
 date: "2026-06-25"
 ---

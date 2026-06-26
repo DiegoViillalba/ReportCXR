@@ -32,6 +32,7 @@ To prevent the model from collapsing to the majority class and simply predicting
 $$w_j = \text{clip}\left( \left( \prod_{l \in L_j} \frac{p_{\text{target}}(l)}{p_{\text{dataset}}(l)} \right)^{\frac{1}{|L_j|}}, \text{clip\_val} \right)$$
 
 Where:
+
 *   $L_j$ is the set of positive pathologies present in study $j$.
 *   $p_{\text{target}}(l)$ is the user-specified target prevalence for pathology $l$.
 *   $p_{\text{dataset}}(l)$ is the empirical prevalence of pathology $l$ in the training set.
@@ -42,3 +43,13 @@ For studies with no positive pathologies ("No Finding"), we assign a base weight
 $$w_j = \frac{p_{\text{target}}(\text{No Finding})}{p_{\text{dataset}}(\text{No Finding})}$$
 
 Applying these weights at the batch-selection level forces the model to encounter rare pathology patterns during backpropagation without modifying the loss function, avoiding gradient-scale instabilities.
+
+### ESS-Based Sampler Settings (v4)
+In the v4 training run, we configured the target prevalences $p_{\text{target}}$ in `params.yaml` directly using the class Effective Sample Size (ESS) metrics computed in @fig-ess:
+
+1.  **Common Pathologies (ESS > 250)**: No correction needed. Target prevalences set to null, defaulting to raw dataset prevalence (e.g. Enlarged Cardiomediastinum, Cardiomegaly, Lung Opacity, No Finding).
+2.  **Moderate Pathologies (ESS 50–224)**: Boosted to a 10% target prevalence (e.g. Atelectasis, Support Devices, Lung Lesion, Fracture, Pleural Effusion).
+3.  **Rare Pathologies (ESS < 50)**: Aggressively boosted to a 5% target prevalence (e.g. Pleural Other, Edema, Pneumonia, Consolidation, Pneumothorax).
+
+This structured up-weighting guarantees that the backpropagated gradients contain meaningful representations of rare clinical conditions, preventing the training loop from defaulting to the dominant "normal" mode.
+

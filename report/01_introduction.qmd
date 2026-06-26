@@ -11,7 +11,7 @@ This section introduces the core clinical motivation of the project. Chest X-ray
 
 ## Clinical Domain Shift
 
-The Eden AI technical challenge focuses on developing a multimodal medical vision-language foundation model that generates chest X-ray findings. However, deploying such a model in a real clinical setting—particularly across distinct geographic regions like Latin America—introduces severe out-of-distribution (OOD) shifts:
+Developing a multimodal medical vision-language foundation model that generates chest X-ray findings is one of the key challenges in medical AI. However, deploying such a model in a real clinical setting—particularly across distinct geographic regions like Latin America—introduces severe out-of-distribution (OOD) shifts:
 
 1.  **Acquisition Shift**: Differences in scanner hardware manufacturers, kVp exposure calibrations, and sensor resolutions produce raw image distributions that diverge from the clean datasets used during pre-training.
 2.  **Prevalence Shift**: Regional epidemiological patterns result in different baseline frequencies of pathologies. For example, Latin American public clinics may exhibit higher prevalences of Tuberculosis or Chagas disease compared to standard Western benchmarks.

@@ -1,15 +1,19 @@
 ---
 title: "ReportCXR"
-subtitle: "Automated Radiological Report Generation and Domain Shift Auditing under Distributional Discrepancy"
+subtitle: "Automated Radiological Report Generation via Vision-Language Models"
 author: "Diego Villalba (Applied Research Candidate)"
 date: "2026-06-25"
+bibliography: references.bib
 ---
 
 ::: {.non-technical-summary}
 ##### Executive Summary (Non-Technical)
-This project is an advanced AI system built for automated chest X-ray interpretation. Instead of simply fine-tuning a general-purpose model, this work addresses a critical, real-world challenge in healthcare AI: domain shift. Medical AI models trained on United States clinical datasets (which are predominantly English and heavily biased towards normal findings) often fail when deployed in Latin American (LATAM) hospitals due to differences in scanner equipment, local patient populations (prevalences of disease), and local reporting languages.
+This project is an AI system built for automated chest X-ray interpretation. Instead of simply fine-tuning a general-purpose model, this work addresses a critical, real-world challenge in healthcare AI: domain shift. Medical AI models trained on United States clinical datasets (which are predominantly English and heavily biased towards normal findings) often fail when deployed out of distribution domains, like hospitals in other regions due to differences in scanner equipment, local patient populations (prevalences of disease), and local reporting languages [@sellergren2025medgemma], [@chen2024chexagent].
 
-Here, we build a robust, reproducible clinical language model based on Google's MedGemma 4B-it, construct a data pipeline using DVC (Data Version Control) and Weights & Biases (W&B) for full MLOps auditing, and establish a Domain Shift Audit Protocol to systematically test and quantify model degradation under simulated equipment, language, and epidemiological shifts.
+Here, we build a robust and reproducible clinical vision-language pipeline based on Google’s MedGemma 4B-it. The system is implemented end-to-end, from data preparation and model adaptation to evaluation and experiment tracking. To ensure reproducibility and auditability, the pipeline integrates DVC for dataset and artifact versioning, together with Weights & Biases for experiment tracking, metric logging, and model comparison. In addition, we introduce a Domain Shift Audit Protocol designed to systematically quantify model degradation under simulated shifts in imaging equipment, reporting language, and disease prevalence.
+
+Beyond this baseline pipeline, we implement and evaluate two research-driven extensions inspired by recent work. First, we incorporate a retrieval-augmented generation strategy that conditions the model on clinically similar prior reports [@kang2025structuredradiology], allowing the system to use case-based context at inference time. Second, we introduce soft label priors derived from association rules between radiological findings and diagnoses, which are injected into the prompting or decoding process to guide the model toward clinically plausible outputs without requiring additional supervised fine-tuning data [@singh2026clinicalreasoningvlm].
+
 :::
 
 ## Project Overview
@@ -21,6 +25,7 @@ The ReportCXR project is developed as part of the Eden AI technical challenge fo
 Our central premise is that deploying medical models across geographies is a distributional shift problem. Rather than reporting static accuracy metrics on a clean dataset, this project designs and validates a reusable diagnostic infrastructure—the DomainShiftAudit framework—on simulated shifts inside the Indiana University Chest X-ray (IU CXR) dataset.
 
 This protocol acts as a diagnostic suite. It measures the robustness of models before they go live:
+
 1. **Acquisition Shift**: Simulates older equipment or different scanner manufacturers by applying synthetic noise, contrast adjustments, and compression.
 2. **Language Shift**: Assesses how a model trained in English performs when prompting and generating in Spanish.
 3. **Prevalence Shift**: Simulates different disease rates using importance sampling to evaluate how the model handles a LATAM patient distribution.
@@ -42,7 +47,7 @@ Use the navigation menu at the top to explore the work:
 This project is built for complete mathematical reproducibility. Data, parameters, and pipelines are versioned.
 
 ### 1. Versioned Parameters (params.yaml)
-Every parameter—from QLoRA rank to target sampler disease prevalences—is declared in a single source of truth: [params.yaml](file:///Users/diegovillaba/Code/ReportCXR/params.yaml). No thresholds or weights are hardcoded inside the code in `src/`.
+Every parameter (from QLoRA rank to target sampler disease prevalences) is declared in a single source of truth: [params.yaml](file:///Users/diegovillaba/Code/ReportCXR/params.yaml). No thresholds or weights are hardcoded inside the code in `src/`.
 
 ### 2. DVC Pipeline (dvc.yaml)
 The data pipeline is managed via DVC (Data Version Control). To reproduce the pipeline stages, run:
@@ -56,6 +61,7 @@ dvc repro
 ```
 
 The pipeline contains the following stages defined in [dvc.yaml](file:///Users/diegovillaba/Code/ReportCXR/dvc.yaml):
+
 *   `load`: Joins reports and projections CSVs and links images.
 *   `labels`: Processes free-text findings with a CheXbert labeler to build a 14-dimensional pathology matrix.
 *   `split`: Employs iterative multi-label stratification to split studies cleanly without patient leakage.

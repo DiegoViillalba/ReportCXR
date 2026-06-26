@@ -57,7 +57,27 @@ div.sourceCode
 @media screen {
 pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
-</style>
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+  margin-bottom: 0em;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
 
 
 <script src="site_libs/quarto-nav/quarto-nav.js"></script>
@@ -153,12 +173,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="dropdown-text">4. Evaluation &amp; Metric Pivot</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./report/05_domain_shift.html">
- <span class="dropdown-text">5. Domain Shift Audit Protocol</span></a>
+    <a class="dropdown-item" href="./report/05_inference_conditioning.html">
+ <span class="dropdown-text">5. Inference Conditioning</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="./report/06_production_scaling.html">
- <span class="dropdown-text">6. Production Scaling</span></a>
+    <a class="dropdown-item" href="./report/06_domain_shift.html">
+ <span class="dropdown-text">6. Domain Shift Audit Protocol</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./report/07_production_scaling.html">
+ <span class="dropdown-text">7. Production Scaling</span></a>
   </li>  
     </ul>
   </li>
@@ -214,6 +238,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <a class="dropdown-item" href="./notebooks/04_eval_and_figures.html">
  <span class="dropdown-text">04: Evaluation</span></a>
   </li>  
+        <li>
+    <a class="dropdown-item" href="./notebooks/05_rag_retrieval.html">
+ <span class="dropdown-text">05: RAG Retrieval</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="./notebooks/06_association_rules.html">
+ <span class="dropdown-text">06: Association Rules</span></a>
+  </li>  
     </ul>
   </li>
 </ul>
@@ -252,7 +284,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
 <div class="quarto-title-block"><div><h1 class="title">ReportCXR</h1><button type="button" class="btn code-tools-button" id="quarto-code-tools-source"><i class="bi"></i> Code</button></div></div>
-<p class="subtitle lead">Automated Radiological Report Generation and Domain Shift Auditing under Distributional Discrepancy</p>
+<p class="subtitle lead">Automated Radiological Report Generation via Vision-Language Models</p>
 </div>
 
 
@@ -283,8 +315,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="executive-summary-non-technical" class="level5 non-technical-summary">
 <h5 class="anchored" data-anchor-id="executive-summary-non-technical">Executive Summary (Non-Technical)</h5>
-<p>This project is an advanced AI system built for automated chest X-ray interpretation. Instead of simply fine-tuning a general-purpose model, this work addresses a critical, real-world challenge in healthcare AI: domain shift. Medical AI models trained on United States clinical datasets (which are predominantly English and heavily biased towards normal findings) often fail when deployed in Latin American (LATAM) hospitals due to differences in scanner equipment, local patient populations (prevalences of disease), and local reporting languages.</p>
-<p>Here, we build a robust, reproducible clinical language model based on Google’s MedGemma 4B-it, construct a data pipeline using DVC (Data Version Control) and Weights &amp; Biases (W&amp;B) for full MLOps auditing, and establish a Domain Shift Audit Protocol to systematically test and quantify model degradation under simulated equipment, language, and epidemiological shifts.</p>
+<p>This project is an AI system built for automated chest X-ray interpretation. Instead of simply fine-tuning a general-purpose model, this work addresses a critical, real-world challenge in healthcare AI: domain shift. Medical AI models trained on United States clinical datasets (which are predominantly English and heavily biased towards normal findings) often fail when deployed out of distribution domains, like hospitals in other regions due to differences in scanner equipment, local patient populations (prevalences of disease), and local reporting languages <span class="citation" data-cites="sellergren2025medgemma">(<a href="#ref-sellergren2025medgemma" role="doc-biblioref">Sellergren et al. 2025</a>)</span>, <span class="citation" data-cites="chen2024chexagent">(<a href="#ref-chen2024chexagent" role="doc-biblioref">Chen et al. 2024</a>)</span>.</p>
+<p>Here, we build a robust and reproducible clinical vision-language pipeline based on Google’s MedGemma 4B-it. The system is implemented end-to-end, from data preparation and model adaptation to evaluation and experiment tracking. To ensure reproducibility and auditability, the pipeline integrates DVC for dataset and artifact versioning, together with Weights &amp; Biases for experiment tracking, metric logging, and model comparison. In addition, we introduce a Domain Shift Audit Protocol designed to systematically quantify model degradation under simulated shifts in imaging equipment, reporting language, and disease prevalence.</p>
+<p>Beyond this baseline pipeline, we implement and evaluate two research-driven extensions inspired by recent work. First, we incorporate a retrieval-augmented generation strategy that conditions the model on clinically similar prior reports <span class="citation" data-cites="kang2025structuredradiology">(<a href="#ref-kang2025structuredradiology" role="doc-biblioref">Kang et al. 2025</a>)</span>, allowing the system to use case-based context at inference time. Second, we introduce soft label priors derived from association rules between radiological findings and diagnoses, which are injected into the prompting or decoding process to guide the model toward clinically plausible outputs without requiring additional supervised fine-tuning data <span class="citation" data-cites="singh2026clinicalreasoningvlm">(<a href="#ref-singh2026clinicalreasoningvlm" role="doc-biblioref">Singh et al. 2026</a>)</span>.</p>
 </section>
 <section id="project-overview" class="level2">
 <h2 class="anchored" data-anchor-id="project-overview">Project Overview</h2>
@@ -292,7 +325,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="the-strategic-thesis-domain-shift-auditing" class="level3">
 <h3 class="anchored" data-anchor-id="the-strategic-thesis-domain-shift-auditing">The Strategic Thesis: Domain Shift Auditing</h3>
 <p>Our central premise is that deploying medical models across geographies is a distributional shift problem. Rather than reporting static accuracy metrics on a clean dataset, this project designs and validates a reusable diagnostic infrastructure—the DomainShiftAudit framework—on simulated shifts inside the Indiana University Chest X-ray (IU CXR) dataset.</p>
-<p>This protocol acts as a diagnostic suite. It measures the robustness of models before they go live: 1. <strong>Acquisition Shift</strong>: Simulates older equipment or different scanner manufacturers by applying synthetic noise, contrast adjustments, and compression. 2. <strong>Language Shift</strong>: Assesses how a model trained in English performs when prompting and generating in Spanish. 3. <strong>Prevalence Shift</strong>: Simulates different disease rates using importance sampling to evaluate how the model handles a LATAM patient distribution.</p>
+<p>This protocol acts as a diagnostic suite. It measures the robustness of models before they go live:</p>
+<ol type="1">
+<li><strong>Acquisition Shift</strong>: Simulates older equipment or different scanner manufacturers by applying synthetic noise, contrast adjustments, and compression.</li>
+<li><strong>Language Shift</strong>: Assesses how a model trained in English performs when prompting and generating in Spanish.</li>
+<li><strong>Prevalence Shift</strong>: Simulates different disease rates using importance sampling to evaluate how the model handles a LATAM patient distribution.</li>
+</ol>
 <hr>
 </section>
 </section>
@@ -311,7 +349,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>This project is built for complete mathematical reproducibility. Data, parameters, and pipelines are versioned.</p>
 <section id="versioned-parameters-params.yaml" class="level3">
 <h3 class="anchored" data-anchor-id="versioned-parameters-params.yaml">1. Versioned Parameters (params.yaml)</h3>
-<p>Every parameter—from QLoRA rank to target sampler disease prevalences—is declared in a single source of truth: <a href="file:///Users/diegovillaba/Code/ReportCXR/params.yaml">params.yaml</a>. No thresholds or weights are hardcoded inside the code in <code>src/</code>.</p>
+<p>Every parameter (from QLoRA rank to target sampler disease prevalences) is declared in a single source of truth: <a href="file:///Users/diegovillaba/Code/ReportCXR/params.yaml">params.yaml</a>. No thresholds or weights are hardcoded inside the code in <code>src/</code>.</p>
 </section>
 <section id="dvc-pipeline-dvc.yaml" class="level3">
 <h3 class="anchored" data-anchor-id="dvc-pipeline-dvc.yaml">2. DVC Pipeline (dvc.yaml)</h3>
@@ -321,7 +359,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Reproduce the entire pipeline (loading -&gt; labeling -&gt; splitting -&gt; training -&gt; evaluation)</span></span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="ex">dvc</span> repro</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>The pipeline contains the following stages defined in <a href="file:///Users/diegovillaba/Code/ReportCXR/dvc.yaml">dvc.yaml</a>: * <code>load</code>: Joins reports and projections CSVs and links images. * <code>labels</code>: Processes free-text findings with a CheXbert labeler to build a 14-dimensional pathology matrix. * <code>split</code>: Employs iterative multi-label stratification to split studies cleanly without patient leakage. * <code>eda</code>: Computes prevalences and class statistics, outputting training distribution plots. * <code>train_uniform</code>: Trains QLoRA on a uniform distribution. * <code>train_weighted</code>: Trains QLoRA with active sampling weights. * <code>eval</code>: Computes test metrics on the best saved models.</p>
+<p>The pipeline contains the following stages defined in <a href="file:///Users/diegovillaba/Code/ReportCXR/dvc.yaml">dvc.yaml</a>:</p>
+<ul>
+<li><code>load</code>: Joins reports and projections CSVs and links images.</li>
+<li><code>labels</code>: Processes free-text findings with a CheXbert labeler to build a 14-dimensional pathology matrix.</li>
+<li><code>split</code>: Employs iterative multi-label stratification to split studies cleanly without patient leakage.</li>
+<li><code>eda</code>: Computes prevalences and class statistics, outputting training distribution plots.</li>
+<li><code>train_uniform</code>: Trains QLoRA on a uniform distribution.</li>
+<li><code>train_weighted</code>: Trains QLoRA with active sampling weights.</li>
+<li><code>eval</code>: Computes test metrics on the best saved models.</li>
+</ul>
 </section>
 <section id="experiment-tracking-weights-and-biases" class="level3">
 <h3 class="anchored" data-anchor-id="experiment-tracking-weights-and-biases">3. Experiment Tracking (Weights and Biases)</h3>
@@ -330,10 +377,24 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <!-- -->
 
+
 </section>
 </section>
 
-</main> <!-- /main -->
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography" id="quarto-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list">
+<div id="ref-chen2024chexagent" class="csl-entry" role="listitem">
+Chen, Zhihong, Maya Varma, Justin Xu, Magdalini Paschali, Dave Van Veen, Andrew Johnston, Alaa Youssef, et al. 2024. <span>“A Vision-Language Foundation Model to Enhance Efficiency of Chest x-Ray Interpretation.”</span> <em>arXiv Preprint arXiv:2401.12208</em>, January. <a href="https://arxiv.org/abs/2401.12208">https://arxiv.org/abs/2401.12208</a>.
+</div>
+<div id="ref-kang2025structuredradiology" class="csl-entry" role="listitem">
+Kang, Seongjae, Dong Bok Lee, Juho Jung, Dongseop Kim, Won Hwa Kim, and Sunghoon Joo. 2025. <span>“Automated Structured Radiology Report Generation with Rich Clinical Context.”</span> <em>arXiv Preprint arXiv:2510.00428</em>, October. <a href="https://arxiv.org/abs/2510.00428">https://arxiv.org/abs/2510.00428</a>.
+</div>
+<div id="ref-sellergren2025medgemma" class="csl-entry" role="listitem">
+Sellergren, Andrew, Sahar Kazemzadeh, Tiam Jaroensri, Atilla Kiraly, Madeleine Traverse, Timo Kohlberger, Shawn Xu, et al. 2025. <span>“MedGemma Technical Report.”</span> <em>arXiv Preprint arXiv:2507.05201</em>, July. <a href="https://arxiv.org/abs/2507.05201">https://arxiv.org/abs/2507.05201</a>.
+</div>
+<div id="ref-singh2026clinicalreasoningvlm" class="csl-entry" role="listitem">
+Singh, Vikash, Debargha Ganguly, Haotian Yu, Chengwei Zhou, Prerna Singh, Brandon Lee, Vipin Chaudhary, and Gourav Datta. 2026. <span>“Toward Guarantees for Clinical Reasoning in Vision Language Models via Formal Verification.”</span> <em>arXiv Preprint arXiv:2602.24111</em>, February. <a href="https://arxiv.org/abs/2602.24111">https://arxiv.org/abs/2602.24111</a>.
+</div>
+</div></section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
     const icon = "";
@@ -787,72 +848,78 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </script><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">Source Code</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="">
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "ReportCXR"</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="an">subtitle:</span><span class="co"> "Automated Radiological Report Generation and Domain Shift Auditing under Distributional Discrepancy"</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="an">subtitle:</span><span class="co"> "Automated Radiological Report Generation via Vision-Language Models"</span></span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="an">author:</span><span class="co"> "Diego Villalba (Applied Research Candidate)"</span></span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="an">date:</span><span class="co"> "2026-06-25"</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>::: {.non-technical-summary}</span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="fu">##### Executive Summary (Non-Technical)</span></span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>This project is an advanced AI system built for automated chest X-ray interpretation. Instead of simply fine-tuning a general-purpose model, this work addresses a critical, real-world challenge in healthcare AI: domain shift. Medical AI models trained on United States clinical datasets (which are predominantly English and heavily biased towards normal findings) often fail when deployed in Latin American (LATAM) hospitals due to differences in scanner equipment, local patient populations (prevalences of disease), and local reporting languages.</span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>Here, we build a robust, reproducible clinical language model based on Google's MedGemma 4B-it, construct a data pipeline using DVC (Data Version Control) and Weights &amp; Biases (W&amp;B) for full MLOps auditing, and establish a Domain Shift Audit Protocol to systematically test and quantify model degradation under simulated equipment, language, and epidemiological shifts.</span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="an">bibliography:</span><span class="co"> references.bib</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>::: {.non-technical-summary}</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="fu">##### Executive Summary (Non-Technical)</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>This project is an AI system built for automated chest X-ray interpretation. Instead of simply fine-tuning a general-purpose model, this work addresses a critical, real-world challenge in healthcare AI: domain shift. Medical AI models trained on United States clinical datasets (which are predominantly English and heavily biased towards normal findings) often fail when deployed out of distribution domains, like hospitals in other regions due to differences in scanner equipment, local patient populations (prevalences of disease), and local reporting languages <span class="co">[</span><span class="ot">@sellergren2025medgemma</span><span class="co">]</span>, <span class="co">[</span><span class="ot">@chen2024chexagent</span><span class="co">]</span>.</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>Here, we build a robust and reproducible clinical vision-language pipeline based on Google’s MedGemma 4B-it. The system is implemented end-to-end, from data preparation and model adaptation to evaluation and experiment tracking. To ensure reproducibility and auditability, the pipeline integrates DVC for dataset and artifact versioning, together with Weights &amp; Biases for experiment tracking, metric logging, and model comparison. In addition, we introduce a Domain Shift Audit Protocol designed to systematically quantify model degradation under simulated shifts in imaging equipment, reporting language, and disease prevalence.</span>
 <span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="fu">## Project Overview</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>Beyond this baseline pipeline, we implement and evaluate two research-driven extensions inspired by recent work. First, we incorporate a retrieval-augmented generation strategy that conditions the model on clinically similar prior reports <span class="co">[</span><span class="ot">@kang2025structuredradiology</span><span class="co">]</span>, allowing the system to use case-based context at inference time. Second, we introduce soft label priors derived from association rules between radiological findings and diagnoses, which are injected into the prompting or decoding process to guide the model toward clinically plausible outputs without requiring additional supervised fine-tuning data <span class="co">[</span><span class="ot">@singh2026clinicalreasoningvlm</span><span class="co">]</span>.</span>
 <span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>The ReportCXR project is developed as part of the Eden AI technical challenge for the Applied Research role. The system fine-tunes a medical vision-language model, google/medgemma-4b-it (which combines a frozen medical SigLIP image encoder and a Gemma 3 4B-it language decoder), to generate radiological reports (specifically the Findings section) conditioned on Clinical Indications.</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>:::</span>
 <span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="fu">### The Strategic Thesis: Domain Shift Auditing</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="fu">## Project Overview</span></span>
 <span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>Our central premise is that deploying medical models across geographies is a distributional shift problem. Rather than reporting static accuracy metrics on a clean dataset, this project designs and validates a reusable diagnostic infrastructure—the DomainShiftAudit framework—on simulated shifts inside the Indiana University Chest X-ray (IU CXR) dataset.</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>The ReportCXR project is developed as part of the Eden AI technical challenge for the Applied Research role. The system fine-tunes a medical vision-language model, google/medgemma-4b-it (which combines a frozen medical SigLIP image encoder and a Gemma 3 4B-it language decoder), to generate radiological reports (specifically the Findings section) conditioned on Clinical Indications.</span>
 <span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>This protocol acts as a diagnostic suite. It measures the robustness of models before they go live:</span>
-<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>**Acquisition Shift**: Simulates older equipment or different scanner manufacturers by applying synthetic noise, contrast adjustments, and compression.</span>
-<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>**Language Shift**: Assesses how a model trained in English performs when prompting and generating in Spanish.</span>
-<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>**Prevalence Shift**: Simulates different disease rates using importance sampling to evaluate how the model handles a LATAM patient distribution.</span>
-<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>---</span>
-<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="fu">## Website Structure</span></span>
-<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>Use the navigation menu at the top to explore the work:</span>
-<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**Technical Report**: A modular, multi-part deep dive into the strategic thesis, data distribution, model training, evaluation metrics, domain shift experiments, and production scaling.</span>
-<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**Code Documentation**: Detailed module-by-module documentation of every component in the codebase (data loading, label extraction, QLoRA training, metric evaluation, and synthetic shifts).</span>
-<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**Notebooks**: Step-by-step interactive implementations of our entire pipeline (EDA, baseline zero-shot, training, and evaluation).</span>
-<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>---</span>
-<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a><span class="fu">## MLOps Setup and Reproducibility</span></span>
-<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a>This project is built for complete mathematical reproducibility. Data, parameters, and pipelines are versioned.</span>
-<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a><span class="fu">### 1. Versioned Parameters (params.yaml)</span></span>
-<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a>Every parameter—from QLoRA rank to target sampler disease prevalences—is declared in a single source of truth: <span class="co">[</span><span class="ot">params.yaml</span><span class="co">](file:///Users/diegovillaba/Code/ReportCXR/params.yaml)</span>. No thresholds or weights are hardcoded inside the code in <span class="in">`src/`</span>.</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="fu">### The Strategic Thesis: Domain Shift Auditing</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>Our central premise is that deploying medical models across geographies is a distributional shift problem. Rather than reporting static accuracy metrics on a clean dataset, this project designs and validates a reusable diagnostic infrastructure—the DomainShiftAudit framework—on simulated shifts inside the Indiana University Chest X-ray (IU CXR) dataset.</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>This protocol acts as a diagnostic suite. It measures the robustness of models before they go live:</span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>**Acquisition Shift**: Simulates older equipment or different scanner manufacturers by applying synthetic noise, contrast adjustments, and compression.</span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>**Language Shift**: Assesses how a model trained in English performs when prompting and generating in Spanish.</span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>**Prevalence Shift**: Simulates different disease rates using importance sampling to evaluate how the model handles a LATAM patient distribution.</span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a><span class="fu">## Website Structure</span></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>Use the navigation menu at the top to explore the work:</span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**Technical Report**: A modular, multi-part deep dive into the strategic thesis, data distribution, model training, evaluation metrics, domain shift experiments, and production scaling.</span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**Code Documentation**: Detailed module-by-module documentation of every component in the codebase (data loading, label extraction, QLoRA training, metric evaluation, and synthetic shifts).</span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**Notebooks**: Step-by-step interactive implementations of our entire pipeline (EDA, baseline zero-shot, training, and evaluation).</span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a><span class="fu">## MLOps Setup and Reproducibility</span></span>
 <span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a><span class="fu">### 2. DVC Pipeline (dvc.yaml)</span></span>
-<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a>The data pipeline is managed via DVC (Data Version Control). To reproduce the pipeline stages, run:</span>
-<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a><span class="in">```bash</span></span>
-<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a><span class="co"># Verify status of data and steps</span></span>
-<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a><span class="ex">dvc</span> status</span>
-<span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a><span class="co"># Reproduce the entire pipeline (loading -&gt; labeling -&gt; splitting -&gt; training -&gt; evaluation)</span></span>
-<span id="cb2-55"><a href="#cb2-55" aria-hidden="true" tabindex="-1"></a><span class="ex">dvc</span> repro</span>
-<span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb2-57"><a href="#cb2-57" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-58"><a href="#cb2-58" aria-hidden="true" tabindex="-1"></a>The pipeline contains the following stages defined in <span class="co">[</span><span class="ot">dvc.yaml</span><span class="co">](file:///Users/diegovillaba/Code/ReportCXR/dvc.yaml)</span>:</span>
-<span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span><span class="in">`load`</span>: Joins reports and projections CSVs and links images.</span>
-<span id="cb2-60"><a href="#cb2-60" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span><span class="in">`labels`</span>: Processes free-text findings with a CheXbert labeler to build a 14-dimensional pathology matrix.</span>
-<span id="cb2-61"><a href="#cb2-61" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span><span class="in">`split`</span>: Employs iterative multi-label stratification to split studies cleanly without patient leakage.</span>
-<span id="cb2-62"><a href="#cb2-62" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span><span class="in">`eda`</span>: Computes prevalences and class statistics, outputting training distribution plots.</span>
-<span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span><span class="in">`train_uniform`</span>: Trains QLoRA on a uniform distribution.</span>
-<span id="cb2-64"><a href="#cb2-64" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span><span class="in">`train_weighted`</span>: Trains QLoRA with active sampling weights.</span>
-<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span><span class="in">`eval`</span>: Computes test metrics on the best saved models.</span>
-<span id="cb2-66"><a href="#cb2-66" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a><span class="fu">### 3. Experiment Tracking (Weights and Biases)</span></span>
-<span id="cb2-68"><a href="#cb2-68" aria-hidden="true" tabindex="-1"></a>All training runs, validation curves, and sampler weight distributions are synced to Weights and Biases under the project <span class="in">`reportcxr`</span>.</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a>This project is built for complete mathematical reproducibility. Data, parameters, and pipelines are versioned.</span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a><span class="fu">### 1. Versioned Parameters (params.yaml)</span></span>
+<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a>Every parameter (from QLoRA rank to target sampler disease prevalences) is declared in a single source of truth: <span class="co">[</span><span class="ot">params.yaml</span><span class="co">](file:///Users/diegovillaba/Code/ReportCXR/params.yaml)</span>. No thresholds or weights are hardcoded inside the code in <span class="in">`src/`</span>.</span>
+<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a><span class="fu">### 2. DVC Pipeline (dvc.yaml)</span></span>
+<span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a>The data pipeline is managed via DVC (Data Version Control). To reproduce the pipeline stages, run:</span>
+<span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-55"><a href="#cb2-55" aria-hidden="true" tabindex="-1"></a><span class="in">```bash</span></span>
+<span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a><span class="co"># Verify status of data and steps</span></span>
+<span id="cb2-57"><a href="#cb2-57" aria-hidden="true" tabindex="-1"></a><span class="ex">dvc</span> status</span>
+<span id="cb2-58"><a href="#cb2-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a><span class="co"># Reproduce the entire pipeline (loading -&gt; labeling -&gt; splitting -&gt; training -&gt; evaluation)</span></span>
+<span id="cb2-60"><a href="#cb2-60" aria-hidden="true" tabindex="-1"></a><span class="ex">dvc</span> repro</span>
+<span id="cb2-61"><a href="#cb2-61" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb2-62"><a href="#cb2-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a>The pipeline contains the following stages defined in <span class="co">[</span><span class="ot">dvc.yaml</span><span class="co">](file:///Users/diegovillaba/Code/ReportCXR/dvc.yaml)</span>:</span>
+<span id="cb2-64"><a href="#cb2-64" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span><span class="in">`load`</span>: Joins reports and projections CSVs and links images.</span>
+<span id="cb2-66"><a href="#cb2-66" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span><span class="in">`labels`</span>: Processes free-text findings with a CheXbert labeler to build a 14-dimensional pathology matrix.</span>
+<span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span><span class="in">`split`</span>: Employs iterative multi-label stratification to split studies cleanly without patient leakage.</span>
+<span id="cb2-68"><a href="#cb2-68" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span><span class="in">`eda`</span>: Computes prevalences and class statistics, outputting training distribution plots.</span>
+<span id="cb2-69"><a href="#cb2-69" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span><span class="in">`train_uniform`</span>: Trains QLoRA on a uniform distribution.</span>
+<span id="cb2-70"><a href="#cb2-70" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span><span class="in">`train_weighted`</span>: Trains QLoRA with active sampling weights.</span>
+<span id="cb2-71"><a href="#cb2-71" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span><span class="in">`eval`</span>: Computes test metrics on the best saved models.</span>
+<span id="cb2-72"><a href="#cb2-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-73"><a href="#cb2-73" aria-hidden="true" tabindex="-1"></a><span class="fu">### 3. Experiment Tracking (Weights and Biases)</span></span>
+<span id="cb2-74"><a href="#cb2-74" aria-hidden="true" tabindex="-1"></a>All training runs, validation curves, and sampler weight distributions are synced to Weights and Biases under the project <span class="in">`reportcxr`</span>.</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
 </div></div></div></div></div>
 </div> <!-- /content -->
 <footer class="footer">

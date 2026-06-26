@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>04 — Evaluation, Shift Experiment, and Final Figures – ReportCXR</title>
+<title>04 — Core Evaluation and Domain Shift Audit – ReportCXR</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -151,12 +151,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="dropdown-text">4. Evaluation &amp; Metric Pivot</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="../report/05_domain_shift.html">
- <span class="dropdown-text">5. Domain Shift Audit Protocol</span></a>
+    <a class="dropdown-item" href="../report/05_inference_conditioning.html">
+ <span class="dropdown-text">5. Inference Conditioning</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="../report/06_production_scaling.html">
- <span class="dropdown-text">6. Production Scaling</span></a>
+    <a class="dropdown-item" href="../report/06_domain_shift.html">
+ <span class="dropdown-text">6. Domain Shift Audit Protocol</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../report/07_production_scaling.html">
+ <span class="dropdown-text">7. Production Scaling</span></a>
   </li>  
     </ul>
   </li>
@@ -212,6 +216,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <a class="dropdown-item" href="../notebooks/04_eval_and_figures.html">
  <span class="dropdown-text">04: Evaluation</span></a>
   </li>  
+        <li>
+    <a class="dropdown-item" href="../notebooks/05_rag_retrieval.html">
+ <span class="dropdown-text">05: RAG Retrieval</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../notebooks/06_association_rules.html">
+ <span class="dropdown-text">06: Association Rules</span></a>
+  </li>  
     </ul>
   </li>
 </ul>
@@ -225,15 +237,27 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
 <!-- margin-sidebar -->
-    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
-        
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active" data-toc-expanded="99">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#step-1-environment-setup" id="toc-step-1-environment-setup" class="nav-link active" data-scroll-target="#step-1-environment-setup">STEP 1 — Environment setup</a></li>
+  <li><a href="#step-2-generate-test-set-reports-for-all-fine-tuned-variants" id="toc-step-2-generate-test-set-reports-for-all-fine-tuned-variants" class="nav-link" data-scroll-target="#step-2-generate-test-set-reports-for-all-fine-tuned-variants">STEP 2 — Generate test-set reports for all fine-tuned variants</a></li>
+  <li><a href="#step-3-full-metric-stack" id="toc-step-3-full-metric-stack" class="nav-link" data-scroll-target="#step-3-full-metric-stack">STEP 3 — Full metric stack</a></li>
+  <li><a href="#step-4-fine-tuning-comparison-table-and-figures" id="toc-step-4-fine-tuning-comparison-table-and-figures" class="nav-link" data-scroll-target="#step-4-fine-tuning-comparison-table-and-figures">STEP 4 — Fine-tuning comparison table and figures</a></li>
+  <li><a href="#step-5-domain-shift-audit-acquisition-shift" id="toc-step-5-domain-shift-audit-acquisition-shift" class="nav-link" data-scroll-target="#step-5-domain-shift-audit-acquisition-shift">STEP 5 — Domain Shift Audit: Acquisition Shift</a></li>
+  <li><a href="#step-6-domain-shift-audit-prevalence-shift-importance-sampling" id="toc-step-6-domain-shift-audit-prevalence-shift-importance-sampling" class="nav-link" data-scroll-target="#step-6-domain-shift-audit-prevalence-shift-importance-sampling">STEP 6 — Domain Shift Audit: Prevalence Shift (Importance Sampling)</a></li>
+  <li><a href="#step-7-grand-comparison-all-variants" id="toc-step-7-grand-comparison-all-variants" class="nav-link" data-scroll-target="#step-7-grand-comparison-all-variants">STEP 7 — Grand Comparison (all variants)</a></li>
+  </ul>
+</nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<div class="quarto-title-block"><div><h1 class="title">04 — Evaluation, Shift Experiment, and Final Figures</h1><button type="button" class="btn code-tools-button dropdown-toggle" id="quarto-code-tools-menu" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi"></i> Code</button><ul class="dropdown-menu dropdown-menu-end" aria-labelelledby="quarto-code-tools-menu"><li><a id="quarto-show-all-code" class="dropdown-item" href="javascript:void(0)" role="button">Show All Code</a></li><li><a id="quarto-hide-all-code" class="dropdown-item" href="javascript:void(0)" role="button">Hide All Code</a></li></ul></div></div>
+<div class="quarto-title-block"><div><h1 class="title">04 — Core Evaluation and Domain Shift Audit</h1><button type="button" class="btn code-tools-button dropdown-toggle" id="quarto-code-tools-menu" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi"></i> Code</button><ul class="dropdown-menu dropdown-menu-end" aria-labelelledby="quarto-code-tools-menu"><li><a id="quarto-show-all-code" class="dropdown-item" href="javascript:void(0)" role="button">Show All Code</a></li><li><a id="quarto-hide-all-code" class="dropdown-item" href="javascript:void(0)" role="button">Hide All Code</a></li></ul></div></div>
 </div>
 
 
@@ -250,87 +274,412 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<p><strong>Purpose:</strong> Run the full evaluation pipeline on the trained checkpoints and produce all figures for the writeup.</p>
-<p><strong>Sections:</strong> 1. Full metric stack — all three models (zero-shot, uniform FT, weighted FT) 2. Shift experiment — importance-weighted re-evaluation + ESS curve 3. Calibration report — prevalence gap + MMD before/after fine-tuning 4. Domain Shift Audit — acquisition shift + language shift curves 5. Summary table for the writeup</p>
-<div id="b2c3d4e5" class="cell">
+<p><strong>Purpose:</strong> Generate test-set reports, compute the full metric stack, and run both domain shift audits. Advanced prompt engineering strategies (RAG, association rules) live in notebooks 05 and 06. Run notebook 04 first — its cached metric files are the input to the grand comparison in STEP 7.</p>
+<p><strong>Checkpoints evaluated:</strong> - Zero-shot MedGemma 4B-it (no fine-tuning) - <code>qlora_uniform_v3</code> — uniform sampling, BERTScore=0.7113 - <code>qlora_weighted_v4</code> — ESS-based weighted sampler, BERTScore=0.7036, macro-F1=0.0635</p>
+<p><strong>Execution order across notebooks:</strong></p>
+<pre><code>04 (core eval)  →  05 (RAG)  →  06 (assoc. rules)  →  04 STEP 7 (grand comparison)</code></pre>
+<section id="step-1-environment-setup" class="level2">
+<h2 class="anchored" data-anchor-id="step-1-environment-setup">STEP 1 — Environment setup</h2>
+<div id="step1-code" class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> logging</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> torch</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> yaml</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> src.<span class="bu">eval</span>.metrics <span class="im">import</span> evaluate_full</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> src.<span class="bu">eval</span>.shift_experiment <span class="im">import</span> run_prevalence_sweep</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> src.<span class="bu">eval</span>.calibration <span class="im">import</span> calibration_report</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> src.domain_shift_audit.audit <span class="im">import</span> DomainShiftAudit</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>logging.basicConfig(level<span class="op">=</span>logging.INFO, <span class="bu">format</span><span class="op">=</span><span class="st">'</span><span class="sc">%(levelname)s</span><span class="st"> </span><span class="sc">%(message)s</span><span class="st">'</span>)</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> <span class="bu">open</span>(<span class="st">'../params.yaml'</span>) <span class="im">as</span> f:</span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    params <span class="op">=</span> yaml.safe_load(f)</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>DEVICE <span class="op">=</span> <span class="st">'cuda'</span> <span class="cf">if</span> torch.cuda.is_available() <span class="cf">else</span> <span class="st">'cpu'</span></span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>PROCESSED_DIR <span class="op">=</span> Path(<span class="st">'../data/processed'</span>)</span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>CHECKPOINT_DIR <span class="op">=</span> Path(<span class="st">'../checkpoints'</span>)</span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>FIGURES_DIR <span class="op">=</span> Path(<span class="st">'../reports/figures'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os, sys, json, logging</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> torch</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> yaml</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>matplotlib.rcParams[<span class="st">'figure.dpi'</span>] <span class="op">=</span> <span class="dv">120</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>logging.basicConfig(level<span class="op">=</span>logging.INFO, <span class="bu">format</span><span class="op">=</span><span class="st">'</span><span class="sc">%(levelname)s</span><span class="st"> </span><span class="sc">%(message)s</span><span class="st">'</span>)</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>REPO_ROOT <span class="op">=</span> Path(os.getcwd())</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> REPO_ROOT.name <span class="op">==</span> <span class="st">'notebooks'</span>:</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    REPO_ROOT <span class="op">=</span> REPO_ROOT.parent</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>os.chdir(REPO_ROOT)</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>sys.path.insert(<span class="dv">0</span>, <span class="bu">str</span>(REPO_ROOT))</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>PROCESSED_DIR  <span class="op">=</span> REPO_ROOT <span class="op">/</span> <span class="st">'data'</span> <span class="op">/</span> <span class="st">'processed'</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>CHECKPOINT_DIR <span class="op">=</span> REPO_ROOT <span class="op">/</span> <span class="st">'checkpoints'</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>FIGURES_DIR    <span class="op">=</span> REPO_ROOT <span class="op">/</span> <span class="st">'reports'</span> <span class="op">/</span> <span class="st">'figures'</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>FIGURES_DIR.mkdir(parents<span class="op">=</span><span class="va">True</span>, exist_ok<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> <span class="bu">open</span>(REPO_ROOT <span class="op">/</span> <span class="st">'params.yaml'</span>) <span class="im">as</span> f:</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>    params <span class="op">=</span> yaml.safe_load(f)</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>DEVICE <span class="op">=</span> <span class="st">'cuda'</span> <span class="cf">if</span> torch.cuda.is_available() <span class="cf">else</span> <span class="st">'cpu'</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Device : </span><span class="sc">{</span>DEVICE<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> DEVICE <span class="op">==</span> <span class="st">'cuda'</span>:</span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>    props <span class="op">=</span> torch.cuda.get_device_properties(<span class="dv">0</span>)</span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f'GPU    : </span><span class="sc">{</span>props<span class="sc">.</span>name<span class="sc">}</span><span class="ss">  </span><span class="sc">{</span>props<span class="sc">.</span>total_memory<span class="op">/</span><span class="fl">1e9</span><span class="sc">:.1f}</span><span class="ss"> GB'</span>)</span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>test_df <span class="op">=</span> pd.read_parquet(PROCESSED_DIR <span class="op">/</span> <span class="st">'test.parquet'</span>)</span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>test_df <span class="op">=</span> test_df[test_df[<span class="st">'findings'</span>].notna() <span class="op">&amp;</span> (test_df[<span class="st">'findings'</span>].<span class="bu">str</span>.strip() <span class="op">!=</span> <span class="st">''</span>)].reset_index(drop<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>references <span class="op">=</span> test_df[<span class="st">'findings'</span>].<span class="bu">str</span>.strip().tolist()</span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Test set: </span><span class="sc">{</span><span class="bu">len</span>(test_df)<span class="sc">}</span><span class="ss"> studies'</span>)</span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a>env_file <span class="op">=</span> REPO_ROOT <span class="op">/</span> <span class="st">'.env'</span></span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> env_file.exists():</span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> line <span class="kw">in</span> env_file.read_text().splitlines():</span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a>        line <span class="op">=</span> line.strip()</span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> line <span class="kw">and</span> <span class="kw">not</span> line.startswith(<span class="st">'#'</span>) <span class="kw">and</span> <span class="st">'='</span> <span class="kw">in</span> line:</span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a>            k, v <span class="op">=</span> line.split(<span class="st">'='</span>, <span class="dv">1</span>)</span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a>            os.environ.setdefault(k.strip(), v.strip())</span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a>    <span class="im">import</span> huggingface_hub</span>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a>    hf_token <span class="op">=</span> os.environ.get(<span class="st">'HF_TOKEN'</span>)</span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> hf_token:</span>
+<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a>        huggingface_hub.login(token<span class="op">=</span>hf_token, add_to_git_credential<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">'HF: logged in'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
-<div id="c3d4e5f6" class="cell">
+</section>
+<section id="step-2-generate-test-set-reports-for-all-fine-tuned-variants" class="level2">
+<h2 class="anchored" data-anchor-id="step-2-generate-test-set-reports-for-all-fine-tuned-variants">STEP 2 — Generate test-set reports for all fine-tuned variants</h2>
+<p>Greedy decoding (<code>temperature=0</code>) for reproducibility.<br>
+Cached to <code>reports/eval_hypotheses_{variant}.json</code> — re-running skips generation.<br>
+<strong>~25–40 min per variant on Ada RTX 4000 (600 studies).</strong></p>
+<div id="step2-generate" class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Section 1: Load test set and generated reports</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>test_df <span class="op">=</span> pd.read_parquet(PROCESSED_DIR <span class="op">/</span> <span class="st">'test.parquet'</span>)</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>references <span class="op">=</span> test_df[<span class="st">'findings'</span>].tolist()</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TODO</span><span class="co">: Load hypotheses from each model variant</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co"># zero_shot_hyps = ...</span></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co"># uniform_ft_hyps = ...</span></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co"># weighted_ft_hyps = ...</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> PIL <span class="im">import</span> Imagefrom tqdm <span class="im">import</span> tqdmfrom src.training.model <span class="im">import</span> load_model_and_processorIMAGES_DIR <span class="op">=</span> REPO_ROOT <span class="op">/</span> params[<span class="st">'data'</span>][<span class="st">'images_dir'</span>] <span class="op">/</span> <span class="st">'images_normalized'</span>_BLANK <span class="op">=</span> Image.new(<span class="st">'RGB'</span>, (<span class="dv">224</span>, <span class="dv">224</span>), color<span class="op">=</span>(<span class="dv">128</span>, <span class="dv">128</span>, <span class="dv">128</span>))SYSTEM_PROMPT <span class="op">=</span> (    <span class="st">'You are an expert radiologist. '</span>    <span class="st">'Write only the Findings section of a radiology report for the chest X-ray shown. '</span>    <span class="st">'Be concise and clinical. Do not include an Impression section.'</span>)VARIANTS <span class="op">=</span> {    <span class="st">'zero_shot'</span>:   <span class="va">None</span>,    <span class="st">'uniform_v3'</span>:  <span class="st">'qlora_uniform_v3/best_model'</span>,    <span class="st">'weighted_v4'</span>: <span class="st">'qlora_weighted_v4/best_model'</span>,}<span class="kw">def</span> _load_image(row):    frontal <span class="op">=</span> row.get(<span class="st">'frontal'</span>, [])    <span class="cf">if</span> <span class="bu">hasattr</span>(frontal, <span class="st">'__len__'</span>) <span class="kw">and</span> <span class="bu">len</span>(frontal) <span class="op">&gt;</span> <span class="dv">0</span>:        p <span class="op">=</span> IMAGES_DIR <span class="op">/</span> <span class="bu">list</span>(frontal)[<span class="dv">0</span>]        <span class="cf">if</span> p.exists():            <span class="cf">try</span>: <span class="cf">return</span> Image.<span class="bu">open</span>(p).convert(<span class="st">'RGB'</span>)            <span class="cf">except</span> <span class="pp">Exception</span>: <span class="cf">pass</span>    <span class="cf">return</span> _BLANKdef _generate_all(model, processor, df, cache_path):    <span class="cf">if</span> cache_path.exists():        hyps <span class="op">=</span> json.loads(cache_path.read_text())        <span class="bu">print</span>(<span class="ss">f'  Loaded </span><span class="sc">{</span><span class="bu">len</span>(hyps)<span class="sc">}</span><span class="ss"> cached hypotheses from </span><span class="sc">{</span>cache_path<span class="sc">.</span>name<span class="sc">}</span><span class="ss">'</span>)        <span class="cf">return</span> hyps    hyps <span class="op">=</span> []    <span class="cf">for</span> _, row <span class="kw">in</span> tqdm(df.iterrows(), total<span class="op">=</span><span class="bu">len</span>(df)):        img <span class="op">=</span> _load_image(row)        indication <span class="op">=</span> <span class="bu">str</span>(row.get(<span class="st">'indication'</span>, <span class="st">''</span>) <span class="kw">or</span> <span class="st">''</span>).strip()        <span class="cf">if</span> indication.lower() <span class="kw">in</span> {<span class="st">'nan'</span>, <span class="st">'none'</span>, <span class="st">''</span>}: indication <span class="op">=</span> <span class="st">''</span>        user_text <span class="op">=</span> <span class="ss">f'</span><span class="sc">{</span>SYSTEM_PROMPT<span class="sc">}</span><span class="ch">\n</span><span class="ss">Indication: </span><span class="sc">{</span>indication<span class="sc">}</span><span class="ss">'</span> <span class="cf">if</span> indication <span class="cf">else</span> SYSTEM_PROMPT        content <span class="op">=</span> [{<span class="st">'type'</span>: <span class="st">'image'</span>}, {<span class="st">'type'</span>: <span class="st">'text'</span>, <span class="st">'text'</span>: user_text}]        prompt <span class="op">=</span> processor.apply_chat_template(            [{<span class="st">'role'</span>: <span class="st">'user'</span>, <span class="st">'content'</span>: content}],            add_generation_prompt<span class="op">=</span><span class="va">True</span>, tokenize<span class="op">=</span><span class="va">False</span>,        )        inputs <span class="op">=</span> processor(text<span class="op">=</span>prompt, images<span class="op">=</span>[img], return_tensors<span class="op">=</span><span class="st">'pt'</span>, padding<span class="op">=</span><span class="va">True</span>)        inputs <span class="op">=</span> {k: v.to(model.device) <span class="cf">for</span> k, v <span class="kw">in</span> inputs.items()}        <span class="cf">with</span> torch.inference_mode():            out <span class="op">=</span> model.generate(                <span class="op">**</span>inputs,                max_new_tokens<span class="op">=</span>params[<span class="st">'model'</span>][<span class="st">'max_new_tokens'</span>],                do_sample<span class="op">=</span><span class="va">False</span>,                pad_token_id<span class="op">=</span>processor.tokenizer.eos_token_id,            )        hyp <span class="op">=</span> processor.tokenizer.decode(            out[<span class="dv">0</span>][inputs[<span class="st">'input_ids'</span>].shape[<span class="dv">1</span>]:], skip_special_tokens<span class="op">=</span><span class="va">True</span>        ).strip()        hyps.append(hyp)    cache_path.write_text(json.dumps(hyps, ensure_ascii<span class="op">=</span><span class="va">False</span>, indent<span class="op">=</span><span class="dv">2</span>))    <span class="bu">print</span>(<span class="ss">f'  Saved </span><span class="sc">{</span><span class="bu">len</span>(hyps)<span class="sc">}</span><span class="ss"> hypotheses to </span><span class="sc">{</span>cache_path<span class="sc">.</span>name<span class="sc">}</span><span class="ss">'</span>)    <span class="cf">return</span> hypshypotheses <span class="op">=</span> {}<span class="cf">for</span> variant, adapter_rel <span class="kw">in</span> VARIANTS.items():    cache <span class="op">=</span> REPO_ROOT <span class="op">/</span> <span class="st">'reports'</span> <span class="op">/</span> <span class="ss">f'eval_hypotheses_</span><span class="sc">{</span>variant<span class="sc">}</span><span class="ss">.json'</span>    <span class="bu">print</span>(<span class="ss">f'</span><span class="ch">\n</span><span class="ss">[</span><span class="sc">{</span>variant<span class="sc">}</span><span class="ss">]'</span>)    model, processor <span class="op">=</span> load_model_and_processor(        model_id<span class="op">=</span>params[<span class="st">'model'</span>][<span class="st">'base_model_id'</span>],        quantization<span class="op">=</span>params[<span class="st">'model'</span>][<span class="st">'quantization'</span>],    )    <span class="cf">if</span> adapter_rel <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span>:        adapter_path <span class="op">=</span> CHECKPOINT_DIR <span class="op">/</span> adapter_rel        <span class="cf">if</span> <span class="kw">not</span> adapter_path.exists():            <span class="bu">print</span>(<span class="ss">f'  SKIP — checkpoint not found: </span><span class="sc">{</span>adapter_path<span class="sc">}</span><span class="ss">'</span>)            <span class="kw">del</span> model, processor<span class="op">;</span> torch.cuda.empty_cache()<span class="op">;</span> <span class="cf">continue</span>        <span class="im">from</span> peft <span class="im">import</span> PeftModel        model <span class="op">=</span> PeftModel.from_pretrained(model, <span class="bu">str</span>(adapter_path))    model.<span class="bu">eval</span>()    hypotheses[variant] <span class="op">=</span> _generate_all(model, processor, test_df, cache)    <span class="kw">del</span> model, processor<span class="op">;</span> torch.cuda.empty_cache()    <span class="bu">print</span>(<span class="ss">f'  Done. VRAM freed.'</span>)<span class="bu">print</span>(<span class="ss">f'</span><span class="ch">\n</span><span class="ss">Variants with hypotheses: </span><span class="sc">{</span><span class="bu">list</span>(hypotheses.keys())<span class="sc">}</span><span class="ss">'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
-<div id="d4e5f6a7" class="cell">
+</section>
+<section id="step-3-full-metric-stack" class="level2">
+<h2 class="anchored" data-anchor-id="step-3-full-metric-stack">STEP 3 — Full metric stack</h2>
+<ul>
+<li><strong>BERTScore-F1</strong> (primary) — <code>microsoft/deberta-xlarge-mnli</code></li>
+<li><strong>CheXbert micro/macro F1</strong> (diagnostic, vocabulary-artifact-affected on IU X-ray)</li>
+<li><strong>BLEU-4</strong> and <strong>ROUGE-L</strong> (NLG comparability)</li>
+</ul>
+<p>Cached to <code>reports/eval_metrics_{variant}.json</code> — picked up by notebooks 05/06 and STEP 7.</p>
+<div id="step3-metrics" class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Section 2: Shift experiment</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TODO</span><span class="co">: Run run_prevalence_sweep for LATAM-relevant labels</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot: x=target_prevalence, y=weighted_F1_macro, color=model_variant, shade=ESS</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> bert_score.utils <span class="im">as</span> _bsu</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> bert_score <span class="im">import</span> score <span class="im">as</span> _bert_score</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> src.data.labels <span class="im">import</span> CHEXBERT_LABELS, run_chexbert</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.metrics <span class="im">import</span> f1_score</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> evaluate <span class="im">as</span> hf_evaluate</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>_orig_sent_encode <span class="op">=</span> _bsu.sent_encode</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _safe_sent_encode(tokenizer, sent):</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="bu">getattr</span>(tokenizer, <span class="st">'model_max_length'</span>, <span class="dv">0</span>) <span class="op">&gt;</span> <span class="dv">10_000</span>:</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>        tokenizer.model_max_length <span class="op">=</span> <span class="dv">512</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> _orig_sent_encode(tokenizer, sent)</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>_bsu.sent_encode <span class="op">=</span> _safe_sent_encode</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>_bleu  <span class="op">=</span> hf_evaluate.load(<span class="st">'bleu'</span>)</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>_rouge <span class="op">=</span> hf_evaluate.load(<span class="st">'rouge'</span>)</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _compute_metrics(hyps, refs, variant, uncertain_policy<span class="op">=</span><span class="st">'present'</span>):</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>    cache <span class="op">=</span> REPO_ROOT <span class="op">/</span> <span class="st">'reports'</span> <span class="op">/</span> <span class="ss">f'eval_metrics_</span><span class="sc">{</span>variant<span class="sc">}</span><span class="ss">.json'</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> cache.exists():</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f'  [</span><span class="sc">{</span>variant<span class="sc">}</span><span class="ss">] loaded from cache'</span>)</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> json.loads(cache.read_text())</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f'  [</span><span class="sc">{</span>variant<span class="sc">}</span><span class="ss">] BERTScore…'</span>)</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>    _, _, F <span class="op">=</span> _bert_score(hyps, refs,</span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>        model_type<span class="op">=</span>params[<span class="st">'eval'</span>][<span class="st">'bertscore_model'</span>],</span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>        lang<span class="op">=</span><span class="st">'en'</span>, device<span class="op">=</span>DEVICE, verbose<span class="op">=</span><span class="va">False</span>, batch_size<span class="op">=</span><span class="dv">16</span>)</span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f'  [</span><span class="sc">{</span>variant<span class="sc">}</span><span class="ss">] CheXbert…'</span>)</span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>    hyp_labels <span class="op">=</span> run_chexbert(hyps, uncertain_policy<span class="op">=</span>uncertain_policy, device<span class="op">=</span>DEVICE)</span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>    ref_labels <span class="op">=</span> run_chexbert(refs, uncertain_policy<span class="op">=</span>uncertain_policy, device<span class="op">=</span>DEVICE)</span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f'  [</span><span class="sc">{</span>variant<span class="sc">}</span><span class="ss">] BLEU/ROUGE…'</span>)</span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>    result <span class="op">=</span> {</span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>        <span class="st">'variant'</span>: variant,</span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>        <span class="st">'bertscore_f1'</span>:      <span class="bu">float</span>(F.mean()),</span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>        <span class="st">'chexbert_micro_f1'</span>: <span class="bu">float</span>(f1_score(ref_labels, hyp_labels, average<span class="op">=</span><span class="st">'micro'</span>, zero_division<span class="op">=</span><span class="dv">0</span>)),</span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>        <span class="st">'chexbert_macro_f1'</span>: <span class="bu">float</span>(f1_score(ref_labels, hyp_labels, average<span class="op">=</span><span class="st">'macro'</span>, zero_division<span class="op">=</span><span class="dv">0</span>)),</span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a>        <span class="st">'bleu4'</span>:             _bleu.compute(predictions<span class="op">=</span>hyps, references<span class="op">=</span>[[r] <span class="cf">for</span> r <span class="kw">in</span> refs], max_order<span class="op">=</span><span class="dv">4</span>)[<span class="st">'bleu'</span>],</span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>        <span class="st">'rouge_l'</span>:           _rouge.compute(predictions<span class="op">=</span>hyps, references<span class="op">=</span>refs)[<span class="st">'rougeL'</span>],</span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a>        <span class="st">'per_label_f1'</span>:      {label: <span class="bu">float</span>(f1_score(ref_labels[:, i], hyp_labels[:, i], zero_division<span class="op">=</span><span class="dv">0</span>))</span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a>                              <span class="cf">for</span> i, label <span class="kw">in</span> <span class="bu">enumerate</span>(CHEXBERT_LABELS)},</span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a>        <span class="st">'bertscore_per_study'</span>: F.tolist(),</span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a>    cache.write_text(json.dumps(result, indent<span class="op">=</span><span class="dv">2</span>))</span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f'  [</span><span class="sc">{</span>variant<span class="sc">}</span><span class="ss">] saved → </span><span class="sc">{</span>cache<span class="sc">.</span>name<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> result</span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a>metrics <span class="op">=</span> {}</span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a>zs_baseline <span class="op">=</span> REPO_ROOT <span class="op">/</span> <span class="st">'reports'</span> <span class="op">/</span> <span class="st">'baseline_results.json'</span></span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> zs_baseline.exists():</span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a>    raw <span class="op">=</span> json.loads(zs_baseline.read_text())</span>
+<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a>    m <span class="op">=</span> raw[<span class="st">'metrics'</span>]</span>
+<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a>    metrics[<span class="st">'zero_shot'</span>] <span class="op">=</span> {</span>
+<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a>        <span class="st">'variant'</span>: <span class="st">'zero_shot'</span>,</span>
+<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a>        <span class="st">'bertscore_f1'</span>:       m.get(<span class="st">'bertscore_f1'</span>, <span class="bu">float</span>(<span class="st">'nan'</span>)),</span>
+<span id="cb4-53"><a href="#cb4-53" aria-hidden="true" tabindex="-1"></a>        <span class="st">'chexbert_micro_f1'</span>:  m.get(<span class="st">'f1_chexbert_micro_present'</span>, <span class="bu">float</span>(<span class="st">'nan'</span>)),</span>
+<span id="cb4-54"><a href="#cb4-54" aria-hidden="true" tabindex="-1"></a>        <span class="st">'chexbert_macro_f1'</span>:  m.get(<span class="st">'f1_chexbert_macro_present'</span>, <span class="bu">float</span>(<span class="st">'nan'</span>)),</span>
+<span id="cb4-55"><a href="#cb4-55" aria-hidden="true" tabindex="-1"></a>        <span class="st">'bleu4'</span>:              m.get(<span class="st">'bleu4'</span>, <span class="bu">float</span>(<span class="st">'nan'</span>)),</span>
+<span id="cb4-56"><a href="#cb4-56" aria-hidden="true" tabindex="-1"></a>        <span class="st">'rouge_l'</span>:            m.get(<span class="st">'rouge_l'</span>, <span class="bu">float</span>(<span class="st">'nan'</span>)),</span>
+<span id="cb4-57"><a href="#cb4-57" aria-hidden="true" tabindex="-1"></a>        <span class="st">'per_label_f1'</span>:       m.get(<span class="st">'per_label_f1_present'</span>, {}),</span>
+<span id="cb4-58"><a href="#cb4-58" aria-hidden="true" tabindex="-1"></a>        <span class="st">'bertscore_per_study'</span>: raw.get(<span class="st">'bertscore_per_study'</span>, []),</span>
+<span id="cb4-59"><a href="#cb4-59" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb4-60"><a href="#cb4-60" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">'[zero_shot] loaded from baseline_results.json'</span>)</span>
+<span id="cb4-61"><a href="#cb4-61" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-62"><a href="#cb4-62" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> variant, hyps <span class="kw">in</span> hypotheses.items():</span>
+<span id="cb4-63"><a href="#cb4-63" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> variant <span class="op">==</span> <span class="st">'zero_shot'</span> <span class="kw">and</span> <span class="st">'zero_shot'</span> <span class="kw">in</span> metrics:</span>
+<span id="cb4-64"><a href="#cb4-64" aria-hidden="true" tabindex="-1"></a>        <span class="cf">continue</span></span>
+<span id="cb4-65"><a href="#cb4-65" aria-hidden="true" tabindex="-1"></a>    metrics[variant] <span class="op">=</span> _compute_metrics(hyps, references, variant)</span>
+<span id="cb4-66"><a href="#cb4-66" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-67"><a href="#cb4-67" aria-hidden="true" tabindex="-1"></a>_bsu.sent_encode <span class="op">=</span> _orig_sent_encode</span>
+<span id="cb4-68"><a href="#cb4-68" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'</span><span class="ch">\n</span><span class="st">Done. Variants evaluated:'</span>, <span class="bu">list</span>(metrics.keys()))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
-<div id="e5f6a7b8" class="cell">
+</section>
+<section id="step-4-fine-tuning-comparison-table-and-figures" class="level2">
+<h2 class="anchored" data-anchor-id="step-4-fine-tuning-comparison-table-and-figures">STEP 4 — Fine-tuning comparison table and figures</h2>
+<div id="step4-table" class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Section 3: Calibration</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TODO</span><span class="co">: Run calibration_report for zero-shot and fine-tuned variants</span></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Show prevalence gap bar chart before/after</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>DISPLAY_NAMES <span class="op">=</span> {</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">'zero_shot'</span>:   <span class="st">'Zero-shot MedGemma'</span>,</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">'uniform_v3'</span>:  <span class="st">'QLoRA uniform (v3)'</span>,</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">'weighted_v4'</span>: <span class="st">'QLoRA weighted (v4)'</span>,</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>METRIC_KEY <span class="op">=</span> {</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">'BERTScore-F1'</span>:      <span class="st">'bertscore_f1'</span>,</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="st">'CheXbert micro-F1'</span>: <span class="st">'chexbert_micro_f1'</span>,</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">'CheXbert macro-F1'</span>: <span class="st">'chexbert_macro_f1'</span>,</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="st">'BLEU-4'</span>:            <span class="st">'bleu4'</span>,</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">'ROUGE-L'</span>:           <span class="st">'rouge_l'</span>,</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>rows <span class="op">=</span> []</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> variant <span class="kw">in</span> (<span class="st">'zero_shot'</span>, <span class="st">'uniform_v3'</span>, <span class="st">'weighted_v4'</span>):</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> variant <span class="kw">not</span> <span class="kw">in</span> metrics: <span class="cf">continue</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>    m <span class="op">=</span> metrics[variant]</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>    rows.append({<span class="st">'Model'</span>: DISPLAY_NAMES.get(variant, variant),</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>                 <span class="op">**</span>{col: <span class="bu">round</span>(m[key], <span class="dv">4</span>) <span class="cf">for</span> col, key <span class="kw">in</span> METRIC_KEY.items()}})</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>summary_df <span class="op">=</span> pd.DataFrame(rows).set_index(<span class="st">'Model'</span>)</span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>display(summary_df)</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>fig, axes <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">2</span>, figsize<span class="op">=</span>(<span class="dv">13</span>, <span class="dv">4</span>))</span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>colors <span class="op">=</span> [<span class="st">'#7f7f7f'</span>, <span class="st">'#1f77b4'</span>, <span class="st">'#d62728'</span>]</span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>active <span class="op">=</span> [v <span class="cf">for</span> v <span class="kw">in</span> (<span class="st">'zero_shot'</span>, <span class="st">'uniform_v3'</span>, <span class="st">'weighted_v4'</span>) <span class="cf">if</span> v <span class="kw">in</span> metrics]</span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>names  <span class="op">=</span> [DISPLAY_NAMES[v] <span class="cf">for</span> v <span class="kw">in</span> active]</span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ax, (col, key), title <span class="kw">in</span> [</span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>    (axes[<span class="dv">0</span>], (<span class="st">'BERTScore-F1'</span>, <span class="st">'bertscore_f1'</span>),      <span class="st">'BERTScore-F1 (primary)'</span>),</span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>    (axes[<span class="dv">1</span>], (<span class="st">'CheXbert micro-F1'</span>, <span class="st">'chexbert_micro_f1'</span>), <span class="st">'CheXbert micro-F1 (diagnostic)'</span>),</span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a>]:</span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>    vals <span class="op">=</span> [metrics[v][key] <span class="cf">for</span> v <span class="kw">in</span> active]</span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a>    bars <span class="op">=</span> ax.bar(names, vals, color<span class="op">=</span>colors[:<span class="bu">len</span>(vals)], alpha<span class="op">=</span><span class="fl">0.85</span>, edgecolor<span class="op">=</span><span class="st">'white'</span>)</span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> bar, val <span class="kw">in</span> <span class="bu">zip</span>(bars, vals):</span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a>        ax.text(bar.get_x() <span class="op">+</span> bar.get_width()<span class="op">/</span><span class="dv">2</span>, val <span class="op">+</span> <span class="fl">0.002</span>, <span class="ss">f'</span><span class="sc">{</span>val<span class="sc">:.4f}</span><span class="ss">'</span>,</span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a>                ha<span class="op">=</span><span class="st">'center'</span>, va<span class="op">=</span><span class="st">'bottom'</span>, fontsize<span class="op">=</span><span class="dv">9</span>)</span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a>    ax.set_ylim(<span class="dv">0</span>, <span class="bu">max</span>(vals) <span class="op">*</span> <span class="fl">1.15</span>)</span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a>    ax.set_title(title)<span class="op">;</span> ax.set_ylabel(<span class="st">'Score'</span>)</span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a>    ax.tick_params(axis<span class="op">=</span><span class="st">'x'</span>, labelrotation<span class="op">=</span><span class="dv">15</span>)</span>
+<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a>plt.suptitle(<span class="st">'Test-set evaluation — zero-shot vs fine-tuned'</span>, fontsize<span class="op">=</span><span class="dv">13</span>)</span>
+<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a>fig.savefig(FIGURES_DIR <span class="op">/</span> <span class="st">'eval_metric_summary.png'</span>, dpi<span class="op">=</span><span class="dv">150</span>, bbox_inches<span class="op">=</span><span class="st">'tight'</span>)</span>
+<span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'Saved eval_metric_summary.png'</span>)<span class="op">;</span> plt.show()</span>
+<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a><span class="co"># Per-label F1 heatmap</span></span>
+<span id="cb5-47"><a href="#cb5-47" aria-hidden="true" tabindex="-1"></a>label_rows <span class="op">=</span> []</span>
+<span id="cb5-48"><a href="#cb5-48" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> variant <span class="kw">in</span> active:</span>
+<span id="cb5-49"><a href="#cb5-49" aria-hidden="true" tabindex="-1"></a>    per_label <span class="op">=</span> metrics[variant].get(<span class="st">'per_label_f1'</span>, {})</span>
+<span id="cb5-50"><a href="#cb5-50" aria-hidden="true" tabindex="-1"></a>    label_rows.append({<span class="st">'Model'</span>: DISPLAY_NAMES[variant], <span class="op">**</span>{k: <span class="bu">round</span>(v, <span class="dv">3</span>) <span class="cf">for</span> k, v <span class="kw">in</span> per_label.items()}})</span>
+<span id="cb5-51"><a href="#cb5-51" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> label_rows:</span>
+<span id="cb5-52"><a href="#cb5-52" aria-hidden="true" tabindex="-1"></a>    ldf <span class="op">=</span> pd.DataFrame(label_rows).set_index(<span class="st">'Model'</span>)</span>
+<span id="cb5-53"><a href="#cb5-53" aria-hidden="true" tabindex="-1"></a>    fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">16</span>, <span class="fl">2.5</span>))</span>
+<span id="cb5-54"><a href="#cb5-54" aria-hidden="true" tabindex="-1"></a>    im <span class="op">=</span> ax.imshow(ldf.values, cmap<span class="op">=</span><span class="st">'RdYlGn'</span>, vmin<span class="op">=</span><span class="dv">0</span>, vmax<span class="op">=</span><span class="fl">0.6</span>, aspect<span class="op">=</span><span class="st">'auto'</span>)</span>
+<span id="cb5-55"><a href="#cb5-55" aria-hidden="true" tabindex="-1"></a>    ax.set_xticks(<span class="bu">range</span>(<span class="bu">len</span>(ldf.columns)))<span class="op">;</span> ax.set_xticklabels(ldf.columns, rotation<span class="op">=</span><span class="dv">35</span>, ha<span class="op">=</span><span class="st">'right'</span>, fontsize<span class="op">=</span><span class="dv">8</span>)</span>
+<span id="cb5-56"><a href="#cb5-56" aria-hidden="true" tabindex="-1"></a>    ax.set_yticks(<span class="bu">range</span>(<span class="bu">len</span>(ldf.index)))<span class="op">;</span> ax.set_yticklabels(ldf.index, fontsize<span class="op">=</span><span class="dv">9</span>)</span>
+<span id="cb5-57"><a href="#cb5-57" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="bu">len</span>(ldf.index)):</span>
+<span id="cb5-58"><a href="#cb5-58" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> j <span class="kw">in</span> <span class="bu">range</span>(<span class="bu">len</span>(ldf.columns)):</span>
+<span id="cb5-59"><a href="#cb5-59" aria-hidden="true" tabindex="-1"></a>            ax.text(j, i, <span class="ss">f'</span><span class="sc">{</span>ldf<span class="sc">.</span>values[i,j]<span class="sc">:.2f}</span><span class="ss">'</span>, ha<span class="op">=</span><span class="st">'center'</span>, va<span class="op">=</span><span class="st">'center'</span>, fontsize<span class="op">=</span><span class="dv">7</span>)</span>
+<span id="cb5-60"><a href="#cb5-60" aria-hidden="true" tabindex="-1"></a>    plt.colorbar(im, ax<span class="op">=</span>ax, shrink<span class="op">=</span><span class="fl">0.8</span>, label<span class="op">=</span><span class="st">'CheXbert F1'</span>)</span>
+<span id="cb5-61"><a href="#cb5-61" aria-hidden="true" tabindex="-1"></a>    ax.set_title(<span class="st">'Per-label CheXbert F1 — zero-shot vs fine-tuned'</span>)</span>
+<span id="cb5-62"><a href="#cb5-62" aria-hidden="true" tabindex="-1"></a>    plt.tight_layout()</span>
+<span id="cb5-63"><a href="#cb5-63" aria-hidden="true" tabindex="-1"></a>    fig.savefig(FIGURES_DIR <span class="op">/</span> <span class="st">'eval_per_label_f1.png'</span>, dpi<span class="op">=</span><span class="dv">150</span>, bbox_inches<span class="op">=</span><span class="st">'tight'</span>)</span>
+<span id="cb5-64"><a href="#cb5-64" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">'Saved eval_per_label_f1.png'</span>)<span class="op">;</span> plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
-<div id="f6a7b8c9" class="cell">
+</section>
+<section id="step-5-domain-shift-audit-acquisition-shift" class="level2">
+<h2 class="anchored" data-anchor-id="step-5-domain-shift-audit-acquisition-shift">STEP 5 — Domain Shift Audit: Acquisition Shift</h2>
+<p>Sweeps 5 image perturbation types across their magnitude grids and measures BERTScore degradation. Simulates equipment-level shift (different vendor calibration, kVp, digitization quality).</p>
+<p><strong>Perturbations:</strong> brightness · contrast · gamma · gaussian_noise · jpeg_compression</p>
+<div id="step5-acq" class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Section 4: Domain Shift Audit — acquisition shift</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TODO</span><span class="co">: Load test images, instantiate DomainShiftAudit, run acquisition sweep</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> src.domain_shift_audit.acquisition_shift <span class="im">import</span> run_acquisition_sweep, DEFAULT_MAGNITUDESfrom peft <span class="im">import</span> PeftModelAUDIT_VARIANT <span class="op">=</span> <span class="st">'uniform_v3'</span><span class="bu">print</span>(<span class="ss">f'Loading </span><span class="sc">{</span>AUDIT_VARIANT<span class="sc">}</span><span class="ss"> for acquisition audit…'</span>)audit_model, audit_proc <span class="op">=</span> load_model_and_processor(    model_id<span class="op">=</span>params[<span class="st">'model'</span>][<span class="st">'base_model_id'</span>],    quantization<span class="op">=</span>params[<span class="st">'model'</span>][<span class="st">'quantization'</span>],)adapter_path <span class="op">=</span> CHECKPOINT_DIR <span class="op">/</span> AUDIT_VARIANT <span class="op">/</span> <span class="st">'best_model'</span><span class="cf">if</span> <span class="kw">not</span> adapter_path.exists():    adapter_path <span class="op">=</span> CHECKPOINT_DIR <span class="op">/</span> <span class="ss">f'qlora_</span><span class="sc">{</span>AUDIT_VARIANT<span class="sc">}</span><span class="ss">'</span> <span class="op">/</span> <span class="st">'best_model'</span>audit_model <span class="op">=</span> PeftModel.from_pretrained(audit_model, <span class="bu">str</span>(adapter_path))audit_model.<span class="bu">eval</span>()<span class="bu">print</span>(<span class="st">'Loading test images…'</span>)test_images <span class="op">=</span> [_load_image(row) <span class="cf">for</span> _, row <span class="kw">in</span> test_df.iterrows()]<span class="kw">def</span> _bertscore_metric_fn(perturbed_images):    <span class="im">import</span> bert_score.utils <span class="im">as</span> _bsu2    <span class="im">from</span> bert_score <span class="im">import</span> score <span class="im">as</span> _bert_score2    _bsu2.sent_encode <span class="op">=</span> _safe_sent_encode    hyps <span class="op">=</span> []    <span class="cf">for</span> img, (_, row) <span class="kw">in</span> <span class="bu">zip</span>(perturbed_images, test_df.iterrows()):        indication <span class="op">=</span> <span class="bu">str</span>(row.get(<span class="st">'indication'</span>, <span class="st">''</span>) <span class="kw">or</span> <span class="st">''</span>).strip()        <span class="cf">if</span> indication.lower() <span class="kw">in</span> {<span class="st">'nan'</span>, <span class="st">'none'</span>, <span class="st">''</span>}: indication <span class="op">=</span> <span class="st">''</span>        user_text <span class="op">=</span> <span class="ss">f'</span><span class="sc">{</span>SYSTEM_PROMPT<span class="sc">}</span><span class="ch">\n</span><span class="ss">Indication: </span><span class="sc">{</span>indication<span class="sc">}</span><span class="ss">'</span> <span class="cf">if</span> indication <span class="cf">else</span> SYSTEM_PROMPT        content <span class="op">=</span> [{<span class="st">'type'</span>: <span class="st">'image'</span>}, {<span class="st">'type'</span>: <span class="st">'text'</span>, <span class="st">'text'</span>: user_text}]        prompt <span class="op">=</span> audit_proc.apply_chat_template(            [{<span class="st">'role'</span>: <span class="st">'user'</span>, <span class="st">'content'</span>: content}],            add_generation_prompt<span class="op">=</span><span class="va">True</span>, tokenize<span class="op">=</span><span class="va">False</span>,        )        inputs <span class="op">=</span> audit_proc(text<span class="op">=</span>prompt, images<span class="op">=</span>[img], return_tensors<span class="op">=</span><span class="st">'pt'</span>, padding<span class="op">=</span><span class="va">True</span>)        inputs <span class="op">=</span> {k: v.to(audit_model.device) <span class="cf">for</span> k, v <span class="kw">in</span> inputs.items()}        <span class="cf">with</span> torch.inference_mode():            out <span class="op">=</span> audit_model.generate(<span class="op">**</span>inputs,                max_new_tokens<span class="op">=</span>params[<span class="st">'model'</span>][<span class="st">'max_new_tokens'</span>],                do_sample<span class="op">=</span><span class="va">False</span>, pad_token_id<span class="op">=</span>audit_proc.tokenizer.eos_token_id)        hyp <span class="op">=</span> audit_proc.tokenizer.decode(            out[<span class="dv">0</span>][inputs[<span class="st">'input_ids'</span>].shape[<span class="dv">1</span>]:], skip_special_tokens<span class="op">=</span><span class="va">True</span>).strip()        hyps.append(hyp)    _, _, F <span class="op">=</span> _bert_score2(hyps, references,        model_type<span class="op">=</span>params[<span class="st">'eval'</span>][<span class="st">'bertscore_model'</span>],        lang<span class="op">=</span><span class="st">'en'</span>, device<span class="op">=</span>DEVICE, verbose<span class="op">=</span><span class="va">False</span>, batch_size<span class="op">=</span><span class="dv">16</span>)    <span class="cf">return</span> <span class="bu">float</span>(F.mean())acq_results <span class="op">=</span> {}<span class="cf">for</span> perturb_type <span class="kw">in</span> DEFAULT_MAGNITUDES:    cache <span class="op">=</span> REPO_ROOT <span class="op">/</span> <span class="st">'reports'</span> <span class="op">/</span> <span class="ss">f'acq_shift_</span><span class="sc">{</span>AUDIT_VARIANT<span class="sc">}</span><span class="ss">_</span><span class="sc">{</span>perturb_type<span class="sc">}</span><span class="ss">.json'</span>    <span class="cf">if</span> cache.exists():        acq_results[perturb_type] <span class="op">=</span> json.loads(cache.read_text())        <span class="bu">print</span>(<span class="ss">f'  </span><span class="sc">{</span>perturb_type<span class="sc">}</span><span class="ss">: loaded from cache'</span>)    <span class="cf">else</span>:        <span class="bu">print</span>(<span class="ss">f'  </span><span class="sc">{</span>perturb_type<span class="sc">}</span><span class="ss">: sweeping…'</span>)        res <span class="op">=</span> run_acquisition_sweep(            images<span class="op">=</span>test_images, perturb_type<span class="op">=</span>perturb_type,            metric_fn<span class="op">=</span>_bertscore_metric_fn, metric_name<span class="op">=</span><span class="st">'bertscore_f1'</span>,        )        data <span class="op">=</span> res.to_dataframe().to_dict(orient<span class="op">=</span><span class="st">'list'</span>)        cache.write_text(json.dumps(data))        acq_results[perturb_type] <span class="op">=</span> data        <span class="bu">print</span>(<span class="ss">f'  </span><span class="sc">{</span>perturb_type<span class="sc">}</span><span class="ss">: done'</span>)<span class="kw">del</span> audit_model, audit_proc<span class="op">;</span> torch.cuda.empty_cache()<span class="bu">print</span>(<span class="st">'VRAM freed.'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
-<div id="g7h8i9j0" class="cell">
+<div id="step5-plot" class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Section 5: Summary table</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="co"># </span><span class="al">TODO</span><span class="co">: Build a clean comparison table: model x metric</span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Zero-shot | Uniform FT | Weighted FT</span></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co"># F1-CheXbert micro | ... | ... | ...</span></span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="co"># F1-CheXbert macro | ... | ... | ...</span></span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="co"># F1-RadGraph       | ... | ... | ...</span></span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="co"># BERTScore         | ... | ... | ...</span></span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="co"># BLEU-4            | ... | ... | ...</span></span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="co"># ROUGE-L           | ... | ... | ...</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>fig, axes <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="bu">len</span>(acq_results), figsize<span class="op">=</span>(<span class="dv">4</span> <span class="op">*</span> <span class="bu">len</span>(acq_results), <span class="dv">4</span>), sharey<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">len</span>(acq_results) <span class="op">==</span> <span class="dv">1</span>: axes <span class="op">=</span> [axes]</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ax, (perturb_type, data) <span class="kw">in</span> <span class="bu">zip</span>(axes, acq_results.items()):</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    df <span class="op">=</span> pd.DataFrame(data)</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    ax.plot(df[<span class="st">'magnitude'</span>], df[<span class="st">'bertscore_f1'</span>], marker<span class="op">=</span><span class="st">'o'</span>, color<span class="op">=</span><span class="st">'#1f77b4'</span>, linewidth<span class="op">=</span><span class="dv">2</span>)</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    rel <span class="op">=</span> df[<span class="st">'relative_degradation'</span>].<span class="bu">abs</span>()</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (rel <span class="op">&lt;</span> <span class="fl">0.001</span>).<span class="bu">any</span>():</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>        baseline <span class="op">=</span> <span class="bu">float</span>(df.loc[rel.idxmin(), <span class="st">'bertscore_f1'</span>])</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>        ax.axhline(baseline, color<span class="op">=</span><span class="st">'gray'</span>, linestyle<span class="op">=</span><span class="st">'--'</span>, linewidth<span class="op">=</span><span class="dv">1</span>, label<span class="op">=</span><span class="ss">f'baseline=</span><span class="sc">{</span>baseline<span class="sc">:.4f}</span><span class="ss">'</span>)</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>        ax.legend(fontsize<span class="op">=</span><span class="dv">8</span>)</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>    ax.set_title(perturb_type.replace(<span class="st">'_'</span>, <span class="st">' '</span>).title())</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>    ax.set_xlabel(<span class="st">'Magnitude'</span>)</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> ax <span class="kw">is</span> axes[<span class="dv">0</span>]: ax.set_ylabel(<span class="st">'BERTScore-F1'</span>)</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>    ax.set_ylim(<span class="fl">0.5</span>, <span class="fl">0.80</span>)</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>plt.suptitle(<span class="ss">f'Acquisition Shift Audit — </span><span class="sc">{</span>AUDIT_VARIANT<span class="sc">}</span><span class="ss">'</span>, fontsize<span class="op">=</span><span class="dv">13</span>)</span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>fig.savefig(FIGURES_DIR <span class="op">/</span> <span class="st">'eval_acquisition_shift.png'</span>, dpi<span class="op">=</span><span class="dv">150</span>, bbox_inches<span class="op">=</span><span class="st">'tight'</span>)</span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'Saved eval_acquisition_shift.png'</span>)<span class="op">;</span> plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="step-6-domain-shift-audit-prevalence-shift-importance-sampling" class="level2">
+<h2 class="anchored" data-anchor-id="step-6-domain-shift-audit-prevalence-shift-importance-sampling">STEP 6 — Domain Shift Audit: Prevalence Shift (Importance Sampling)</h2>
+<p>Estimates performance under a different label distribution (e.g.&nbsp;higher Pleural Effusion prevalence — plausible for a LATAM deployment). Uses importance-sampling re-weighting:<br>
+<code>w_i = π_target(y_i) / π_source(y_i)</code>, <code>weighted_score = Σ w_i·score_i / Σ w_i</code><br>
+Dashed lines = ESS &lt; 30 (estimate unreliable).</p>
+<div id="step6-prev" class="cell">
+<details open="" class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> src.data.labels <span class="im">import</span> CHEXBERT_LABELS</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>SHIFT_LABELS <span class="op">=</span> [<span class="st">'Pleural Effusion'</span>, <span class="st">'Atelectasis'</span>, <span class="st">'Pneumonia'</span>, <span class="st">'Consolidation'</span>]</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>test_label_matrix <span class="op">=</span> test_df[CHEXBERT_LABELS].values.astype(<span class="bu">float</span>)</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _importance_weights(label_matrix, label_idx, pi_target, pi_source):</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    y <span class="op">=</span> label_matrix[:, label_idx]</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> np.where(y <span class="op">==</span> <span class="dv">1</span>,</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>        pi_target <span class="op">/</span> <span class="bu">max</span>(pi_source, <span class="fl">1e-9</span>),</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>        (<span class="dv">1</span> <span class="op">-</span> pi_target) <span class="op">/</span> <span class="bu">max</span>(<span class="dv">1</span> <span class="op">-</span> pi_source, <span class="fl">1e-9</span>)</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    ).astype(np.float64)</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _ess(weights):</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>    w <span class="op">=</span> weights <span class="op">/</span> weights.<span class="bu">sum</span>()</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="bu">float</span>(<span class="fl">1.0</span> <span class="op">/</span> (w<span class="op">**</span><span class="dv">2</span>).<span class="bu">sum</span>())</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>pi_targets <span class="op">=</span> np.linspace(<span class="fl">0.01</span>, <span class="fl">0.50</span>, <span class="dv">20</span>)</span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>prev_results <span class="op">=</span> {}</span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> label <span class="kw">in</span> SHIFT_LABELS:</span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>    label_idx <span class="op">=</span> CHEXBERT_LABELS.index(label)</span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>    pi_source <span class="op">=</span> <span class="bu">float</span>(test_label_matrix[:, label_idx].mean())</span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>    rows <span class="op">=</span> []</span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> variant <span class="kw">in</span> (<span class="st">'zero_shot'</span>, <span class="st">'uniform_v3'</span>, <span class="st">'weighted_v4'</span>):</span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> variant <span class="kw">not</span> <span class="kw">in</span> metrics: <span class="cf">continue</span></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>        scores <span class="op">=</span> np.array(metrics[variant].get(<span class="st">'bertscore_per_study'</span>, []))</span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="bu">len</span>(scores) <span class="op">!=</span> <span class="bu">len</span>(test_label_matrix): <span class="cf">continue</span></span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> pi_t <span class="kw">in</span> pi_targets:</span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a>            w <span class="op">=</span> _importance_weights(test_label_matrix, label_idx, pi_t, pi_source)</span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a>            ess_val <span class="op">=</span> _ess(w)</span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a>            rows.append({<span class="st">'variant'</span>: variant,</span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a>                         <span class="st">'target_prevalence'</span>: <span class="bu">round</span>(<span class="bu">float</span>(pi_t), <span class="dv">4</span>),</span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a>                         <span class="st">'weighted_bertscore_f1'</span>: <span class="bu">float</span>(np.average(scores, weights<span class="op">=</span>w)),</span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a>                         <span class="st">'ess'</span>: ess_val, <span class="st">'reliable'</span>: ess_val <span class="op">&gt;=</span> <span class="dv">30</span>})</span>
+<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a>    prev_results[label] <span class="op">=</span> pd.DataFrame(rows)</span>
+<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f'</span><span class="sc">{</span>label<span class="sc">}</span><span class="ss">: source prevalence = </span><span class="sc">{</span>pi_source<span class="sc">:.3f}</span><span class="ss">'</span>)</span>
+<span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a>palette <span class="op">=</span> {<span class="st">'zero_shot'</span>: <span class="st">'#7f7f7f'</span>, <span class="st">'uniform_v3'</span>: <span class="st">'#1f77b4'</span>, <span class="st">'weighted_v4'</span>: <span class="st">'#d62728'</span>}</span>
+<span id="cb8-38"><a href="#cb8-38" aria-hidden="true" tabindex="-1"></a>fig, axes <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="bu">len</span>(SHIFT_LABELS), figsize<span class="op">=</span>(<span class="dv">5</span> <span class="op">*</span> <span class="bu">len</span>(SHIFT_LABELS), <span class="dv">4</span>), sharey<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb8-39"><a href="#cb8-39" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> ax, label <span class="kw">in</span> <span class="bu">zip</span>(axes, SHIFT_LABELS):</span>
+<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a>    df <span class="op">=</span> prev_results[label]</span>
+<span id="cb8-41"><a href="#cb8-41" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> variant, color <span class="kw">in</span> palette.items():</span>
+<span id="cb8-42"><a href="#cb8-42" aria-hidden="true" tabindex="-1"></a>        vdf <span class="op">=</span> df[df[<span class="st">'variant'</span>] <span class="op">==</span> variant]</span>
+<span id="cb8-43"><a href="#cb8-43" aria-hidden="true" tabindex="-1"></a>        r, u <span class="op">=</span> vdf[vdf[<span class="st">'reliable'</span>]], vdf[<span class="op">~</span>vdf[<span class="st">'reliable'</span>]]</span>
+<span id="cb8-44"><a href="#cb8-44" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="bu">len</span>(r): ax.plot(r[<span class="st">'target_prevalence'</span>], r[<span class="st">'weighted_bertscore_f1'</span>],</span>
+<span id="cb8-45"><a href="#cb8-45" aria-hidden="true" tabindex="-1"></a>                           color<span class="op">=</span>color, linewidth<span class="op">=</span><span class="dv">2</span>, label<span class="op">=</span>DISPLAY_NAMES.get(variant, variant))</span>
+<span id="cb8-46"><a href="#cb8-46" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="bu">len</span>(u): ax.plot(u[<span class="st">'target_prevalence'</span>], u[<span class="st">'weighted_bertscore_f1'</span>],</span>
+<span id="cb8-47"><a href="#cb8-47" aria-hidden="true" tabindex="-1"></a>                           color<span class="op">=</span>color, linewidth<span class="op">=</span><span class="dv">1</span>, linestyle<span class="op">=</span><span class="st">':'</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
+<span id="cb8-48"><a href="#cb8-48" aria-hidden="true" tabindex="-1"></a>    ax.set_xlabel(<span class="ss">f'Target prevalence of</span><span class="ch">\n</span><span class="sc">{</span>label<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb8-49"><a href="#cb8-49" aria-hidden="true" tabindex="-1"></a>    ax.set_title(label)<span class="op">;</span> ax.legend(fontsize<span class="op">=</span><span class="dv">7</span>)<span class="op">;</span> ax.set_ylim(<span class="fl">0.60</span>, <span class="fl">0.80</span>)</span>
+<span id="cb8-50"><a href="#cb8-50" aria-hidden="true" tabindex="-1"></a>axes[<span class="dv">0</span>].set_ylabel(<span class="st">'Weighted BERTScore-F1'</span>)</span>
+<span id="cb8-51"><a href="#cb8-51" aria-hidden="true" tabindex="-1"></a>plt.suptitle(<span class="st">'Prevalence Shift Audit (dashed = ESS &lt; 30)'</span>, fontsize<span class="op">=</span><span class="dv">12</span>)</span>
+<span id="cb8-52"><a href="#cb8-52" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb8-53"><a href="#cb8-53" aria-hidden="true" tabindex="-1"></a>fig.savefig(FIGURES_DIR <span class="op">/</span> <span class="st">'eval_prevalence_shift.png'</span>, dpi<span class="op">=</span><span class="dv">150</span>, bbox_inches<span class="op">=</span><span class="st">'tight'</span>)</span>
+<span id="cb8-54"><a href="#cb8-54" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'Saved eval_prevalence_shift.png'</span>)<span class="op">;</span> plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="step-7-grand-comparison-all-variants" class="level2">
+<h2 class="anchored" data-anchor-id="step-7-grand-comparison-all-variants">STEP 7 — Grand Comparison (all variants)</h2>
+<p>Auto-discovers every <code>reports/eval_metrics_*.json</code> file — including those produced by notebooks 05 (RAG) and 06 (association rules). Run this cell last, after all other notebooks have completed.</p>
+<p><strong>Execution order:</strong> 04 STEPs 1-6 → notebook 05 → notebook 06 → this cell.</p>
+<div id="step7-grand" class="cell">
+<details open="" class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Friendly display names for all known variant keys ─────────────────────────</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>ALL_DISPLAY_NAMES <span class="op">=</span> {</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">'zero_shot'</span>:                   <span class="st">'Zero-shot MedGemma'</span>,</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">'uniform_v3'</span>:                  <span class="st">'QLoRA uniform (v3)'</span>,</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">'weighted_v4'</span>:                 <span class="st">'QLoRA weighted (v4)'</span>,</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">'rag_k3_uniform_v3'</span>:           <span class="st">'RAG k=3 (v3)'</span>,</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">'rag_k5_uniform_v3'</span>:           <span class="st">'RAG k=5 (v3)'</span>,</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    <span class="st">'assoc_rules_uniform_v3'</span>:      <span class="st">'Assoc. rules (v3)'</span>,</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">'rag_assoc_combined_uniform_v3'</span>: <span class="st">'RAG + Assoc. rules (v3)'</span>,</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Scan all cached metric files ──────────────────────────────────────────────</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>all_metrics <span class="op">=</span> {}</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> f <span class="kw">in</span> <span class="bu">sorted</span>((REPO_ROOT <span class="op">/</span> <span class="st">'reports'</span>).glob(<span class="st">'eval_metrics_*.json'</span>)):</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>    variant <span class="op">=</span> f.stem.replace(<span class="st">'eval_metrics_'</span>, <span class="st">''</span>)</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> json.loads(f.read_text())</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>    all_metrics[variant] <span class="op">=</span> data</span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>    display_name <span class="op">=</span> ALL_DISPLAY_NAMES.get(variant, variant)</span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f'  </span><span class="sc">{</span>display_name<span class="sc">}</span><span class="ss">: BERTScore=</span><span class="sc">{</span>data[<span class="st">"bertscore_f1"</span>]<span class="sc">:.4f}</span><span class="ss">'</span>)</span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> all_metrics:</span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">'No eval_metrics_*.json files found — run STEPs 1–6 first.'</span>)</span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>    rows <span class="op">=</span> []</span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> variant, m <span class="kw">in</span> <span class="bu">sorted</span>(all_metrics.items(), key<span class="op">=</span><span class="kw">lambda</span> x: <span class="op">-</span>x[<span class="dv">1</span>][<span class="st">'bertscore_f1'</span>]):</span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>        rows.append({</span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>            <span class="st">'Model'</span>:             ALL_DISPLAY_NAMES.get(variant, variant),</span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>            <span class="st">'BERTScore-F1'</span>:      <span class="bu">round</span>(m[<span class="st">'bertscore_f1'</span>],      <span class="dv">4</span>),</span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>            <span class="st">'CheXbert micro-F1'</span>: <span class="bu">round</span>(m[<span class="st">'chexbert_micro_f1'</span>], <span class="dv">4</span>),</span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>            <span class="st">'CheXbert macro-F1'</span>: <span class="bu">round</span>(m[<span class="st">'chexbert_macro_f1'</span>], <span class="dv">4</span>),</span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a>            <span class="st">'BLEU-4'</span>:            <span class="bu">round</span>(m[<span class="st">'bleu4'</span>],             <span class="dv">4</span>),</span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a>            <span class="st">'ROUGE-L'</span>:           <span class="bu">round</span>(m[<span class="st">'rouge_l'</span>],           <span class="dv">4</span>),</span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a>        })</span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a>    grand_df <span class="op">=</span> pd.DataFrame(rows).set_index(<span class="st">'Model'</span>)</span>
+<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a>    display(grand_df)</span>
+<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a>    <span class="co"># ── Grand comparison bar chart ────────────────────────────────────────────</span></span>
+<span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a>    ordered_variants <span class="op">=</span> [v <span class="cf">for</span> v <span class="kw">in</span> (</span>
+<span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a>        <span class="st">'zero_shot'</span>, <span class="st">'uniform_v3'</span>, <span class="st">'weighted_v4'</span>,</span>
+<span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a>        <span class="st">'rag_k3_uniform_v3'</span>, <span class="st">'rag_k5_uniform_v3'</span>,</span>
+<span id="cb9-41"><a href="#cb9-41" aria-hidden="true" tabindex="-1"></a>        <span class="st">'assoc_rules_uniform_v3'</span>, <span class="st">'rag_assoc_combined_uniform_v3'</span>,</span>
+<span id="cb9-42"><a href="#cb9-42" aria-hidden="true" tabindex="-1"></a>    ) <span class="cf">if</span> v <span class="kw">in</span> all_metrics]</span>
+<span id="cb9-43"><a href="#cb9-43" aria-hidden="true" tabindex="-1"></a>    other_variants <span class="op">=</span> [v <span class="cf">for</span> v <span class="kw">in</span> all_metrics <span class="cf">if</span> v <span class="kw">not</span> <span class="kw">in</span> ordered_variants]</span>
+<span id="cb9-44"><a href="#cb9-44" aria-hidden="true" tabindex="-1"></a>    ordered_variants <span class="op">+=</span> other_variants</span>
+<span id="cb9-45"><a href="#cb9-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-46"><a href="#cb9-46" aria-hidden="true" tabindex="-1"></a>    names <span class="op">=</span> [ALL_DISPLAY_NAMES.get(v, v) <span class="cf">for</span> v <span class="kw">in</span> ordered_variants]</span>
+<span id="cb9-47"><a href="#cb9-47" aria-hidden="true" tabindex="-1"></a>    bscore <span class="op">=</span> [all_metrics[v][<span class="st">'bertscore_f1'</span>] <span class="cf">for</span> v <span class="kw">in</span> ordered_variants]</span>
+<span id="cb9-48"><a href="#cb9-48" aria-hidden="true" tabindex="-1"></a>    palette_grand <span class="op">=</span> [<span class="st">'#7f7f7f'</span>, <span class="st">'#1f77b4'</span>, <span class="st">'#d62728'</span>, <span class="st">'#2ca02c'</span>, <span class="st">'#17becf'</span>, <span class="st">'#ff7f0e'</span>, <span class="st">'#9467bd'</span>]</span>
+<span id="cb9-49"><a href="#cb9-49" aria-hidden="true" tabindex="-1"></a>    colors_grand <span class="op">=</span> (palette_grand <span class="op">*</span> <span class="dv">4</span>)[:<span class="bu">len</span>(ordered_variants)]</span>
+<span id="cb9-50"><a href="#cb9-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-51"><a href="#cb9-51" aria-hidden="true" tabindex="-1"></a>    fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="bu">max</span>(<span class="dv">8</span>, <span class="fl">2.2</span> <span class="op">*</span> <span class="bu">len</span>(ordered_variants)), <span class="dv">5</span>))</span>
+<span id="cb9-52"><a href="#cb9-52" aria-hidden="true" tabindex="-1"></a>    bars <span class="op">=</span> ax.bar(names, bscore, color<span class="op">=</span>colors_grand, alpha<span class="op">=</span><span class="fl">0.85</span>, edgecolor<span class="op">=</span><span class="st">'white'</span>)</span>
+<span id="cb9-53"><a href="#cb9-53" aria-hidden="true" tabindex="-1"></a>    baseline_score <span class="op">=</span> all_metrics.get(<span class="st">'zero_shot'</span>, {}).get(<span class="st">'bertscore_f1'</span>)</span>
+<span id="cb9-54"><a href="#cb9-54" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> baseline_score:</span>
+<span id="cb9-55"><a href="#cb9-55" aria-hidden="true" tabindex="-1"></a>        ax.axhline(baseline_score, color<span class="op">=</span><span class="st">'black'</span>, linestyle<span class="op">=</span><span class="st">'--'</span>, linewidth<span class="op">=</span><span class="dv">1</span>,</span>
+<span id="cb9-56"><a href="#cb9-56" aria-hidden="true" tabindex="-1"></a>                   label<span class="op">=</span><span class="ss">f'Zero-shot baseline (</span><span class="sc">{</span>baseline_score<span class="sc">:.4f}</span><span class="ss">)'</span>)</span>
+<span id="cb9-57"><a href="#cb9-57" aria-hidden="true" tabindex="-1"></a>        ax.legend(fontsize<span class="op">=</span><span class="dv">9</span>)</span>
+<span id="cb9-58"><a href="#cb9-58" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> bar, val <span class="kw">in</span> <span class="bu">zip</span>(bars, bscore):</span>
+<span id="cb9-59"><a href="#cb9-59" aria-hidden="true" tabindex="-1"></a>        ax.text(bar.get_x() <span class="op">+</span> bar.get_width()<span class="op">/</span><span class="dv">2</span>, val <span class="op">+</span> <span class="fl">0.001</span>, <span class="ss">f'</span><span class="sc">{</span>val<span class="sc">:.4f}</span><span class="ss">'</span>,</span>
+<span id="cb9-60"><a href="#cb9-60" aria-hidden="true" tabindex="-1"></a>                ha<span class="op">=</span><span class="st">'center'</span>, va<span class="op">=</span><span class="st">'bottom'</span>, fontsize<span class="op">=</span><span class="dv">8</span>)</span>
+<span id="cb9-61"><a href="#cb9-61" aria-hidden="true" tabindex="-1"></a>    ax.set_ylim(<span class="bu">min</span>(bscore) <span class="op">*</span> <span class="fl">0.97</span>, <span class="bu">max</span>(bscore) <span class="op">*</span> <span class="fl">1.05</span>)</span>
+<span id="cb9-62"><a href="#cb9-62" aria-hidden="true" tabindex="-1"></a>    ax.set_ylabel(<span class="st">'BERTScore-F1'</span>)</span>
+<span id="cb9-63"><a href="#cb9-63" aria-hidden="true" tabindex="-1"></a>    ax.set_title(<span class="st">'Grand Comparison — BERTScore-F1 across all variants'</span>, fontsize<span class="op">=</span><span class="dv">13</span>)</span>
+<span id="cb9-64"><a href="#cb9-64" aria-hidden="true" tabindex="-1"></a>    ax.tick_params(axis<span class="op">=</span><span class="st">'x'</span>, labelrotation<span class="op">=</span><span class="dv">20</span>)</span>
+<span id="cb9-65"><a href="#cb9-65" aria-hidden="true" tabindex="-1"></a>    plt.tight_layout()</span>
+<span id="cb9-66"><a href="#cb9-66" aria-hidden="true" tabindex="-1"></a>    fig.savefig(FIGURES_DIR <span class="op">/</span> <span class="st">'eval_grand_comparison.png'</span>, dpi<span class="op">=</span><span class="dv">150</span>, bbox_inches<span class="op">=</span><span class="st">'tight'</span>)</span>
+<span id="cb9-67"><a href="#cb9-67" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">'Saved eval_grand_comparison.png'</span>)<span class="op">;</span> plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 
 
+</section>
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">

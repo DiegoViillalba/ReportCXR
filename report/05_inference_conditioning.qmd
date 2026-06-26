@@ -1,0 +1,78 @@
+---
+title: "5. Inference Conditioning"
+author: "Diego Villalba (Applied Research Candidate)"
+date: "2026-06-25"
+---
+
+::: {.non-technical-summary}
+##### Section Summary (Non-Technical)
+This section explains two advanced techniques we use to improve the model's reports without having to perform additional expensive training. 
+
+First, we use **Retrieval-Augmented Generation (RAG)**, which searches the training database at inference time for chest X-ray reports with similar clinical indications and injects them as examples in the model prompt. This gives the AI local reference points. 
+
+Second, we use **Soft Label Priors**, which analyze training statistics to find which diseases commonly occur together (for example, fluid overload and lung congestion). When the model generates a report, we feed it these statistical likelihoods as hints, guiding it toward writing clinically logical findings.
+:::
+
+## 1. Case-Based Retrieval-Augmented Generation [@kang2025structuredradiology]
+
+When a radiologist interprets a chest radiograph, they often refer to historical cases with similar clinical presentations. To replicate this case-based reasoning, we implement an inference-time Retrieval-Augmented Generation (RAG) strategy based on the work of Kang et al. [-@kang2025structuredradiology].
+
+### 1.1 Vector Indexing & Similarity Matching
+Because clinical indications are dense, structured text, we construct a CPU-efficient term frequency-inverse document frequency (TF-IDF) vectorizer over the training indications:
+
+$$TF\text{-}IDF(t, d) = TF(t, d) \times IDF(t)$$
+
+We extract unigrams and bigrams, capping features at 5,000. At inference time, the query indication $q$ is vectorized, and cosine similarity is computed against all training vectors:
+
+$$\text{similarity}(q, d_i) = \frac{q \cdot d_i}{\|q\| \|d_i\|}$$
+
+We set a similarity threshold of $0.05$. If matches exist, we select the top-$k$ (typically $k=3$ or $k=5$) corresponding training reports to act as few-shot clinical contexts.
+
+### 1.2 Few-Shot Prompt Injection
+The retrieved reference indications and findings are formatted and appended to the system prompt, as shown in the following structure:
+
+```
+You are an expert radiologist. Write only the Findings section...
+The following are findings from similar studies for reference:
+  Example 1 (similarity=0.72):
+    Indication: Shortness of breath, history of smoking.
+    Findings: Lungs are hyperexpanded with flattened diaphragms...
+
+Indication: Patient with shortness of breath and low oxygen.
+Findings:
+```
+
+This grounds the model in target-vocabulary phrasing before generation, helping to bridge the vocabulary mismatch gap.
+
+---
+
+## 2. Soft Label Priors via Association Rules [@singh2026clinicalreasoningvlm]
+
+Medical findings do not occur in isolation; they follow logical clinical associations. To steer the decoder toward plausible reports without modifying model weights or gathering more data, we introduce soft label priors derived from label association rules, as proposed in Singh et al. [@singh2026clinicalreasoningvlm].
+
+
+### 2.1 Mining Co-occurrence Statistics
+We compute a pairwise joint occurrence matrix from the binary CheXbert training labels ($L \in \{0, 1\}^{N \times 14}$):
+
+$$C = \frac{L^T L}{N}$$
+
+For each pair of labels $A$ and $B$, we compute the conditional probability (confidence) and lift:
+
+$$P(B \mid A) = \frac{P(A \cap B)}{P(A)} = \frac{C_{A, B}}{\mu_A}$$
+
+$$\text{Lift}(A \rightarrow B) = \frac{P(B \mid A)}{P(B)} = \frac{C_{A, B}}{\mu_A \mu_B}$$
+
+Where $\mu_A$ represents the empirical prevalence of label $A$ in the dataset. Rules are sorted by confidence and filtered using thresholds (confidence $\ge 0.25$, lift $\ge 1.2$). The resulting joint statistics are saved to a heatmap.
+
+### 2.2 Keyword Triggering and Prompt Conditioning
+During test inference, we scan the incoming indication text for keywords related to the 14 target pathologies, using negation filtering (e.g., ignoring mentions preceded by "no evidence of" or "rule out"). 
+
+If a pathology $A$ is triggered, we fetch its highest-confidence associations and append them as a structured hint:
+
+```
+Clinical association context (training set statistics):
+  - Atelectasis co-occurs with Lung Opacity in 45% of similar studies (lift=1.82).
+```
+
+### 2.3 Empirical TF-IDF Prior Overrides
+To handle complex cases where keywords are insufficient, we implement an alternative prior estimator: we retrieve the top-$K$ ($K=20$) similar training indications via TF-IDF and compute the empirical label prevalence vector directly over this neighborhood. If this retrieval succeeds, the empirical priors are formatted as a direct prompt context, overriding the rule-based hints.

@@ -8,8 +8,9 @@ project:
     - report/02_data.qmd
     - report/03_model_training.qmd
     - report/04_evaluation.qmd
-    - report/05_domain_shift.qmd
-    - report/06_production_scaling.qmd
+    - report/05_inference_conditioning.qmd
+    - report/06_domain_shift.qmd
+    - report/07_production_scaling.qmd
     # Code Documentation pages
     - doc/architecture.qmd
     - doc/data_pipeline.qmd
@@ -22,9 +23,13 @@ project:
     - notebooks/03_train_local.ipynb
     - notebooks/03_train_kaggle.ipynb
     - notebooks/04_eval_and_figures.ipynb
+    - notebooks/05_rag_retrieval.ipynb
+    - notebooks/06_association_rules.ipynb
 
 execute:
   execute: false # Do not run notebook cells; convert them with their existing outputs
+
+bibliography: references.bib
 
 website:
   title: "ReportCXR"
@@ -48,10 +53,12 @@ website:
             href: report/03_model_training.qmd
           - text: "4. Evaluation & Metric Pivot"
             href: report/04_evaluation.qmd
-          - text: "5. Domain Shift Audit Protocol"
-            href: report/05_domain_shift.qmd
-          - text: "6. Production Scaling"
-            href: report/06_production_scaling.qmd
+          - text: "5. Inference Conditioning"
+            href: report/05_inference_conditioning.qmd
+          - text: "6. Domain Shift Audit Protocol"
+            href: report/06_domain_shift.qmd
+          - text: "7. Production Scaling"
+            href: report/07_production_scaling.qmd
       - text: "Code Documentation"
         menu:
           - text: "Architecture Overview"
@@ -76,6 +83,10 @@ website:
             href: notebooks/03_train_kaggle.ipynb
           - text: "04: Evaluation"
             href: notebooks/04_eval_and_figures.ipynb
+          - text: "05: RAG Retrieval"
+            href: notebooks/05_rag_retrieval.ipynb
+          - text: "06: Association Rules"
+            href: notebooks/06_association_rules.ipynb
   page-footer:
     left: "ReportCXR Technical Challenge"
     right: "Built with Quarto"

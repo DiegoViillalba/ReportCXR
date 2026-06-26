@@ -154,12 +154,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="dropdown-text">4. Evaluation &amp; Metric Pivot</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="../report/05_domain_shift.html">
- <span class="dropdown-text">5. Domain Shift Audit Protocol</span></a>
+    <a class="dropdown-item" href="../report/05_inference_conditioning.html">
+ <span class="dropdown-text">5. Inference Conditioning</span></a>
   </li>  
         <li>
-    <a class="dropdown-item" href="../report/06_production_scaling.html">
- <span class="dropdown-text">6. Production Scaling</span></a>
+    <a class="dropdown-item" href="../report/06_domain_shift.html">
+ <span class="dropdown-text">6. Domain Shift Audit Protocol</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../report/07_production_scaling.html">
+ <span class="dropdown-text">7. Production Scaling</span></a>
   </li>  
     </ul>
   </li>
@@ -215,6 +219,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <a class="dropdown-item" href="../notebooks/04_eval_and_figures.html">
  <span class="dropdown-text">04: Evaluation</span></a>
   </li>  
+        <li>
+    <a class="dropdown-item" href="../notebooks/05_rag_retrieval.html">
+ <span class="dropdown-text">05: RAG Retrieval</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../notebooks/06_association_rules.html">
+ <span class="dropdown-text">06: Association Rules</span></a>
+  </li>  
     </ul>
   </li>
 </ul>
@@ -242,7 +254,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#step-7-per-class-ess" id="toc-step-7-per-class-ess" class="nav-link" data-scroll-target="#step-7-per-class-ess">STEP 7 — Per-class ESS</a></li>
   <li><a href="#step-8-tail-mass" id="toc-step-8-tail-mass" class="nav-link" data-scroll-target="#step-8-tail-mass">STEP 8 — Tail mass</a></li>
   <li><a href="#step-9-label-co-occurrence" id="toc-step-9-label-co-occurrence" class="nav-link" data-scroll-target="#step-9-label-co-occurrence">STEP 9 — Label co-occurrence</a></li>
-  <li><a href="#step-10-save-figures-to-reportsfigures" id="toc-step-10-save-figures-to-reportsfigures" class="nav-link" data-scroll-target="#step-10-save-figures-to-reportsfigures">STEP 10 — Save figures to reports/figures/</a></li>
+  <li><a href="#step-10-association-rules-mining" id="toc-step-10-association-rules-mining" class="nav-link" data-scroll-target="#step-10-association-rules-mining">STEP 10 — Association Rules Mining</a></li>
+  <li><a href="#step-11-label-cluster-dendrogram" id="toc-step-11-label-cluster-dendrogram" class="nav-link" data-scroll-target="#step-11-label-cluster-dendrogram">STEP 11 — Label Cluster Dendrogram</a></li>
+  <li><a href="#step-12-save-figures-to-reportsfigures" id="toc-step-12-save-figures-to-reportsfigures" class="nav-link" data-scroll-target="#step-12-save-figures-to-reportsfigures">STEP 12 — Save figures to reports/figures/</a></li>
   <li><a href="#summary" id="toc-summary" class="nav-link" data-scroll-target="#summary">Summary</a></li>
   </ul>
 </nav>
@@ -279,7 +293,9 @@ STEP 6  K_eff and entropy
 STEP 7  Class ESS
 STEP 8  Tail mass
 STEP 9  Co-occurrence matrix
-STEP 10 Save figures</code></pre>
+STEP 10 Association rules mining
+STEP 11 Label cluster dendrogram
+STEP 12 Save figures</code></pre>
 <div id="cell-00-setup" class="cell">
 <details open="" class="code-fold">
 <summary>Code</summary>
@@ -1313,21 +1329,154 @@ Pleural Effusion  Edema                         0.295455</code></pre>
 </div>
 </div>
 </section>
-<section id="step-10-save-figures-to-reportsfigures" class="level2">
-<h2 class="anchored" data-anchor-id="step-10-save-figures-to-reportsfigures">STEP 10 — Save figures to reports/figures/</h2>
+<section id="step-10-association-rules-mining" class="level2">
+<h2 class="anchored" data-anchor-id="step-10-association-rules-mining">STEP 10 — Association Rules Mining</h2>
+<p>Computes pairwise directional rules <strong>A → B</strong> from the label co-occurrence matrix.</p>
+<ul>
+<li><strong>Support</strong>: P(A ∧ B) — how often both appear together</li>
+<li><strong>Confidence</strong>: P(B | A) — how likely B is given A</li>
+<li><strong>Lift</strong>: confidence / P(B) — how much more likely B is <em>given</em> A vs at random (lift &gt; 1 = positive association)</li>
+</ul>
+<p>Rules with lift ≫ 1 are the most interesting: they reveal non-trivial clinical co-occurrences beyond what base prevalence would predict. <code>No Finding</code> is excluded (it’s a special label, not a pathology).</p>
+<p>These rules form the statistical foundation for the soft diagnostic prior injected in notebook 06.</p>
+<div id="cell-10-arules" class="cell">
+<details open="" class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb45"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> itertools <span class="im">import</span> combinations</span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Exclude 'No Finding' — it's a logical complement, not a pathology</span></span>
+<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a>LABELS_PATH <span class="op">=</span> [l <span class="cf">for</span> l <span class="kw">in</span> CHEXBERT_LABELS <span class="cf">if</span> l <span class="op">!=</span> <span class="st">'No Finding'</span>]</span>
+<span id="cb45-5"><a href="#cb45-5" aria-hidden="true" tabindex="-1"></a>lm_path <span class="op">=</span> df_labeled[LABELS_PATH].to_numpy(dtype<span class="op">=</span>np.float32)</span>
+<span id="cb45-6"><a href="#cb45-6" aria-hidden="true" tabindex="-1"></a>n_studies <span class="op">=</span> <span class="bu">len</span>(lm_path)</span>
+<span id="cb45-7"><a href="#cb45-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-8"><a href="#cb45-8" aria-hidden="true" tabindex="-1"></a>prev_path <span class="op">=</span> lm_path.mean(axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb45-9"><a href="#cb45-9" aria-hidden="true" tabindex="-1"></a>co_path   <span class="op">=</span> (lm_path.T <span class="op">@</span> lm_path) <span class="op">/</span> n_studies</span>
+<span id="cb45-10"><a href="#cb45-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-11"><a href="#cb45-11" aria-hidden="true" tabindex="-1"></a>rules_list <span class="op">=</span> []</span>
+<span id="cb45-12"><a href="#cb45-12" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i, la <span class="kw">in</span> <span class="bu">enumerate</span>(LABELS_PATH):</span>
+<span id="cb45-13"><a href="#cb45-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> prev_path[i] <span class="op">&lt;</span> <span class="fl">0.01</span>:</span>
+<span id="cb45-14"><a href="#cb45-14" aria-hidden="true" tabindex="-1"></a>        <span class="cf">continue</span></span>
+<span id="cb45-15"><a href="#cb45-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> j, lb <span class="kw">in</span> <span class="bu">enumerate</span>(LABELS_PATH):</span>
+<span id="cb45-16"><a href="#cb45-16" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> i <span class="op">==</span> j <span class="kw">or</span> prev_path[j] <span class="op">&lt;</span> <span class="fl">0.01</span>:</span>
+<span id="cb45-17"><a href="#cb45-17" aria-hidden="true" tabindex="-1"></a>            <span class="cf">continue</span></span>
+<span id="cb45-18"><a href="#cb45-18" aria-hidden="true" tabindex="-1"></a>        p_ab <span class="op">=</span> <span class="bu">float</span>(co_path[i, j])</span>
+<span id="cb45-19"><a href="#cb45-19" aria-hidden="true" tabindex="-1"></a>        p_a  <span class="op">=</span> <span class="bu">float</span>(prev_path[i])</span>
+<span id="cb45-20"><a href="#cb45-20" aria-hidden="true" tabindex="-1"></a>        p_b  <span class="op">=</span> <span class="bu">float</span>(prev_path[j])</span>
+<span id="cb45-21"><a href="#cb45-21" aria-hidden="true" tabindex="-1"></a>        conf <span class="op">=</span> p_ab <span class="op">/</span> p_a</span>
+<span id="cb45-22"><a href="#cb45-22" aria-hidden="true" tabindex="-1"></a>        lift <span class="op">=</span> conf <span class="op">/</span> p_b <span class="cf">if</span> p_b <span class="op">&gt;</span> <span class="dv">0</span> <span class="cf">else</span> <span class="fl">0.0</span></span>
+<span id="cb45-23"><a href="#cb45-23" aria-hidden="true" tabindex="-1"></a>        rules_list.append({</span>
+<span id="cb45-24"><a href="#cb45-24" aria-hidden="true" tabindex="-1"></a>            <span class="st">'antecedent'</span>:  la,</span>
+<span id="cb45-25"><a href="#cb45-25" aria-hidden="true" tabindex="-1"></a>            <span class="st">'consequent'</span>:  lb,</span>
+<span id="cb45-26"><a href="#cb45-26" aria-hidden="true" tabindex="-1"></a>            <span class="st">'support'</span>:     <span class="bu">round</span>(p_ab,  <span class="dv">4</span>),</span>
+<span id="cb45-27"><a href="#cb45-27" aria-hidden="true" tabindex="-1"></a>            <span class="st">'confidence'</span>:  <span class="bu">round</span>(conf,  <span class="dv">4</span>),</span>
+<span id="cb45-28"><a href="#cb45-28" aria-hidden="true" tabindex="-1"></a>            <span class="st">'lift'</span>:        <span class="bu">round</span>(lift,  <span class="dv">4</span>),</span>
+<span id="cb45-29"><a href="#cb45-29" aria-hidden="true" tabindex="-1"></a>        })</span>
+<span id="cb45-30"><a href="#cb45-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-31"><a href="#cb45-31" aria-hidden="true" tabindex="-1"></a>rules_eda <span class="op">=</span> pd.DataFrame(rules_list).sort_values(<span class="st">'lift'</span>, ascending<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb45-32"><a href="#cb45-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-33"><a href="#cb45-33" aria-hidden="true" tabindex="-1"></a><span class="co"># Strong rules only</span></span>
+<span id="cb45-34"><a href="#cb45-34" aria-hidden="true" tabindex="-1"></a>strong_rules <span class="op">=</span> rules_eda[</span>
+<span id="cb45-35"><a href="#cb45-35" aria-hidden="true" tabindex="-1"></a>    (rules_eda[<span class="st">'confidence'</span>] <span class="op">&gt;=</span> <span class="fl">0.25</span>) <span class="op">&amp;</span></span>
+<span id="cb45-36"><a href="#cb45-36" aria-hidden="true" tabindex="-1"></a>    (rules_eda[<span class="st">'lift'</span>]       <span class="op">&gt;=</span> <span class="fl">1.50</span>)</span>
+<span id="cb45-37"><a href="#cb45-37" aria-hidden="true" tabindex="-1"></a>].reset_index(drop<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb45-38"><a href="#cb45-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-39"><a href="#cb45-39" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Total rules       : </span><span class="sc">{</span><span class="bu">len</span>(rules_eda)<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb45-40"><a href="#cb45-40" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Strong rules      : </span><span class="sc">{</span><span class="bu">len</span>(strong_rules)<span class="sc">}</span><span class="ss">  (conf ≥ 0.25, lift ≥ 1.5)'</span>)</span>
+<span id="cb45-41"><a href="#cb45-41" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>()</span>
+<span id="cb45-42"><a href="#cb45-42" aria-hidden="true" tabindex="-1"></a>display(strong_rules.head(<span class="dv">20</span>))</span>
+<span id="cb45-43"><a href="#cb45-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-44"><a href="#cb45-44" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Visualization: confidence and lift for the top 15 rules ───────────────────</span></span>
+<span id="cb45-45"><a href="#cb45-45" aria-hidden="true" tabindex="-1"></a>top15 <span class="op">=</span> strong_rules.head(<span class="dv">15</span>).copy()</span>
+<span id="cb45-46"><a href="#cb45-46" aria-hidden="true" tabindex="-1"></a>top15[<span class="st">'rule'</span>] <span class="op">=</span> top15[<span class="st">'antecedent'</span>] <span class="op">+</span> <span class="st">'  →  '</span> <span class="op">+</span> top15[<span class="st">'consequent'</span>]</span>
+<span id="cb45-47"><a href="#cb45-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-48"><a href="#cb45-48" aria-hidden="true" tabindex="-1"></a>fig, axes <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">2</span>, figsize<span class="op">=</span>(<span class="dv">14</span>, <span class="dv">5</span>))</span>
+<span id="cb45-49"><a href="#cb45-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-50"><a href="#cb45-50" aria-hidden="true" tabindex="-1"></a>axes[<span class="dv">0</span>].barh(top15[<span class="st">'rule'</span>][::<span class="op">-</span><span class="dv">1</span>], top15[<span class="st">'confidence'</span>][::<span class="op">-</span><span class="dv">1</span>], color<span class="op">=</span><span class="st">'#1f77b4'</span>, alpha<span class="op">=</span><span class="fl">0.85</span>)</span>
+<span id="cb45-51"><a href="#cb45-51" aria-hidden="true" tabindex="-1"></a>axes[<span class="dv">0</span>].axvline(<span class="fl">0.25</span>, color<span class="op">=</span><span class="st">'red'</span>, linestyle<span class="op">=</span><span class="st">'--'</span>, linewidth<span class="op">=</span><span class="fl">0.8</span>, label<span class="op">=</span><span class="st">'min confidence'</span>)</span>
+<span id="cb45-52"><a href="#cb45-52" aria-hidden="true" tabindex="-1"></a>axes[<span class="dv">0</span>].set_xlabel(<span class="st">'Confidence  P(B | A)'</span>)</span>
+<span id="cb45-53"><a href="#cb45-53" aria-hidden="true" tabindex="-1"></a>axes[<span class="dv">0</span>].set_title(<span class="st">'Top association rules — Confidence'</span>)</span>
+<span id="cb45-54"><a href="#cb45-54" aria-hidden="true" tabindex="-1"></a>axes[<span class="dv">0</span>].legend(fontsize<span class="op">=</span><span class="dv">8</span>)</span>
+<span id="cb45-55"><a href="#cb45-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-56"><a href="#cb45-56" aria-hidden="true" tabindex="-1"></a>axes[<span class="dv">1</span>].barh(top15[<span class="st">'rule'</span>][::<span class="op">-</span><span class="dv">1</span>], top15[<span class="st">'lift'</span>][::<span class="op">-</span><span class="dv">1</span>], color<span class="op">=</span><span class="st">'#ff7f0e'</span>, alpha<span class="op">=</span><span class="fl">0.85</span>)</span>
+<span id="cb45-57"><a href="#cb45-57" aria-hidden="true" tabindex="-1"></a>axes[<span class="dv">1</span>].axvline(<span class="fl">1.0</span>, color<span class="op">=</span><span class="st">'black'</span>, linestyle<span class="op">=</span><span class="st">'--'</span>, linewidth<span class="op">=</span><span class="fl">0.8</span>, label<span class="op">=</span><span class="st">'lift = 1 (random)'</span>)</span>
+<span id="cb45-58"><a href="#cb45-58" aria-hidden="true" tabindex="-1"></a>axes[<span class="dv">1</span>].axvline(<span class="fl">1.5</span>, color<span class="op">=</span><span class="st">'red'</span>,   linestyle<span class="op">=</span><span class="st">'--'</span>, linewidth<span class="op">=</span><span class="fl">0.8</span>, label<span class="op">=</span><span class="st">'min lift'</span>)</span>
+<span id="cb45-59"><a href="#cb45-59" aria-hidden="true" tabindex="-1"></a>axes[<span class="dv">1</span>].set_xlabel(<span class="st">'Lift'</span>)</span>
+<span id="cb45-60"><a href="#cb45-60" aria-hidden="true" tabindex="-1"></a>axes[<span class="dv">1</span>].set_title(<span class="st">'Top association rules — Lift'</span>)</span>
+<span id="cb45-61"><a href="#cb45-61" aria-hidden="true" tabindex="-1"></a>axes[<span class="dv">1</span>].legend(fontsize<span class="op">=</span><span class="dv">8</span>)</span>
+<span id="cb45-62"><a href="#cb45-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-63"><a href="#cb45-63" aria-hidden="true" tabindex="-1"></a>plt.suptitle(<span class="st">'Association Rules: A → B  (No Finding excluded)'</span>, fontsize<span class="op">=</span><span class="dv">12</span>)</span>
+<span id="cb45-64"><a href="#cb45-64" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb45-65"><a href="#cb45-65" aria-hidden="true" tabindex="-1"></a>fig.savefig(FIGURES_DIR <span class="op">/</span> <span class="st">'assoc_rules_eda.png'</span>, dpi<span class="op">=</span><span class="dv">150</span>, bbox_inches<span class="op">=</span><span class="st">'tight'</span>)</span>
+<span id="cb45-66"><a href="#cb45-66" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'Saved assoc_rules_eda.png'</span>)</span>
+<span id="cb45-67"><a href="#cb45-67" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="step-11-label-cluster-dendrogram" class="level2">
+<h2 class="anchored" data-anchor-id="step-11-label-cluster-dendrogram">STEP 11 — Label Cluster Dendrogram</h2>
+<p>Groups labels by how similarly they co-occur across studies. Distance metric: <strong>Jaccard</strong> on binary label vectors (symmetric — does not assume direction). Clustering method: <strong>average linkage</strong>.</p>
+<p>Clusters that emerge here correspond to clinical syndromes: a cardiac cluster (Cardiomegaly, Edema, Enlarged Cardiomediastinum), an infection cluster (Pneumonia, Consolidation), etc. This structure motivates using multi-label antecedents in the prompt conditioner (notebook 06).</p>
+<div id="cell-11-dendro" class="cell">
+<details open="" class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb46"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.cluster.hierarchy <span class="im">import</span> dendrogram, linkage</span>
+<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.spatial.distance <span class="im">import</span> pdist, squareform</span>
+<span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb46-4"><a href="#cb46-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Jaccard distance between label occurrence vectors (columns of the binary matrix)</span></span>
+<span id="cb46-5"><a href="#cb46-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Each label is a binary vector over studies; Jaccard = 1 - |A∩B|/|A∪B|</span></span>
+<span id="cb46-6"><a href="#cb46-6" aria-hidden="true" tabindex="-1"></a>lm_T <span class="op">=</span> lm_path.T.astype(<span class="bu">bool</span>)   <span class="co"># shape (n_labels, n_studies)</span></span>
+<span id="cb46-7"><a href="#cb46-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb46-8"><a href="#cb46-8" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> jaccard_dist(a, b):</span>
+<span id="cb46-9"><a href="#cb46-9" aria-hidden="true" tabindex="-1"></a>    inter <span class="op">=</span> (a <span class="op">&amp;</span> b).<span class="bu">sum</span>()</span>
+<span id="cb46-10"><a href="#cb46-10" aria-hidden="true" tabindex="-1"></a>    union <span class="op">=</span> (a <span class="op">|</span> b).<span class="bu">sum</span>()</span>
+<span id="cb46-11"><a href="#cb46-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="fl">1.0</span> <span class="op">-</span> inter <span class="op">/</span> union <span class="cf">if</span> union <span class="op">&gt;</span> <span class="dv">0</span> <span class="cf">else</span> <span class="fl">1.0</span></span>
+<span id="cb46-12"><a href="#cb46-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb46-13"><a href="#cb46-13" aria-hidden="true" tabindex="-1"></a>dist_condensed <span class="op">=</span> pdist(lm_T, metric<span class="op">=</span>jaccard_dist)</span>
+<span id="cb46-14"><a href="#cb46-14" aria-hidden="true" tabindex="-1"></a>Z <span class="op">=</span> linkage(dist_condensed, method<span class="op">=</span><span class="st">'average'</span>)</span>
+<span id="cb46-15"><a href="#cb46-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb46-16"><a href="#cb46-16" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">11</span>, <span class="dv">5</span>))</span>
+<span id="cb46-17"><a href="#cb46-17" aria-hidden="true" tabindex="-1"></a>dg <span class="op">=</span> dendrogram(</span>
+<span id="cb46-18"><a href="#cb46-18" aria-hidden="true" tabindex="-1"></a>    Z,</span>
+<span id="cb46-19"><a href="#cb46-19" aria-hidden="true" tabindex="-1"></a>    labels<span class="op">=</span>LABELS_PATH,</span>
+<span id="cb46-20"><a href="#cb46-20" aria-hidden="true" tabindex="-1"></a>    ax<span class="op">=</span>ax,</span>
+<span id="cb46-21"><a href="#cb46-21" aria-hidden="true" tabindex="-1"></a>    leaf_rotation<span class="op">=</span><span class="dv">40</span>,</span>
+<span id="cb46-22"><a href="#cb46-22" aria-hidden="true" tabindex="-1"></a>    leaf_font_size<span class="op">=</span><span class="dv">9</span>,</span>
+<span id="cb46-23"><a href="#cb46-23" aria-hidden="true" tabindex="-1"></a>    color_threshold<span class="op">=</span><span class="fl">0.70</span> <span class="op">*</span> <span class="bu">max</span>(Z[:, <span class="dv">2</span>]),</span>
+<span id="cb46-24"><a href="#cb46-24" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb46-25"><a href="#cb46-25" aria-hidden="true" tabindex="-1"></a>ax.set_title(<span class="st">'Hierarchical Clustering of CheXbert Labels (Jaccard distance, average linkage)'</span>, fontsize<span class="op">=</span><span class="dv">12</span>)</span>
+<span id="cb46-26"><a href="#cb46-26" aria-hidden="true" tabindex="-1"></a>ax.set_ylabel(<span class="st">'Distance'</span>)</span>
+<span id="cb46-27"><a href="#cb46-27" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb46-28"><a href="#cb46-28" aria-hidden="true" tabindex="-1"></a>fig.savefig(FIGURES_DIR <span class="op">/</span> <span class="st">'label_dendrogram.png'</span>, dpi<span class="op">=</span><span class="dv">150</span>, bbox_inches<span class="op">=</span><span class="st">'tight'</span>)</span>
+<span id="cb46-29"><a href="#cb46-29" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'Saved label_dendrogram.png'</span>)</span>
+<span id="cb46-30"><a href="#cb46-30" aria-hidden="true" tabindex="-1"></a>plt.show()</span>
+<span id="cb46-31"><a href="#cb46-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb46-32"><a href="#cb46-32" aria-hidden="true" tabindex="-1"></a><span class="co"># Print cluster summary at the chosen cut</span></span>
+<span id="cb46-33"><a href="#cb46-33" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.cluster.hierarchy <span class="im">import</span> fcluster</span>
+<span id="cb46-34"><a href="#cb46-34" aria-hidden="true" tabindex="-1"></a>n_clusters <span class="op">=</span> <span class="dv">5</span></span>
+<span id="cb46-35"><a href="#cb46-35" aria-hidden="true" tabindex="-1"></a>cluster_ids <span class="op">=</span> fcluster(Z, n_clusters, criterion<span class="op">=</span><span class="st">'maxclust'</span>)</span>
+<span id="cb46-36"><a href="#cb46-36" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> cid <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, n_clusters <span class="op">+</span> <span class="dv">1</span>):</span>
+<span id="cb46-37"><a href="#cb46-37" aria-hidden="true" tabindex="-1"></a>    members <span class="op">=</span> [LABELS_PATH[i] <span class="cf">for</span> i, c <span class="kw">in</span> <span class="bu">enumerate</span>(cluster_ids) <span class="cf">if</span> c <span class="op">==</span> cid]</span>
+<span id="cb46-38"><a href="#cb46-38" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f'Cluster </span><span class="sc">{</span>cid<span class="sc">}</span><span class="ss">: </span><span class="sc">{</span>members<span class="sc">}</span><span class="ss">'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="step-12-save-figures-to-reportsfigures" class="level2">
+<h2 class="anchored" data-anchor-id="step-12-save-figures-to-reportsfigures">STEP 12 — Save figures to reports/figures/</h2>
 <p>These are the figures that go into the writeup.</p>
 <div id="cell-10-save" class="cell" data-execution_count="22">
 <details open="" class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb45"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> src.eda.distribution_audit <span class="im">import</span> _plot_prevalences, _plot_cooccurrence, _plot_class_ess</span>
-<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a>_plot_prevalences(prevalences, FIGURES_DIR <span class="op">/</span> <span class="st">'label_prevalences.png'</span>)</span>
-<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a>_plot_cooccurrence(cooccurrence, FIGURES_DIR <span class="op">/</span> <span class="st">'cooccurrence_matrix.png'</span>)</span>
-<span id="cb45-5"><a href="#cb45-5" aria-hidden="true" tabindex="-1"></a>_plot_class_ess(class_ess, FIGURES_DIR <span class="op">/</span> <span class="st">'class_ess.png'</span>)</span>
-<span id="cb45-6"><a href="#cb45-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb45-7"><a href="#cb45-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'Saved figures:'</span>)</span>
-<span id="cb45-8"><a href="#cb45-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> f <span class="kw">in</span> <span class="bu">sorted</span>(FIGURES_DIR.glob(<span class="st">'*.png'</span>)):</span>
-<span id="cb45-9"><a href="#cb45-9" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">' '</span>, f)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb47"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> src.eda.distribution_audit <span class="im">import</span> _plot_prevalences, _plot_cooccurrence, _plot_class_ess</span>
+<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a>_plot_prevalences(prevalences, FIGURES_DIR <span class="op">/</span> <span class="st">'label_prevalences.png'</span>)</span>
+<span id="cb47-4"><a href="#cb47-4" aria-hidden="true" tabindex="-1"></a>_plot_cooccurrence(cooccurrence, FIGURES_DIR <span class="op">/</span> <span class="st">'cooccurrence_matrix.png'</span>)</span>
+<span id="cb47-5"><a href="#cb47-5" aria-hidden="true" tabindex="-1"></a>_plot_class_ess(class_ess, FIGURES_DIR <span class="op">/</span> <span class="st">'class_ess.png'</span>)</span>
+<span id="cb47-6"><a href="#cb47-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb47-7"><a href="#cb47-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'Saved figures:'</span>)</span>
+<span id="cb47-8"><a href="#cb47-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> f <span class="kw">in</span> <span class="bu">sorted</span>(FIGURES_DIR.glob(<span class="st">'*.png'</span>)):</span>
+<span id="cb47-9"><a href="#cb47-9" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">' '</span>, f)</span>
+<span id="cb47-10"><a href="#cb47-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb47-11"><a href="#cb47-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Association rules and dendrogram figures are already saved inline above</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stderr">
 <pre><code>INFO  Saved ../reports/figures/label_prevalences.png

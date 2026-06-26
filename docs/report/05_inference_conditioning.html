@@ -9,7 +9,7 @@
 <meta name="author" content="Diego Villalba (Applied Research Candidate)">
 <meta name="dcterms.date" content="2026-06-25">
 
-<title>1. Introduction &amp; Strategic Thesis – ReportCXR</title>
+<title>5. Inference Conditioning – ReportCXR</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -57,7 +57,27 @@ div.sourceCode
 @media screen {
 pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
-</style>
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+  margin-bottom: 0em;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
 
 
 <script src="../site_libs/quarto-nav/quarto-nav.js"></script>
@@ -106,6 +126,35 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   }
 }</script>
 
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
 
 <link rel="stylesheet" href="../styles.css">
 </head>
@@ -244,8 +293,17 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#clinical-domain-shift" id="toc-clinical-domain-shift" class="nav-link active" data-scroll-target="#clinical-domain-shift">Clinical Domain Shift</a></li>
-  <li><a href="#the-strategic-thesis" id="toc-the-strategic-thesis" class="nav-link" data-scroll-target="#the-strategic-thesis">The Strategic Thesis</a></li>
+  <li><a href="#case-based-retrieval-augmented-generation-kang2025structuredradiology" id="toc-case-based-retrieval-augmented-generation-kang2025structuredradiology" class="nav-link active" data-scroll-target="#case-based-retrieval-augmented-generation-kang2025structuredradiology">1. Case-Based Retrieval-Augmented Generation <span class="citation" data-cites="kang2025structuredradiology">(Kang et al. 2025)</span></a>
+  <ul class="collapse">
+  <li><a href="#vector-indexing-similarity-matching" id="toc-vector-indexing-similarity-matching" class="nav-link" data-scroll-target="#vector-indexing-similarity-matching">1.1 Vector Indexing &amp; Similarity Matching</a></li>
+  <li><a href="#few-shot-prompt-injection" id="toc-few-shot-prompt-injection" class="nav-link" data-scroll-target="#few-shot-prompt-injection">1.2 Few-Shot Prompt Injection</a></li>
+  </ul></li>
+  <li><a href="#soft-label-priors-via-association-rules-singh2026clinicalreasoningvlm" id="toc-soft-label-priors-via-association-rules-singh2026clinicalreasoningvlm" class="nav-link" data-scroll-target="#soft-label-priors-via-association-rules-singh2026clinicalreasoningvlm">2. Soft Label Priors via Association Rules <span class="citation" data-cites="singh2026clinicalreasoningvlm">(Singh et al. 2026)</span></a>
+  <ul class="collapse">
+  <li><a href="#mining-co-occurrence-statistics" id="toc-mining-co-occurrence-statistics" class="nav-link" data-scroll-target="#mining-co-occurrence-statistics">2.1 Mining Co-occurrence Statistics</a></li>
+  <li><a href="#keyword-triggering-and-prompt-conditioning" id="toc-keyword-triggering-and-prompt-conditioning" class="nav-link" data-scroll-target="#keyword-triggering-and-prompt-conditioning">2.2 Keyword Triggering and Prompt Conditioning</a></li>
+  <li><a href="#empirical-tf-idf-prior-overrides" id="toc-empirical-tf-idf-prior-overrides" class="nav-link" data-scroll-target="#empirical-tf-idf-prior-overrides">2.3 Empirical TF-IDF Prior Overrides</a></li>
+  </ul></li>
   </ul>
 </nav>
     </div>
@@ -254,7 +312,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<div class="quarto-title-block"><div><h1 class="title">1. Introduction &amp; Strategic Thesis</h1><button type="button" class="btn code-tools-button" id="quarto-code-tools-source"><i class="bi"></i> Code</button></div></div>
+<div class="quarto-title-block"><div><h1 class="title">5. Inference Conditioning</h1><button type="button" class="btn code-tools-button" id="quarto-code-tools-source"><i class="bi"></i> Code</button></div></div>
 </div>
 
 
@@ -285,28 +343,74 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="section-summary-non-technical" class="level5 non-technical-summary">
 <h5 class="anchored" data-anchor-id="section-summary-non-technical">Section Summary (Non-Technical)</h5>
-<p>This section introduces the core clinical motivation of the project. Chest X-ray models are usually trained on massive datasets from large US hospitals, which contain mostly English reports and a very high percentage of normal X-rays. When trying to deploy these models in Latin American (LATAM) clinics, they face three major changes: different image properties from different X-ray machines, different languages (Spanish instead of English), and different rates of disease. We frame this problem not as a simple translation or accuracy task, but as a systematic domain shift diagnostic challenge.</p>
+<p>This section explains two advanced techniques we use to improve the model’s reports without having to perform additional expensive training.</p>
+<p>First, we use <strong>Retrieval-Augmented Generation (RAG)</strong>, which searches the training database at inference time for chest X-ray reports with similar clinical indications and injects them as examples in the model prompt. This gives the AI local reference points.</p>
+<p>Second, we use <strong>Soft Label Priors</strong>, which analyze training statistics to find which diseases commonly occur together (for example, fluid overload and lung congestion). When the model generates a report, we feed it these statistical likelihoods as hints, guiding it toward writing clinically logical findings.</p>
 </section>
-<section id="clinical-domain-shift" class="level2">
-<h2 class="anchored" data-anchor-id="clinical-domain-shift">Clinical Domain Shift</h2>
-<p>Developing a multimodal medical vision-language foundation model that generates chest X-ray findings is one of the key challenges in medical AI. However, deploying such a model in a real clinical setting—particularly across distinct geographic regions like Latin America—introduces severe out-of-distribution (OOD) shifts:</p>
-<ol type="1">
-<li><strong>Acquisition Shift</strong>: Differences in scanner hardware manufacturers, kVp exposure calibrations, and sensor resolutions produce raw image distributions that diverge from the clean datasets used during pre-training.</li>
-<li><strong>Prevalence Shift</strong>: Regional epidemiological patterns result in different baseline frequencies of pathologies. For example, Latin American public clinics may exhibit higher prevalences of Tuberculosis or Chagas disease compared to standard Western benchmarks.</li>
-<li><strong>Language Shift</strong>: Pre-trained clinical vision-language models like MedGemma are pre-trained predominantly on English corpora (e.g., MIMIC-CXR). Clinicians in LATAM dictate findings and indications in Spanish.</li>
-</ol>
+<section id="case-based-retrieval-augmented-generation-kang2025structuredradiology" class="level2">
+<h2 class="anchored" data-anchor-id="case-based-retrieval-augmented-generation-kang2025structuredradiology">1. Case-Based Retrieval-Augmented Generation <span class="citation" data-cites="kang2025structuredradiology">(<a href="#ref-kang2025structuredradiology" role="doc-biblioref">Kang et al. 2025</a>)</span></h2>
+<p>When a radiologist interprets a chest radiograph, they often refer to historical cases with similar clinical presentations. To replicate this case-based reasoning, we implement an inference-time Retrieval-Augmented Generation (RAG) strategy based on the work of Kang et al. <span class="citation" data-cites="kang2025structuredradiology">(<a href="#ref-kang2025structuredradiology" role="doc-biblioref">2025</a>)</span>.</p>
+<section id="vector-indexing-similarity-matching" class="level3">
+<h3 class="anchored" data-anchor-id="vector-indexing-similarity-matching">1.1 Vector Indexing &amp; Similarity Matching</h3>
+<p>Because clinical indications are dense, structured text, we construct a CPU-efficient term frequency-inverse document frequency (TF-IDF) vectorizer over the training indications:</p>
+<p><span class="math display">\[TF\text{-}IDF(t, d) = TF(t, d) \times IDF(t)\]</span></p>
+<p>We extract unigrams and bigrams, capping features at 5,000. At inference time, the query indication <span class="math inline">\(q\)</span> is vectorized, and cosine similarity is computed against all training vectors:</p>
+<p><span class="math display">\[\text{similarity}(q, d_i) = \frac{q \cdot d_i}{\|q\| \|d_i\|}\]</span></p>
+<p>We set a similarity threshold of <span class="math inline">\(0.05\)</span>. If matches exist, we select the top-<span class="math inline">\(k\)</span> (typically <span class="math inline">\(k=3\)</span> or <span class="math inline">\(k=5\)</span>) corresponding training reports to act as few-shot clinical contexts.</p>
 </section>
-<section id="the-strategic-thesis" class="level2">
-<h2 class="anchored" data-anchor-id="the-strategic-thesis">The Strategic Thesis</h2>
-<p>Our thesis is that <strong>cross-geographic deployment must be framed as a distributional discrepancy audit</strong>. Rather than optimizing a model to achieve maximum accuracy on a single dataset, we construct a reusable diagnostic infrastructure—the <code>DomainShiftAudit</code> class—capable of auditing models under simulated shifts.</p>
-<p>By validating this diagnostic protocol on controlled, synthetic perturbations within the Indiana University Chest X-ray (IU CXR) dataset, we ensure that the auditing infrastructure is fully developed and ready to be run on real, local clinical data from day one.</p>
+<section id="few-shot-prompt-injection" class="level3">
+<h3 class="anchored" data-anchor-id="few-shot-prompt-injection">1.2 Few-Shot Prompt Injection</h3>
+<p>The retrieved reference indications and findings are formatted and appended to the system prompt, as shown in the following structure:</p>
+<pre><code>You are an expert radiologist. Write only the Findings section...
+The following are findings from similar studies for reference:
+  Example 1 (similarity=0.72):
+    Indication: Shortness of breath, history of smoking.
+    Findings: Lungs are hyperexpanded with flattened diaphragms...
+
+Indication: Patient with shortness of breath and low oxygen.
+Findings:</code></pre>
+<p>This grounds the model in target-vocabulary phrasing before generation, helping to bridge the vocabulary mismatch gap.</p>
+<hr>
+</section>
+</section>
+<section id="soft-label-priors-via-association-rules-singh2026clinicalreasoningvlm" class="level2">
+<h2 class="anchored" data-anchor-id="soft-label-priors-via-association-rules-singh2026clinicalreasoningvlm">2. Soft Label Priors via Association Rules <span class="citation" data-cites="singh2026clinicalreasoningvlm">(<a href="#ref-singh2026clinicalreasoningvlm" role="doc-biblioref">Singh et al. 2026</a>)</span></h2>
+<p>Medical findings do not occur in isolation; they follow logical clinical associations. To steer the decoder toward plausible reports without modifying model weights or gathering more data, we introduce soft label priors derived from label association rules, as proposed in Singh et al. <span class="citation" data-cites="singh2026clinicalreasoningvlm">(<a href="#ref-singh2026clinicalreasoningvlm" role="doc-biblioref">Singh et al. 2026</a>)</span>.</p>
+<section id="mining-co-occurrence-statistics" class="level3">
+<h3 class="anchored" data-anchor-id="mining-co-occurrence-statistics">2.1 Mining Co-occurrence Statistics</h3>
+<p>We compute a pairwise joint occurrence matrix from the binary CheXbert training labels (<span class="math inline">\(L \in \{0, 1\}^{N \times 14}\)</span>):</p>
+<p><span class="math display">\[C = \frac{L^T L}{N}\]</span></p>
+<p>For each pair of labels <span class="math inline">\(A\)</span> and <span class="math inline">\(B\)</span>, we compute the conditional probability (confidence) and lift:</p>
+<p><span class="math display">\[P(B \mid A) = \frac{P(A \cap B)}{P(A)} = \frac{C_{A, B}}{\mu_A}\]</span></p>
+<p><span class="math display">\[\text{Lift}(A \rightarrow B) = \frac{P(B \mid A)}{P(B)} = \frac{C_{A, B}}{\mu_A \mu_B}\]</span></p>
+<p>Where <span class="math inline">\(\mu_A\)</span> represents the empirical prevalence of label <span class="math inline">\(A\)</span> in the dataset. Rules are sorted by confidence and filtered using thresholds (confidence <span class="math inline">\(\ge 0.25\)</span>, lift <span class="math inline">\(\ge 1.2\)</span>). The resulting joint statistics are saved to a heatmap.</p>
+</section>
+<section id="keyword-triggering-and-prompt-conditioning" class="level3">
+<h3 class="anchored" data-anchor-id="keyword-triggering-and-prompt-conditioning">2.2 Keyword Triggering and Prompt Conditioning</h3>
+<p>During test inference, we scan the incoming indication text for keywords related to the 14 target pathologies, using negation filtering (e.g., ignoring mentions preceded by “no evidence of” or “rule out”).</p>
+<p>If a pathology <span class="math inline">\(A\)</span> is triggered, we fetch its highest-confidence associations and append them as a structured hint:</p>
+<pre><code>Clinical association context (training set statistics):
+  - Atelectasis co-occurs with Lung Opacity in 45% of similar studies (lift=1.82).</code></pre>
+</section>
+<section id="empirical-tf-idf-prior-overrides" class="level3">
+<h3 class="anchored" data-anchor-id="empirical-tf-idf-prior-overrides">2.3 Empirical TF-IDF Prior Overrides</h3>
+<p>To handle complex cases where keywords are insufficient, we implement an alternative prior estimator: we retrieve the top-<span class="math inline">\(K\)</span> (<span class="math inline">\(K=20\)</span>) similar training indications via TF-IDF and compute the empirical label prevalence vector directly over this neighborhood. If this retrieval succeeds, the empirical priors are formatted as a direct prompt context, overriding the rule-based hints.</p>
 
 
 <!-- -->
 
+
+</section>
 </section>
 
-</main> <!-- /main -->
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography" id="quarto-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list">
+<div id="ref-kang2025structuredradiology" class="csl-entry" role="listitem">
+Kang, Seongjae, Dong Bok Lee, Juho Jung, Dongseop Kim, Won Hwa Kim, and Sunghoon Joo. 2025. <span>“Automated Structured Radiology Report Generation with Rich Clinical Context.”</span> <em>arXiv Preprint arXiv:2510.00428</em>, October. <a href="https://arxiv.org/abs/2510.00428">https://arxiv.org/abs/2510.00428</a>.
+</div>
+<div id="ref-singh2026clinicalreasoningvlm" class="csl-entry" role="listitem">
+Singh, Vikash, Debargha Ganguly, Haotian Yu, Chengwei Zhou, Prerna Singh, Brandon Lee, Vipin Chaudhary, and Gourav Datta. 2026. <span>“Toward Guarantees for Clinical Reasoning in Vision Language Models via Formal Verification.”</span> <em>arXiv Preprint arXiv:2602.24111</em>, February. <a href="https://arxiv.org/abs/2602.24111">https://arxiv.org/abs/2602.24111</a>.
+</div>
+</div></section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
     const icon = "";
@@ -758,30 +862,84 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     }
   });
   </script><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">Source Code</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "1. Introduction &amp; Strategic Thesis"</span></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="an">author:</span><span class="co"> "Diego Villalba (Applied Research Candidate)"</span></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="an">date:</span><span class="co"> "2026-06-25"</span></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>::: {.non-technical-summary}</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">##### Section Summary (Non-Technical)</span></span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>This section introduces the core clinical motivation of the project. Chest X-ray models are usually trained on massive datasets from large US hospitals, which contain mostly English reports and a very high percentage of normal X-rays. When trying to deploy these models in Latin American (LATAM) clinics, they face three major changes: different image properties from different X-ray machines, different languages (Spanish instead of English), and different rates of disease. We frame this problem not as a simple translation or accuracy task, but as a systematic domain shift diagnostic challenge.</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>:::</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="fu">## Clinical Domain Shift</span></span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>Developing a multimodal medical vision-language foundation model that generates chest X-ray findings is one of the key challenges in medical AI. However, deploying such a model in a real clinical setting—particularly across distinct geographic regions like Latin America—introduces severe out-of-distribution (OOD) shifts:</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="ss">1.  </span>**Acquisition Shift**: Differences in scanner hardware manufacturers, kVp exposure calibrations, and sensor resolutions produce raw image distributions that diverge from the clean datasets used during pre-training.</span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="ss">2.  </span>**Prevalence Shift**: Regional epidemiological patterns result in different baseline frequencies of pathologies. For example, Latin American public clinics may exhibit higher prevalences of Tuberculosis or Chagas disease compared to standard Western benchmarks.</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="ss">3.  </span>**Language Shift**: Pre-trained clinical vision-language models like MedGemma are pre-trained predominantly on English corpora (e.g., MIMIC-CXR). Clinicians in LATAM dictate findings and indications in Spanish.</span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="fu">## The Strategic Thesis</span></span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>Our thesis is that **cross-geographic deployment must be framed as a distributional discrepancy audit**. Rather than optimizing a model to achieve maximum accuracy on a single dataset, we construct a reusable diagnostic infrastructure—the <span class="in">`DomainShiftAudit`</span> class—capable of auditing models under simulated shifts. </span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>By validating this diagnostic protocol on controlled, synthetic perturbations within the Indiana University Chest X-ray (IU CXR) dataset, we ensure that the auditing infrastructure is fully developed and ready to be run on real, local clinical data from day one.</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "5. Inference Conditioning"</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="an">author:</span><span class="co"> "Diego Villalba (Applied Research Candidate)"</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="an">date:</span><span class="co"> "2026-06-25"</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>::: {.non-technical-summary}</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="fu">##### Section Summary (Non-Technical)</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>This section explains two advanced techniques we use to improve the model's reports without having to perform additional expensive training. </span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>First, we use **Retrieval-Augmented Generation (RAG)**, which searches the training database at inference time for chest X-ray reports with similar clinical indications and injects them as examples in the model prompt. This gives the AI local reference points. </span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>Second, we use **Soft Label Priors**, which analyze training statistics to find which diseases commonly occur together (for example, fluid overload and lung congestion). When the model generates a report, we feed it these statistical likelihoods as hints, guiding it toward writing clinically logical findings.</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="fu">## 1. Case-Based Retrieval-Augmented Generation [@kang2025structuredradiology]</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>When a radiologist interprets a chest radiograph, they often refer to historical cases with similar clinical presentations. To replicate this case-based reasoning, we implement an inference-time Retrieval-Augmented Generation (RAG) strategy based on the work of Kang et al. <span class="co">[</span><span class="ot">-@kang2025structuredradiology</span><span class="co">]</span>.</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a><span class="fu">### 1.1 Vector Indexing &amp; Similarity Matching</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>Because clinical indications are dense, structured text, we construct a CPU-efficient term frequency-inverse document frequency (TF-IDF) vectorizer over the training indications:</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>$$TF\text{-}IDF(t, d) = TF(t, d) \times IDF(t)$$</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>We extract unigrams and bigrams, capping features at 5,000. At inference time, the query indication $q$ is vectorized, and cosine similarity is computed against all training vectors:</span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>$$\text{similarity}(q, d_i) = \frac{q \cdot d_i}{<span class="sc">\|</span>q<span class="sc">\|</span> <span class="sc">\|</span>d_i<span class="sc">\|</span>}$$</span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>We set a similarity threshold of $0.05$. If matches exist, we select the top-$k$ (typically $k=3$ or $k=5$) corresponding training reports to act as few-shot clinical contexts.</span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a><span class="fu">### 1.2 Few-Shot Prompt Injection</span></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>The retrieved reference indications and findings are formatted and appended to the system prompt, as shown in the following structure:</span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a><span class="in">You are an expert radiologist. Write only the Findings section...</span></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a><span class="in">The following are findings from similar studies for reference:</span></span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a><span class="in">  Example 1 (similarity=0.72):</span></span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a><span class="in">    Indication: Shortness of breath, history of smoking.</span></span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a><span class="in">    Findings: Lungs are hyperexpanded with flattened diaphragms...</span></span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a><span class="in">Indication: Patient with shortness of breath and low oxygen.</span></span>
+<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a><span class="in">Findings:</span></span>
+<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a>This grounds the model in target-vocabulary phrasing before generation, helping to bridge the vocabulary mismatch gap.</span>
+<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-47"><a href="#cb3-47" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb3-48"><a href="#cb3-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-49"><a href="#cb3-49" aria-hidden="true" tabindex="-1"></a><span class="fu">## 2. Soft Label Priors via Association Rules [@singh2026clinicalreasoningvlm]</span></span>
+<span id="cb3-50"><a href="#cb3-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-51"><a href="#cb3-51" aria-hidden="true" tabindex="-1"></a>Medical findings do not occur in isolation; they follow logical clinical associations. To steer the decoder toward plausible reports without modifying model weights or gathering more data, we introduce soft label priors derived from label association rules, as proposed in Singh et al. <span class="co">[</span><span class="ot">@singh2026clinicalreasoningvlm</span><span class="co">]</span>.</span>
+<span id="cb3-52"><a href="#cb3-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-53"><a href="#cb3-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-54"><a href="#cb3-54" aria-hidden="true" tabindex="-1"></a><span class="fu">### 2.1 Mining Co-occurrence Statistics</span></span>
+<span id="cb3-55"><a href="#cb3-55" aria-hidden="true" tabindex="-1"></a>We compute a pairwise joint occurrence matrix from the binary CheXbert training labels ($L \in <span class="sc">\{</span>0, 1<span class="sc">\}</span>^{N \times 14}$):</span>
+<span id="cb3-56"><a href="#cb3-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-57"><a href="#cb3-57" aria-hidden="true" tabindex="-1"></a>$$C = \frac{L^T L}{N}$$</span>
+<span id="cb3-58"><a href="#cb3-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-59"><a href="#cb3-59" aria-hidden="true" tabindex="-1"></a>For each pair of labels $A$ and $B$, we compute the conditional probability (confidence) and lift:</span>
+<span id="cb3-60"><a href="#cb3-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-61"><a href="#cb3-61" aria-hidden="true" tabindex="-1"></a>$$P(B \mid A) = \frac{P(A \cap B)}{P(A)} = \frac{C_{A, B}}{\mu_A}$$</span>
+<span id="cb3-62"><a href="#cb3-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-63"><a href="#cb3-63" aria-hidden="true" tabindex="-1"></a>$$\text{Lift}(A \rightarrow B) = \frac{P(B \mid A)}{P(B)} = \frac{C_{A, B}}{\mu_A \mu_B}$$</span>
+<span id="cb3-64"><a href="#cb3-64" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-65"><a href="#cb3-65" aria-hidden="true" tabindex="-1"></a>Where $\mu_A$ represents the empirical prevalence of label $A$ in the dataset. Rules are sorted by confidence and filtered using thresholds (confidence $\ge 0.25$, lift $\ge 1.2$). The resulting joint statistics are saved to a heatmap.</span>
+<span id="cb3-66"><a href="#cb3-66" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-67"><a href="#cb3-67" aria-hidden="true" tabindex="-1"></a><span class="fu">### 2.2 Keyword Triggering and Prompt Conditioning</span></span>
+<span id="cb3-68"><a href="#cb3-68" aria-hidden="true" tabindex="-1"></a>During test inference, we scan the incoming indication text for keywords related to the 14 target pathologies, using negation filtering (e.g., ignoring mentions preceded by "no evidence of" or "rule out"). </span>
+<span id="cb3-69"><a href="#cb3-69" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-70"><a href="#cb3-70" aria-hidden="true" tabindex="-1"></a>If a pathology $A$ is triggered, we fetch its highest-confidence associations and append them as a structured hint:</span>
+<span id="cb3-71"><a href="#cb3-71" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-72"><a href="#cb3-72" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb3-73"><a href="#cb3-73" aria-hidden="true" tabindex="-1"></a><span class="in">Clinical association context (training set statistics):</span></span>
+<span id="cb3-74"><a href="#cb3-74" aria-hidden="true" tabindex="-1"></a><span class="in">  - Atelectasis co-occurs with Lung Opacity in 45% of similar studies (lift=1.82).</span></span>
+<span id="cb3-75"><a href="#cb3-75" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb3-76"><a href="#cb3-76" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-77"><a href="#cb3-77" aria-hidden="true" tabindex="-1"></a><span class="fu">### 2.3 Empirical TF-IDF Prior Overrides</span></span>
+<span id="cb3-78"><a href="#cb3-78" aria-hidden="true" tabindex="-1"></a>To handle complex cases where keywords are insufficient, we implement an alternative prior estimator: we retrieve the top-$K$ ($K=20$) similar training indications via TF-IDF and compute the empirical label prevalence vector directly over this neighborhood. If this retrieval succeeds, the empirical priors are formatted as a direct prompt context, overriding the rule-based hints.</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
 </div></div></div></div></div>
 </div> <!-- /content -->
 <footer class="footer">

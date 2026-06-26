@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>05 — RAG Retrieval: Similar Report Injection – ReportCXR</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-edad393940abb5f3c6973fe701e515d2.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-e9614ef202455b86b71b0557e717d80d.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">ReportCXR</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../index.html"> 
+<span class="menu-text">Overview</span></a>
+  </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-technical-report" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Technical Report</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-technical-report">    
+        <li>
+    <a class="dropdown-item" href="../report/01_introduction.html">
+ <span class="dropdown-text">1. Introduction &amp; Strategic Thesis</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../report/02_data.html">
+ <span class="dropdown-text">2. Data Distribution &amp; Sampler</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../report/03_model_training.html">
+ <span class="dropdown-text">3. Model &amp; QLoRA Config</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../report/04_evaluation.html">
+ <span class="dropdown-text">4. Evaluation &amp; Metric Pivot</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../report/05_inference_conditioning.html">
+ <span class="dropdown-text">5. Inference Conditioning</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../report/06_domain_shift.html">
+ <span class="dropdown-text">6. Domain Shift Audit Protocol</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../report/07_production_scaling.html">
+ <span class="dropdown-text">7. Production Scaling</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-code-documentation" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Code Documentation</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-code-documentation">    
+        <li>
+    <a class="dropdown-item" href="../doc/architecture.html">
+ <span class="dropdown-text">Architecture Overview</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../doc/data_pipeline.html">
+ <span class="dropdown-text">Data Pipeline</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../doc/training_pipeline.html">
+ <span class="dropdown-text">Model &amp; Training</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../doc/evaluation_modules.html">
+ <span class="dropdown-text">Evaluation Modules</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../doc/domain_shift_modules.html">
+ <span class="dropdown-text">Domain Shift Audit</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-notebooks" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Notebooks</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-notebooks">    
+        <li>
+    <a class="dropdown-item" href="../notebooks/01_eda.html">
+ <span class="dropdown-text">01: Exploratory Data Analysis</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../notebooks/02_baseline_zero_shot.html">
+ <span class="dropdown-text">02: Zero-Shot Baseline</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../notebooks/03_train_local.html">
+ <span class="dropdown-text">03: Training (Local)</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../notebooks/03_train_kaggle.html">
+ <span class="dropdown-text">03: Training (Kaggle)</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../notebooks/04_eval_and_figures.html">
+ <span class="dropdown-text">04: Evaluation</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../notebooks/05_rag_retrieval.html">
+ <span class="dropdown-text">05: RAG Retrieval</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../notebooks/06_association_rules.html">
+ <span class="dropdown-text">06: Association Rules</span></a>
+  </li>  
+    </ul>
+  </li>
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active" data-toc-expanded="99">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#step-1-environment-setup" id="toc-step-1-environment-setup" class="nav-link active" data-scroll-target="#step-1-environment-setup">STEP 1 — Environment setup</a></li>
+  <li><a href="#step-2-build-tf-idf-retrieval-index" id="toc-step-2-build-tf-idf-retrieval-index" class="nav-link" data-scroll-target="#step-2-build-tf-idf-retrieval-index">STEP 2 — Build TF-IDF retrieval index</a></li>
+  <li><a href="#step-3-rag-inference-on-test-set" id="toc-step-3-rag-inference-on-test-set" class="nav-link" data-scroll-target="#step-3-rag-inference-on-test-set">STEP 3 — RAG inference on test set</a></li>
+  <li><a href="#step-4-compute-and-save-metrics" id="toc-step-4-compute-and-save-metrics" class="nav-link" data-scroll-target="#step-4-compute-and-save-metrics">STEP 4 — Compute and save metrics</a></li>
+  <li><a href="#step-5-results-and-analysis" id="toc-step-5-results-and-analysis" class="nav-link" data-scroll-target="#step-5-results-and-analysis">STEP 5 — Results and analysis</a></li>
+  <li><a href="#done" id="toc-done" class="nav-link" data-scroll-target="#done">Done</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<div class="quarto-title-block"><div><h1 class="title">05 — RAG Retrieval: Similar Report Injection</h1><button type="button" class="btn code-tools-button dropdown-toggle" id="quarto-code-tools-menu" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi"></i> Code</button><ul class="dropdown-menu dropdown-menu-end" aria-labelelledby="quarto-code-tools-menu"><li><a id="quarto-show-all-code" class="dropdown-item" href="javascript:void(0)" role="button">Show All Code</a></li><li><a id="quarto-hide-all-code" class="dropdown-item" href="javascript:void(0)" role="button">Hide All Code</a></li></ul></div></div>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p><strong>Idea:</strong> At inference time, retrieve the top-k most similar training reports and inject them as few-shot examples in the prompt. The model generates conditioned on: 1. The chest X-ray image 2. The clinical indication 3. k reference reports from semantically similar cases</p>
+<p><strong>Retrieval strategy:</strong> TF-IDF over clinical indications (CPU-only, no GPU required for indexing).<br>
+Saves <code>reports/eval_hypotheses_rag_k{K}_{VARIANT}.json</code> and <code>reports/eval_metrics_rag_k{K}_{VARIANT}.json</code> so notebook 04 STEP 7 can include RAG in the grand comparison.</p>
+<p><strong>Run after notebook 04</strong> (needs <code>eval_hypotheses_uniform_v3.json</code> cached references).</p>
+<p><strong>Execution order across notebooks:</strong></p>
+<pre><code>04 (core eval)  →  [this notebook]  →  06 (assoc. rules)  →  04 STEP 7 (grand comparison)</code></pre>
+<section id="step-1-environment-setup" class="level2">
+<h2 class="anchored" data-anchor-id="step-1-environment-setup">STEP 1 — Environment setup</h2>
+<div id="step1-code" class="cell">
+<details open="" class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os, sys, json, logging</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> torch</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> yaml</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>matplotlib.rcParams[<span class="st">'figure.dpi'</span>] <span class="op">=</span> <span class="dv">120</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>logging.basicConfig(level<span class="op">=</span>logging.INFO, <span class="bu">format</span><span class="op">=</span><span class="st">'</span><span class="sc">%(levelname)s</span><span class="st"> </span><span class="sc">%(message)s</span><span class="st">'</span>)</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>REPO_ROOT <span class="op">=</span> Path(os.getcwd())</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> REPO_ROOT.name <span class="op">==</span> <span class="st">'notebooks'</span>:</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    REPO_ROOT <span class="op">=</span> REPO_ROOT.parent</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>os.chdir(REPO_ROOT)</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>sys.path.insert(<span class="dv">0</span>, <span class="bu">str</span>(REPO_ROOT))</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>PROCESSED_DIR  <span class="op">=</span> REPO_ROOT <span class="op">/</span> <span class="st">'data'</span> <span class="op">/</span> <span class="st">'processed'</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>CHECKPOINT_DIR <span class="op">=</span> REPO_ROOT <span class="op">/</span> <span class="st">'checkpoints'</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>FIGURES_DIR    <span class="op">=</span> REPO_ROOT <span class="op">/</span> <span class="st">'reports'</span> <span class="op">/</span> <span class="st">'figures'</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>FIGURES_DIR.mkdir(parents<span class="op">=</span><span class="va">True</span>, exist_ok<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> <span class="bu">open</span>(REPO_ROOT <span class="op">/</span> <span class="st">'params.yaml'</span>) <span class="im">as</span> f:</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>    params <span class="op">=</span> yaml.safe_load(f)</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>DEVICE <span class="op">=</span> <span class="st">'cuda'</span> <span class="cf">if</span> torch.cuda.is_available() <span class="cf">else</span> <span class="st">'cpu'</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Device : </span><span class="sc">{</span>DEVICE<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> DEVICE <span class="op">==</span> <span class="st">'cuda'</span>:</span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>    props <span class="op">=</span> torch.cuda.get_device_properties(<span class="dv">0</span>)</span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f'GPU    : </span><span class="sc">{</span>props<span class="sc">.</span>name<span class="sc">}</span><span class="ss">  </span><span class="sc">{</span>props<span class="sc">.</span>total_memory<span class="op">/</span><span class="fl">1e9</span><span class="sc">:.1f}</span><span class="ss"> GB'</span>)</span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>test_df <span class="op">=</span> pd.read_parquet(PROCESSED_DIR <span class="op">/</span> <span class="st">'test.parquet'</span>)</span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>test_df <span class="op">=</span> test_df[test_df[<span class="st">'findings'</span>].notna() <span class="op">&amp;</span> (test_df[<span class="st">'findings'</span>].<span class="bu">str</span>.strip() <span class="op">!=</span> <span class="st">''</span>)].reset_index(drop<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>references <span class="op">=</span> test_df[<span class="st">'findings'</span>].<span class="bu">str</span>.strip().tolist()</span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Test set : </span><span class="sc">{</span><span class="bu">len</span>(test_df)<span class="sc">}</span><span class="ss"> studies'</span>)</span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a>train_df <span class="op">=</span> pd.read_parquet(PROCESSED_DIR <span class="op">/</span> <span class="st">'train.parquet'</span>)</span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>train_df <span class="op">=</span> train_df[train_df[<span class="st">'findings'</span>].notna() <span class="op">&amp;</span> (train_df[<span class="st">'findings'</span>].<span class="bu">str</span>.strip() <span class="op">!=</span> <span class="st">''</span>)].reset_index(drop<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Train set: </span><span class="sc">{</span><span class="bu">len</span>(train_df)<span class="sc">}</span><span class="ss"> studies'</span>)</span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a>env_file <span class="op">=</span> REPO_ROOT <span class="op">/</span> <span class="st">'.env'</span></span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> env_file.exists():</span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> line <span class="kw">in</span> env_file.read_text().splitlines():</span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a>        line <span class="op">=</span> line.strip()</span>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> line <span class="kw">and</span> <span class="kw">not</span> line.startswith(<span class="st">'#'</span>) <span class="kw">and</span> <span class="st">'='</span> <span class="kw">in</span> line:</span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a>            k, v <span class="op">=</span> line.split(<span class="st">'='</span>, <span class="dv">1</span>)</span>
+<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a>            os.environ.setdefault(k.strip(), v.strip())</span>
+<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a>    <span class="im">import</span> huggingface_hub</span>
+<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a>    hf_token <span class="op">=</span> os.environ.get(<span class="st">'HF_TOKEN'</span>)</span>
+<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> hf_token:</span>
+<span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a>        huggingface_hub.login(token<span class="op">=</span>hf_token, add_to_git_credential<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">'HF: logged in'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="step-2-build-tf-idf-retrieval-index" class="level2">
+<h2 class="anchored" data-anchor-id="step-2-build-tf-idf-retrieval-index">STEP 2 — Build TF-IDF retrieval index</h2>
+<p>Indexes training set indications with TF-IDF bigrams (CPU-only).<br>
+Retrieves by indication similarity — studies with similar clinical context tend to have similar findings.</p>
+<div id="step2-index" class="cell">
+<details open="" class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.feature_extraction.text <span class="im">import</span> TfidfVectorizerfrom sklearn.metrics.pairwise <span class="im">import</span> cosine_similaritySYSTEM_PROMPT <span class="op">=</span> (    <span class="st">'You are an expert radiologist. '</span>    <span class="st">'Write only the Findings section of a radiology report for the chest X-ray shown. '</span>    <span class="st">'Be concise and clinical. Do not include an Impression section.'</span>)train_indications <span class="op">=</span> train_df[<span class="st">'indication'</span>].fillna(<span class="st">''</span>).astype(<span class="bu">str</span>).tolist()train_findings    <span class="op">=</span> train_df[<span class="st">'findings'</span>].<span class="bu">str</span>.strip().tolist()tfidf <span class="op">=</span> TfidfVectorizer(max_features<span class="op">=</span><span class="dv">5000</span>, stop_words<span class="op">=</span><span class="st">'english'</span>, ngram_range<span class="op">=</span>(<span class="dv">1</span>, <span class="dv">2</span>))train_tfidf_matrix <span class="op">=</span> tfidf.fit_transform(train_indications)<span class="bu">print</span>(<span class="ss">f'TF-IDF index: </span><span class="sc">{</span>train_tfidf_matrix<span class="sc">.</span>shape[<span class="dv">0</span>]<span class="sc">}</span><span class="ss"> docs × </span><span class="sc">{</span>train_tfidf_matrix<span class="sc">.</span>shape[<span class="dv">1</span>]<span class="sc">}</span><span class="ss"> features'</span>)MIN_SIM_THRESHOLD <span class="op">=</span> <span class="fl">0.05</span><span class="er">def</span> retrieve_similar_reports(query_indication: <span class="bu">str</span>, k: <span class="bu">int</span> <span class="op">=</span> <span class="dv">3</span>) <span class="op">-&gt;</span> <span class="bu">list</span>[<span class="bu">dict</span>]:    <span class="st">"""Return the top-k training reports most similar to the query indication."""</span>    <span class="cf">if</span> <span class="kw">not</span> query_indication.strip():        <span class="cf">return</span> []    query_vec <span class="op">=</span> tfidf.transform([query_indication])    sims <span class="op">=</span> cosine_similarity(query_vec, train_tfidf_matrix).flatten()    top_k_idx <span class="op">=</span> sims.argsort()[::<span class="op">-</span><span class="dv">1</span>][:k]    <span class="cf">return</span> [        {<span class="st">'indication'</span>: train_indications[i],         <span class="st">'findings'</span>:   train_findings[i],         <span class="st">'similarity'</span>: <span class="bu">float</span>(sims[i])}        <span class="cf">for</span> i <span class="kw">in</span> top_k_idx        <span class="cf">if</span> sims[i] <span class="op">&gt;=</span> MIN_SIM_THRESHOLD    ]<span class="kw">def</span> build_rag_prompt(indication: <span class="bu">str</span>, retrieved: <span class="bu">list</span>[<span class="bu">dict</span>], k: <span class="bu">int</span> <span class="op">=</span> <span class="dv">3</span>, system_prompt: <span class="bu">str</span> <span class="op">=</span> <span class="st">''</span>) <span class="op">-&gt;</span> <span class="bu">str</span>:    <span class="st">"""Inject retrieved reports as few-shot context before the generation target."""</span>    parts <span class="op">=</span> []    <span class="cf">if</span> system_prompt:        parts.append(system_prompt)    <span class="cf">if</span> retrieved:        parts.append(<span class="st">'The following are findings from similar studies for reference:'</span>)        <span class="cf">for</span> i, r <span class="kw">in</span> <span class="bu">enumerate</span>(retrieved[:k], <span class="dv">1</span>):            parts.append(<span class="ss">f'  Example </span><span class="sc">{</span>i<span class="sc">}</span><span class="ss"> (similarity=</span><span class="sc">{</span>r[<span class="st">"similarity"</span>]<span class="sc">:.2f}</span><span class="ss">):'</span>)            <span class="cf">if</span> r[<span class="st">'indication'</span>].strip():                parts.append(<span class="ss">f'    Indication: </span><span class="sc">{</span>r[<span class="st">"indication"</span>]<span class="sc">.</span>strip()<span class="sc">}</span><span class="ss">'</span>)            parts.append(<span class="ss">f'    Findings: </span><span class="sc">{</span>r[<span class="st">"findings"</span>]<span class="sc">.</span>strip()<span class="sc">}</span><span class="ss">'</span>)        parts.append(<span class="st">''</span>)    <span class="cf">if</span> indication.strip():        parts.append(<span class="ss">f'Indication: </span><span class="sc">{</span>indication<span class="sc">.</span>strip()<span class="sc">}</span><span class="ss">'</span>)    parts.append(<span class="st">'Findings:'</span>)    <span class="cf">return</span> <span class="st">'</span><span class="ch">\n</span><span class="st">'</span>.join(parts)<span class="co"># ── Smoke test ────────────────────────────────────────────────────────────────TEST_QUERY = 'Patient with shortness of breath and low oxygen saturation, history of smoking'retrieved = retrieve_similar_reports(TEST_QUERY, k=3)print(f'\nQuery: "{TEST_QUERY}"\n')for r in retrieved:    print(f'  sim={r["similarity"]:.3f} | ind: {r["indication"][:80]}')    print(f'             | fnd: {r["findings"][:90]}…')print(f'\nPrompt preview:\n{build_rag_prompt(TEST_QUERY, retrieved, system_prompt=SYSTEM_PROMPT)}')</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="step-3-rag-inference-on-test-set" class="level2">
+<h2 class="anchored" data-anchor-id="step-3-rag-inference-on-test-set">STEP 3 — RAG inference on test set</h2>
+<p>Loads the fine-tuned checkpoint, injects retrieved examples into each prompt, and generates findings for all 600 test studies.<br>
+Try <code>RAG_K = 3</code> (default) and optionally <code>RAG_K = 5</code> to measure diminishing returns.<br>
+Results cached to <code>reports/eval_hypotheses_rag_k{K}_{VARIANT}.json</code>.</p>
+<div id="step3-inference" class="cell">
+<details open="" class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> PIL <span class="im">import</span> Imagefrom tqdm <span class="im">import</span> tqdmfrom peft <span class="im">import</span> PeftModelfrom src.training.model <span class="im">import</span> load_model_and_processorIMAGES_DIR <span class="op">=</span> REPO_ROOT <span class="op">/</span> params[<span class="st">'data'</span>][<span class="st">'images_dir'</span>] <span class="op">/</span> <span class="st">'images_normalized'</span>_BLANK <span class="op">=</span> Image.new(<span class="st">'RGB'</span>, (<span class="dv">224</span>, <span class="dv">224</span>), color<span class="op">=</span>(<span class="dv">128</span>, <span class="dv">128</span>, <span class="dv">128</span>))RAG_VARIANT <span class="op">=</span> <span class="st">'uniform_v3'</span>RAG_K_VALUES <span class="op">=</span> [<span class="dv">3</span>]   <span class="co"># add 5 to compare: [3, 5]def _load_image(row):    frontal = row.get('frontal', [])    if hasattr(frontal, '__len__') and len(frontal) &gt; 0:        p = IMAGES_DIR / list(frontal)[0]        if p.exists():            try: return Image.open(p).convert('RGB')            except Exception: pass    return _BLANKrag_hypotheses = {}for RAG_K in RAG_K_VALUES:    variant_key = f'rag_k{RAG_K}_{RAG_VARIANT}'    cache = REPO_ROOT / 'reports' / f'eval_hypotheses_{variant_key}.json'    if cache.exists():        rag_hypotheses[variant_key] = json.loads(cache.read_text())        print(f'[{variant_key}] loaded {len(rag_hypotheses[variant_key])} cached hypotheses')        continue    print(f'\n[{variant_key}] loading model…')    model, processor = load_model_and_processor(        model_id=params['model']['base_model_id'],        quantization=params['model']['quantization'],    )    adapter_path = CHECKPOINT_DIR / RAG_VARIANT / 'best_model'    if not adapter_path.exists():        adapter_path = CHECKPOINT_DIR / f'qlora_{RAG_VARIANT}' / 'best_model'    model = PeftModel.from_pretrained(model, str(adapter_path))    model.eval()    hyps = []    for _, row in tqdm(test_df.iterrows(), total=len(test_df), desc=variant_key):        indication = str(row.get('indication', '') or '').strip()        if indication.lower() in {'nan', 'none', ''}: indication = ''        retrieved = retrieve_similar_reports(indication, k=RAG_K)        user_text = build_rag_prompt(indication, retrieved, k=RAG_K, system_prompt=SYSTEM_PROMPT)        img = _load_image(row)        content = [{'type': 'image'}, {'type': 'text', 'text': user_text}]        prompt = processor.apply_chat_template(            [{'role': 'user', 'content': content}],            add_generation_prompt=True, tokenize=False,        )        inputs = processor(text=prompt, images=[img], return_tensors='pt', padding=True)        inputs = {k: v.to(model.device) for k, v in inputs.items()}        with torch.inference_mode():            out = model.generate(**inputs,                max_new_tokens=params['model']['max_new_tokens'],                do_sample=False, pad_token_id=processor.tokenizer.eos_token_id)        hyp = processor.tokenizer.decode(            out[0][inputs['input_ids'].shape[1]:], skip_special_tokens=True).strip()        hyps.append(hyp)    cache.write_text(json.dumps(hyps, ensure_ascii=False, indent=2))    rag_hypotheses[variant_key] = hyps    del model, processor; torch.cuda.empty_cache()    print(f'[{variant_key}] done — {len(hyps)} hypotheses saved')print(f'\nRAG variants ready: {list(rag_hypotheses.keys())}')</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="step-4-compute-and-save-metrics" class="level2">
+<h2 class="anchored" data-anchor-id="step-4-compute-and-save-metrics">STEP 4 — Compute and save metrics</h2>
+<p>Writes <code>reports/eval_metrics_rag_k{K}_{VARIANT}.json</code> — the format notebook 04 STEP 7 auto-discovers.</p>
+<div id="step4-metrics" class="cell">
+<details open="" class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> bert_score.utils <span class="im">as</span> _bsu</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> bert_score <span class="im">import</span> score <span class="im">as</span> _bert_score</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> src.data.labels <span class="im">import</span> CHEXBERT_LABELS, run_chexbert</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.metrics <span class="im">import</span> f1_score</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> evaluate <span class="im">as</span> hf_evaluate</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>_orig_sent_encode <span class="op">=</span> _bsu.sent_encode</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _safe_sent_encode(tokenizer, sent):</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="bu">getattr</span>(tokenizer, <span class="st">'model_max_length'</span>, <span class="dv">0</span>) <span class="op">&gt;</span> <span class="dv">10_000</span>:</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>        tokenizer.model_max_length <span class="op">=</span> <span class="dv">512</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> _orig_sent_encode(tokenizer, sent)</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>_bsu.sent_encode <span class="op">=</span> _safe_sent_encode</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>_bleu  <span class="op">=</span> hf_evaluate.load(<span class="st">'bleu'</span>)</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>_rouge <span class="op">=</span> hf_evaluate.load(<span class="st">'rouge'</span>)</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _compute_metrics(hyps, refs, variant):</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>    cache <span class="op">=</span> REPO_ROOT <span class="op">/</span> <span class="st">'reports'</span> <span class="op">/</span> <span class="ss">f'eval_metrics_</span><span class="sc">{</span>variant<span class="sc">}</span><span class="ss">.json'</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> cache.exists():</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f'  [</span><span class="sc">{</span>variant<span class="sc">}</span><span class="ss">] loaded from cache'</span>)</span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> json.loads(cache.read_text())</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f'  [</span><span class="sc">{</span>variant<span class="sc">}</span><span class="ss">] BERTScore…'</span>)</span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>    _, _, F <span class="op">=</span> _bert_score(hyps, refs,</span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>        model_type<span class="op">=</span>params[<span class="st">'eval'</span>][<span class="st">'bertscore_model'</span>],</span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>        lang<span class="op">=</span><span class="st">'en'</span>, device<span class="op">=</span>DEVICE, verbose<span class="op">=</span><span class="va">False</span>, batch_size<span class="op">=</span><span class="dv">16</span>)</span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f'  [</span><span class="sc">{</span>variant<span class="sc">}</span><span class="ss">] CheXbert…'</span>)</span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>    hyp_labels <span class="op">=</span> run_chexbert(hyps, uncertain_policy<span class="op">=</span><span class="st">'present'</span>, device<span class="op">=</span>DEVICE)</span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>    ref_labels <span class="op">=</span> run_chexbert(refs, uncertain_policy<span class="op">=</span><span class="st">'present'</span>, device<span class="op">=</span>DEVICE)</span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f'  [</span><span class="sc">{</span>variant<span class="sc">}</span><span class="ss">] BLEU/ROUGE…'</span>)</span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>    result <span class="op">=</span> {</span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a>        <span class="st">'variant'</span>: variant,</span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>        <span class="st">'bertscore_f1'</span>:      <span class="bu">float</span>(F.mean()),</span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a>        <span class="st">'chexbert_micro_f1'</span>: <span class="bu">float</span>(f1_score(ref_labels, hyp_labels, average<span class="op">=</span><span class="st">'micro'</span>, zero_division<span class="op">=</span><span class="dv">0</span>)),</span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a>        <span class="st">'chexbert_macro_f1'</span>: <span class="bu">float</span>(f1_score(ref_labels, hyp_labels, average<span class="op">=</span><span class="st">'macro'</span>, zero_division<span class="op">=</span><span class="dv">0</span>)),</span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a>        <span class="st">'bleu4'</span>:             _bleu.compute(predictions<span class="op">=</span>hyps, references<span class="op">=</span>[[r] <span class="cf">for</span> r <span class="kw">in</span> refs], max_order<span class="op">=</span><span class="dv">4</span>)[<span class="st">'bleu'</span>],</span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a>        <span class="st">'rouge_l'</span>:           _rouge.compute(predictions<span class="op">=</span>hyps, references<span class="op">=</span>refs)[<span class="st">'rougeL'</span>],</span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a>        <span class="st">'per_label_f1'</span>:      {label: <span class="bu">float</span>(f1_score(ref_labels[:, i], hyp_labels[:, i], zero_division<span class="op">=</span><span class="dv">0</span>))</span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a>                              <span class="cf">for</span> i, label <span class="kw">in</span> <span class="bu">enumerate</span>(CHEXBERT_LABELS)},</span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a>        <span class="st">'bertscore_per_study'</span>: F.tolist(),</span>
+<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a>    cache.write_text(json.dumps(result, indent<span class="op">=</span><span class="dv">2</span>))</span>
+<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f'  [</span><span class="sc">{</span>variant<span class="sc">}</span><span class="ss">] saved → </span><span class="sc">{</span>cache<span class="sc">.</span>name<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> result</span>
+<span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a>rag_metrics <span class="op">=</span> {}</span>
+<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> variant_key, hyps <span class="kw">in</span> rag_hypotheses.items():</span>
+<span id="cb5-47"><a href="#cb5-47" aria-hidden="true" tabindex="-1"></a>    rag_metrics[variant_key] <span class="op">=</span> _compute_metrics(hyps, references, variant_key)</span>
+<span id="cb5-48"><a href="#cb5-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-49"><a href="#cb5-49" aria-hidden="true" tabindex="-1"></a>_bsu.sent_encode <span class="op">=</span> _orig_sent_encode</span>
+<span id="cb5-50"><a href="#cb5-50" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'</span><span class="ch">\n</span><span class="st">RAG metrics computed.'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="step-5-results-and-analysis" class="level2">
+<h2 class="anchored" data-anchor-id="step-5-results-and-analysis">STEP 5 — Results and analysis</h2>
+<div id="step5-results" class="cell">
+<details open="" class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load baseline for comparison</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>baseline_v3 <span class="op">=</span> json.loads((REPO_ROOT <span class="op">/</span> <span class="st">'reports'</span> <span class="op">/</span> <span class="st">'eval_metrics_uniform_v3.json'</span>).read_text())</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>DISPLAY_NAMES <span class="op">=</span> {</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">'uniform_v3'</span>:       <span class="st">'QLoRA uniform (v3) — no RAG'</span>,</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">'rag_k3_uniform_v3'</span>: <span class="st">'RAG k=3 (v3)'</span>,</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">'rag_k5_uniform_v3'</span>: <span class="st">'RAG k=5 (v3)'</span>,</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>comparison <span class="op">=</span> {<span class="st">'uniform_v3'</span>: baseline_v3, <span class="op">**</span>rag_metrics}</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>rows <span class="op">=</span> []</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> variant, m <span class="kw">in</span> comparison.items():</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>    rows.append({</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>        <span class="st">'Model'</span>:             DISPLAY_NAMES.get(variant, variant),</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>        <span class="st">'BERTScore-F1'</span>:      <span class="bu">round</span>(m[<span class="st">'bertscore_f1'</span>],      <span class="dv">4</span>),</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>        <span class="st">'CheXbert micro-F1'</span>: <span class="bu">round</span>(m[<span class="st">'chexbert_micro_f1'</span>], <span class="dv">4</span>),</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>        <span class="st">'CheXbert macro-F1'</span>: <span class="bu">round</span>(m[<span class="st">'chexbert_macro_f1'</span>], <span class="dv">4</span>),</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>        <span class="st">'BLEU-4'</span>:            <span class="bu">round</span>(m[<span class="st">'bleu4'</span>],             <span class="dv">4</span>),</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>        <span class="st">'ROUGE-L'</span>:           <span class="bu">round</span>(m[<span class="st">'rouge_l'</span>],           <span class="dv">4</span>),</span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>    })</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>display(pd.DataFrame(rows).set_index(<span class="st">'Model'</span>))</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Delta vs no-RAG baseline</span></span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'</span><span class="ch">\n</span><span class="st">Δ BERTScore vs no-RAG baseline:'</span>)</span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> variant, m <span class="kw">in</span> rag_metrics.items():</span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>    delta <span class="op">=</span> m[<span class="st">'bertscore_f1'</span>] <span class="op">-</span> baseline_v3[<span class="st">'bertscore_f1'</span>]</span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f'  </span><span class="sc">{</span>DISPLAY_NAMES<span class="sc">.</span>get(variant, variant)<span class="sc">}</span><span class="ss">: </span><span class="sc">{</span>delta<span class="sc">:+.4f}</span><span class="ss">'</span>)</span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a><span class="co"># Bar chart</span></span>
+<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">9</span>, <span class="dv">4</span>))</span>
+<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a>names  <span class="op">=</span> [DISPLAY_NAMES.get(v, v) <span class="cf">for</span> v <span class="kw">in</span> comparison]</span>
+<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a>bscore <span class="op">=</span> [comparison[v][<span class="st">'bertscore_f1'</span>] <span class="cf">for</span> v <span class="kw">in</span> comparison]</span>
+<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a>colors <span class="op">=</span> [<span class="st">'#1f77b4'</span>] <span class="op">+</span> [<span class="st">'#2ca02c'</span>] <span class="op">*</span> <span class="bu">len</span>(rag_metrics)</span>
+<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a>bars   <span class="op">=</span> ax.bar(names, bscore, color<span class="op">=</span>colors, alpha<span class="op">=</span><span class="fl">0.85</span>, edgecolor<span class="op">=</span><span class="st">'white'</span>)</span>
+<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> bar, val <span class="kw">in</span> <span class="bu">zip</span>(bars, bscore):</span>
+<span id="cb6-36"><a href="#cb6-36" aria-hidden="true" tabindex="-1"></a>    ax.text(bar.get_x() <span class="op">+</span> bar.get_width()<span class="op">/</span><span class="dv">2</span>, val <span class="op">+</span> <span class="fl">0.001</span>, <span class="ss">f'</span><span class="sc">{</span>val<span class="sc">:.4f}</span><span class="ss">'</span>,</span>
+<span id="cb6-37"><a href="#cb6-37" aria-hidden="true" tabindex="-1"></a>            ha<span class="op">=</span><span class="st">'center'</span>, va<span class="op">=</span><span class="st">'bottom'</span>, fontsize<span class="op">=</span><span class="dv">9</span>)</span>
+<span id="cb6-38"><a href="#cb6-38" aria-hidden="true" tabindex="-1"></a>ax.set_ylim(<span class="bu">min</span>(bscore) <span class="op">*</span> <span class="fl">0.98</span>, <span class="bu">max</span>(bscore) <span class="op">*</span> <span class="fl">1.04</span>)</span>
+<span id="cb6-39"><a href="#cb6-39" aria-hidden="true" tabindex="-1"></a>ax.set_ylabel(<span class="st">'BERTScore-F1'</span>)<span class="op">;</span> ax.set_title(<span class="st">'RAG Retrieval — impact on BERTScore-F1'</span>)</span>
+<span id="cb6-40"><a href="#cb6-40" aria-hidden="true" tabindex="-1"></a>ax.tick_params(axis<span class="op">=</span><span class="st">'x'</span>, labelrotation<span class="op">=</span><span class="dv">15</span>)</span>
+<span id="cb6-41"><a href="#cb6-41" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb6-42"><a href="#cb6-42" aria-hidden="true" tabindex="-1"></a>fig.savefig(FIGURES_DIR <span class="op">/</span> <span class="st">'eval_rag_comparison.png'</span>, dpi<span class="op">=</span><span class="dv">150</span>, bbox_inches<span class="op">=</span><span class="st">'tight'</span>)</span>
+<span id="cb6-43"><a href="#cb6-43" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'Saved eval_rag_comparison.png'</span>)<span class="op">;</span> plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="done" class="level2">
+<h2 class="anchored" data-anchor-id="done">Done</h2>
+<p>Metrics written to <code>reports/eval_metrics_rag_k*_uniform_v3.json</code>.<br>
+<strong>Next:</strong> run notebook 06 (association rules), then return to notebook 04 STEP 7 for the grand comparison.</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+    const viewSource = window.document.getElementById('quarto-view-source') ||
+                       window.document.getElementById('quarto-code-tools-source');
+    if (viewSource) {
+      const sourceUrl = viewSource.getAttribute("data-quarto-source-url");
+      viewSource.addEventListener("click", function(e) {
+        if (sourceUrl) {
+          // rstudio viewer pane
+          if (/\bcapabilities=\b/.test(window.location)) {
+            window.open(sourceUrl);
+          } else {
+            window.location.href = sourceUrl;
+          }
+        } else {
+          const modal = new bootstrap.Modal(document.getElementById('quarto-embedded-source-code-modal'));
+          modal.show();
+        }
+        return false;
+      });
+    }
+    function toggleCodeHandler(show) {
+      return function(e) {
+        const detailsSrc = window.document.querySelectorAll(".cell > details > .sourceCode");
+        for (let i=0; i<detailsSrc.length; i++) {
+          const details = detailsSrc[i].parentElement;
+          if (show) {
+            details.open = true;
+          } else {
+            details.removeAttribute("open");
+          }
+        }
+        const cellCodeDivs = window.document.querySelectorAll(".cell > .sourceCode");
+        const fromCls = show ? "hidden" : "unhidden";
+        const toCls = show ? "unhidden" : "hidden";
+        for (let i=0; i<cellCodeDivs.length; i++) {
+          const codeDiv = cellCodeDivs[i];
+          if (codeDiv.classList.contains(fromCls)) {
+            codeDiv.classList.remove(fromCls);
+            codeDiv.classList.add(toCls);
+          } 
+        }
+        return false;
+      }
+    }
+    const hideAllCode = window.document.getElementById("quarto-hide-all-code");
+    if (hideAllCode) {
+      hideAllCode.addEventListener("click", toggleCodeHandler(false));
+    }
+    const showAllCode = window.document.getElementById("quarto-show-all-code");
+    if (showAllCode) {
+      showAllCode.addEventListener("click", toggleCodeHandler(true));
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/diegovillaba\.github\.io\/ReportCXR");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>ReportCXR Technical Challenge</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+<p>Built with Quarto</p>
+</div>
+  </div>
+</footer>
+
+
+
+
+</body></html>

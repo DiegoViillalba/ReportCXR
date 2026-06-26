@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>06 — Association Rules Conditioner: Soft Diagnostic Prior – ReportCXR</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-edad393940abb5f3c6973fe701e515d2.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-e9614ef202455b86b71b0557e717d80d.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../index.html">
+    <span class="navbar-title">ReportCXR</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../index.html"> 
+<span class="menu-text">Overview</span></a>
+  </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-technical-report" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Technical Report</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-technical-report">    
+        <li>
+    <a class="dropdown-item" href="../report/01_introduction.html">
+ <span class="dropdown-text">1. Introduction &amp; Strategic Thesis</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../report/02_data.html">
+ <span class="dropdown-text">2. Data Distribution &amp; Sampler</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../report/03_model_training.html">
+ <span class="dropdown-text">3. Model &amp; QLoRA Config</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../report/04_evaluation.html">
+ <span class="dropdown-text">4. Evaluation &amp; Metric Pivot</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../report/05_inference_conditioning.html">
+ <span class="dropdown-text">5. Inference Conditioning</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../report/06_domain_shift.html">
+ <span class="dropdown-text">6. Domain Shift Audit Protocol</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../report/07_production_scaling.html">
+ <span class="dropdown-text">7. Production Scaling</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-code-documentation" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Code Documentation</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-code-documentation">    
+        <li>
+    <a class="dropdown-item" href="../doc/architecture.html">
+ <span class="dropdown-text">Architecture Overview</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../doc/data_pipeline.html">
+ <span class="dropdown-text">Data Pipeline</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../doc/training_pipeline.html">
+ <span class="dropdown-text">Model &amp; Training</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../doc/evaluation_modules.html">
+ <span class="dropdown-text">Evaluation Modules</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../doc/domain_shift_modules.html">
+ <span class="dropdown-text">Domain Shift Audit</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-notebooks" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Notebooks</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-notebooks">    
+        <li>
+    <a class="dropdown-item" href="../notebooks/01_eda.html">
+ <span class="dropdown-text">01: Exploratory Data Analysis</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../notebooks/02_baseline_zero_shot.html">
+ <span class="dropdown-text">02: Zero-Shot Baseline</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../notebooks/03_train_local.html">
+ <span class="dropdown-text">03: Training (Local)</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../notebooks/03_train_kaggle.html">
+ <span class="dropdown-text">03: Training (Kaggle)</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../notebooks/04_eval_and_figures.html">
+ <span class="dropdown-text">04: Evaluation</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../notebooks/05_rag_retrieval.html">
+ <span class="dropdown-text">05: RAG Retrieval</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../notebooks/06_association_rules.html">
+ <span class="dropdown-text">06: Association Rules</span></a>
+  </li>  
+    </ul>
+  </li>
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active" data-toc-expanded="99">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#step-1-environment-setup" id="toc-step-1-environment-setup" class="nav-link active" data-scroll-target="#step-1-environment-setup">STEP 1 — Environment setup</a></li>
+  <li><a href="#step-2-build-association-rules-from-training-labels" id="toc-step-2-build-association-rules-from-training-labels" class="nav-link" data-scroll-target="#step-2-build-association-rules-from-training-labels">STEP 2 — Build association rules from training labels</a></li>
+  <li><a href="#step-3-prompt-conditioner-functionsdefines-the-two-tier-hint-builder--retrieve_label_prior-from-step-2-is-the-primary-source-empirical-plabel-similar-indication.--build_association_hint-is-the-keyword-based-fallback-for-studies-with-low-similarity-indications.--build_conditioned_prompt-selects-the-best-available-hint-and-formats-the-full-prompt.--_hint_fired-mirrors-the-selection-logic-without-generating-a-full-prompt-used-for-analysis." id="toc-step-3-prompt-conditioner-functionsdefines-the-two-tier-hint-builder--retrieve_label_prior-from-step-2-is-the-primary-source-empirical-plabel-similar-indication.--build_association_hint-is-the-keyword-based-fallback-for-studies-with-low-similarity-indications.--build_conditioned_prompt-selects-the-best-available-hint-and-formats-the-full-prompt.--_hint_fired-mirrors-the-selection-logic-without-generating-a-full-prompt-used-for-analysis." class="nav-link" data-scroll-target="#step-3-prompt-conditioner-functionsdefines-the-two-tier-hint-builder--retrieve_label_prior-from-step-2-is-the-primary-source-empirical-plabel-similar-indication.--build_association_hint-is-the-keyword-based-fallback-for-studies-with-low-similarity-indications.--build_conditioned_prompt-selects-the-best-available-hint-and-formats-the-full-prompt.--_hint_fired-mirrors-the-selection-logic-without-generating-a-full-prompt-used-for-analysis.">STEP 3 — Prompt conditioner functionsDefines the two-tier hint builder:- <code>retrieve_label_prior</code> (from STEP 2) is the primary source — empirical P(label | similar indication).- <code>build_association_hint</code> is the keyword-based fallback for studies with low-similarity indications.- <code>build_conditioned_prompt</code> selects the best available hint and formats the full prompt.- <code>_hint_fired</code> mirrors the selection logic without generating a full prompt — used for analysis.</a></li>
+  <li><a href="#step-4-conditioned-inference-on-test-set" id="toc-step-4-conditioned-inference-on-test-set" class="nav-link" data-scroll-target="#step-4-conditioned-inference-on-test-set">STEP 4 — Conditioned inference on test set</a></li>
+  <li><a href="#step-5-compute-and-save-metrics" id="toc-step-5-compute-and-save-metrics" class="nav-link" data-scroll-target="#step-5-compute-and-save-metrics">STEP 5 — Compute and save metrics</a></li>
+  <li><a href="#step-6-per-indication-analysis" id="toc-step-6-per-indication-analysis" class="nav-link" data-scroll-target="#step-6-per-indication-analysis">STEP 6 — Per-indication analysis</a></li>
+  <li><a href="#done" id="toc-done" class="nav-link" data-scroll-target="#done">Done</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<div class="quarto-title-block"><div><h1 class="title">06 — Association Rules Conditioner: Soft Diagnostic Prior</h1><button type="button" class="btn code-tools-button dropdown-toggle" id="quarto-code-tools-menu" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi"></i> Code</button><ul class="dropdown-menu dropdown-menu-end" aria-labelelledby="quarto-code-tools-menu"><li><a id="quarto-show-all-code" class="dropdown-item" href="javascript:void(0)" role="button">Show All Code</a></li><li><a id="quarto-hide-all-code" class="dropdown-item" href="javascript:void(0)" role="button">Hide All Code</a></li></ul></div></div>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p><strong>Idea:</strong> Use co-occurrence patterns mined from training labels to inject a soft diagnostic prior into the prompt at inference time. The prior tells the model which findings are statistically likely given the clinical indication — nudging generation without hard-coding any output.</p>
+<p><strong>Mechanism (two-tier):</strong> 1. Build a pairwise conditional probability table P(B | A) from training labels (kept as fallback). 2. Build a TF-IDF index over training indications. For each test study, retrieve the k=20 most similar training studies by indication and compute the empirical label prevalence over that neighborhood — a data-driven alternative to hand-coded keyword rules. 3. <strong>Primary path</strong>: if retrieval similarity ≥ 0.05, inject the neighborhood label distribution: <em>“Clinical context: Cardiomegaly present in 67% of similar cases, Edema in 42%…”</em> 4. <strong>Fallback path</strong>: if retrieval fails (empty indication or low similarity), scan the indication for keyword triggers and inject matching pairwise association rules. 5. The selected hint is injected into the prompt after the system instruction, before <code>Findings:</code>.</p>
+<p>Saves <code>reports/eval_metrics_assoc_rules_{VARIANT}.json</code> for notebook 04 STEP 7.</p>
+<p><strong>Execution order across notebooks:</strong></p>
+<pre><code>04 (core eval)  →  05 (RAG)  →  [this notebook]  →  04 STEP 7 (grand comparison)</code></pre>
+<section id="step-1-environment-setup" class="level2">
+<h2 class="anchored" data-anchor-id="step-1-environment-setup">STEP 1 — Environment setup</h2>
+<div id="step1-code" class="cell">
+<details open="" class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os, sys, json, logging</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> torch</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> yaml</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>matplotlib.rcParams[<span class="st">'figure.dpi'</span>] <span class="op">=</span> <span class="dv">120</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>logging.basicConfig(level<span class="op">=</span>logging.INFO, <span class="bu">format</span><span class="op">=</span><span class="st">'</span><span class="sc">%(levelname)s</span><span class="st"> </span><span class="sc">%(message)s</span><span class="st">'</span>)</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>REPO_ROOT <span class="op">=</span> Path(os.getcwd())</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> REPO_ROOT.name <span class="op">==</span> <span class="st">'notebooks'</span>:</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    REPO_ROOT <span class="op">=</span> REPO_ROOT.parent</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>os.chdir(REPO_ROOT)</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>sys.path.insert(<span class="dv">0</span>, <span class="bu">str</span>(REPO_ROOT))</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>PROCESSED_DIR  <span class="op">=</span> REPO_ROOT <span class="op">/</span> <span class="st">'data'</span> <span class="op">/</span> <span class="st">'processed'</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>CHECKPOINT_DIR <span class="op">=</span> REPO_ROOT <span class="op">/</span> <span class="st">'checkpoints'</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>FIGURES_DIR    <span class="op">=</span> REPO_ROOT <span class="op">/</span> <span class="st">'reports'</span> <span class="op">/</span> <span class="st">'figures'</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>FIGURES_DIR.mkdir(parents<span class="op">=</span><span class="va">True</span>, exist_ok<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> <span class="bu">open</span>(REPO_ROOT <span class="op">/</span> <span class="st">'params.yaml'</span>) <span class="im">as</span> f:</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>    params <span class="op">=</span> yaml.safe_load(f)</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>DEVICE <span class="op">=</span> <span class="st">'cuda'</span> <span class="cf">if</span> torch.cuda.is_available() <span class="cf">else</span> <span class="st">'cpu'</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Device : </span><span class="sc">{</span>DEVICE<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> DEVICE <span class="op">==</span> <span class="st">'cuda'</span>:</span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>    props <span class="op">=</span> torch.cuda.get_device_properties(<span class="dv">0</span>)</span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f'GPU    : </span><span class="sc">{</span>props<span class="sc">.</span>name<span class="sc">}</span><span class="ss">  </span><span class="sc">{</span>props<span class="sc">.</span>total_memory<span class="op">/</span><span class="fl">1e9</span><span class="sc">:.1f}</span><span class="ss"> GB'</span>)</span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>test_df <span class="op">=</span> pd.read_parquet(PROCESSED_DIR <span class="op">/</span> <span class="st">'test.parquet'</span>)</span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>test_df <span class="op">=</span> test_df[test_df[<span class="st">'findings'</span>].notna() <span class="op">&amp;</span> (test_df[<span class="st">'findings'</span>].<span class="bu">str</span>.strip() <span class="op">!=</span> <span class="st">''</span>)].reset_index(drop<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>references <span class="op">=</span> test_df[<span class="st">'findings'</span>].<span class="bu">str</span>.strip().tolist()</span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Test set : </span><span class="sc">{</span><span class="bu">len</span>(test_df)<span class="sc">}</span><span class="ss"> studies'</span>)</span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a>train_df <span class="op">=</span> pd.read_parquet(PROCESSED_DIR <span class="op">/</span> <span class="st">'train.parquet'</span>)</span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>train_df <span class="op">=</span> train_df[train_df[<span class="st">'findings'</span>].notna() <span class="op">&amp;</span> (train_df[<span class="st">'findings'</span>].<span class="bu">str</span>.strip() <span class="op">!=</span> <span class="st">''</span>)].reset_index(drop<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Train set: </span><span class="sc">{</span><span class="bu">len</span>(train_df)<span class="sc">}</span><span class="ss"> studies'</span>)</span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a>env_file <span class="op">=</span> REPO_ROOT <span class="op">/</span> <span class="st">'.env'</span></span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> env_file.exists():</span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> line <span class="kw">in</span> env_file.read_text().splitlines():</span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a>        line <span class="op">=</span> line.strip()</span>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> line <span class="kw">and</span> <span class="kw">not</span> line.startswith(<span class="st">'#'</span>) <span class="kw">and</span> <span class="st">'='</span> <span class="kw">in</span> line:</span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a>            k, v <span class="op">=</span> line.split(<span class="st">'='</span>, <span class="dv">1</span>)</span>
+<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a>            os.environ.setdefault(k.strip(), v.strip())</span>
+<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a>    <span class="im">import</span> huggingface_hub</span>
+<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a>    hf_token <span class="op">=</span> os.environ.get(<span class="st">'HF_TOKEN'</span>)</span>
+<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> hf_token:</span>
+<span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a>        huggingface_hub.login(token<span class="op">=</span>hf_token, add_to_git_credential<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">'HF: logged in'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="step-2-build-association-rules-from-training-labels" class="level2">
+<h2 class="anchored" data-anchor-id="step-2-build-association-rules-from-training-labels">STEP 2 — Build association rules from training labels</h2>
+<p>Computes pairwise P(B | A) and lift for all label pairs with prevalence ≥ 1%.<br>
+CPU-only — runs immediately without a GPU.</p>
+<div id="step2-rules" class="cell">
+<details open="" class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> src.data.labels <span class="im">import</span> CHEXBERT_LABELS</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>train_label_matrix <span class="op">=</span> train_df[CHEXBERT_LABELS].values.astype(<span class="bu">float</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>n <span class="op">=</span> <span class="bu">len</span>(train_label_matrix)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>co_matrix   <span class="op">=</span> (train_label_matrix.T <span class="op">@</span> train_label_matrix) <span class="op">/</span> n</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>prevalences <span class="op">=</span> train_label_matrix.mean(axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>rules <span class="op">=</span> []</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i, label_a <span class="kw">in</span> <span class="bu">enumerate</span>(CHEXBERT_LABELS):</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> prevalences[i] <span class="op">&lt;</span> <span class="fl">0.01</span>: <span class="cf">continue</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> j, label_b <span class="kw">in</span> <span class="bu">enumerate</span>(CHEXBERT_LABELS):</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> i <span class="op">==</span> j <span class="kw">or</span> prevalences[j] <span class="op">&lt;</span> <span class="fl">0.01</span>: <span class="cf">continue</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>        p_a  <span class="op">=</span> prevalences[i]</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>        p_ab <span class="op">=</span> co_matrix[i, j]</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>        conf <span class="op">=</span> p_ab <span class="op">/</span> p_a</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>        lift <span class="op">=</span> conf <span class="op">/</span> prevalences[j] <span class="cf">if</span> prevalences[j] <span class="op">&gt;</span> <span class="dv">0</span> <span class="cf">else</span> <span class="dv">0</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>        rules.append({</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>            <span class="st">'antecedent'</span>:   label_a,</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>            <span class="st">'consequent'</span>:   label_b,</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>            <span class="st">'support'</span>:      <span class="bu">round</span>(<span class="bu">float</span>(p_ab),  <span class="dv">4</span>),</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>            <span class="st">'confidence'</span>:   <span class="bu">round</span>(<span class="bu">float</span>(conf),  <span class="dv">4</span>),</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>            <span class="st">'lift'</span>:         <span class="bu">round</span>(<span class="bu">float</span>(lift),  <span class="dv">4</span>),</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>            <span class="st">'p_antecedent'</span>: <span class="bu">round</span>(<span class="bu">float</span>(p_a),   <span class="dv">4</span>),</span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>        })</span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>rules_df <span class="op">=</span> pd.DataFrame(rules).sort_values(<span class="st">'confidence'</span>, ascending<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Total rules      : </span><span class="sc">{</span><span class="bu">len</span>(rules_df)<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'conf ≥ 0.30      : </span><span class="sc">{</span>(rules_df.confidence <span class="op">&gt;=</span> <span class="fl">0.30</span>)<span class="sc">.</span><span class="bu">sum</span>()<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'conf ≥ 0.30 + lift ≥ 1.5: </span><span class="sc">{</span>((rules_df.confidence <span class="op">&gt;=</span> <span class="fl">0.30</span>) <span class="op">&amp;</span> (rules_df.lift <span class="op">&gt;=</span> <span class="fl">1.5</span>))<span class="sc">.</span><span class="bu">sum</span>()<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>()</span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>display(rules_df[rules_df[<span class="st">'confidence'</span>] <span class="op">&gt;=</span> <span class="fl">0.30</span>].head(<span class="dv">25</span>))</span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Heat-map of conditional probabilities ─────────────────────────────────────</span></span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>labels_active <span class="op">=</span> [l <span class="cf">for</span> i, l <span class="kw">in</span> <span class="bu">enumerate</span>(CHEXBERT_LABELS) <span class="cf">if</span> prevalences[i] <span class="op">&gt;=</span> <span class="fl">0.01</span>]</span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a>active_idx    <span class="op">=</span> [CHEXBERT_LABELS.index(l) <span class="cf">for</span> l <span class="kw">in</span> labels_active]</span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a>conf_matrix   <span class="op">=</span> np.zeros((<span class="bu">len</span>(labels_active), <span class="bu">len</span>(labels_active)))</span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i, ia <span class="kw">in</span> <span class="bu">enumerate</span>(active_idx):</span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> j, ja <span class="kw">in</span> <span class="bu">enumerate</span>(active_idx):</span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> ia <span class="op">!=</span> ja <span class="kw">and</span> prevalences[ia] <span class="op">&gt;</span> <span class="dv">0</span>:</span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a>            conf_matrix[i, j] <span class="op">=</span> co_matrix[ia, ja] <span class="op">/</span> prevalences[ia]</span>
+<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">12</span>, <span class="dv">10</span>))</span>
+<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a>im <span class="op">=</span> ax.imshow(conf_matrix, cmap<span class="op">=</span><span class="st">'Blues'</span>, vmin<span class="op">=</span><span class="dv">0</span>, vmax<span class="op">=</span><span class="fl">0.7</span>, aspect<span class="op">=</span><span class="st">'auto'</span>)</span>
+<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a>ax.set_xticks(<span class="bu">range</span>(<span class="bu">len</span>(labels_active)))</span>
+<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a>ax.set_xticklabels(labels_active, rotation<span class="op">=</span><span class="dv">40</span>, ha<span class="op">=</span><span class="st">'right'</span>, fontsize<span class="op">=</span><span class="dv">8</span>)</span>
+<span id="cb3-47"><a href="#cb3-47" aria-hidden="true" tabindex="-1"></a>ax.set_yticks(<span class="bu">range</span>(<span class="bu">len</span>(labels_active)))</span>
+<span id="cb3-48"><a href="#cb3-48" aria-hidden="true" tabindex="-1"></a>ax.set_yticklabels(labels_active, fontsize<span class="op">=</span><span class="dv">8</span>)</span>
+<span id="cb3-49"><a href="#cb3-49" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="bu">len</span>(labels_active)):</span>
+<span id="cb3-50"><a href="#cb3-50" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> j <span class="kw">in</span> <span class="bu">range</span>(<span class="bu">len</span>(labels_active)):</span>
+<span id="cb3-51"><a href="#cb3-51" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> conf_matrix[i, j] <span class="op">&gt;</span> <span class="dv">0</span>:</span>
+<span id="cb3-52"><a href="#cb3-52" aria-hidden="true" tabindex="-1"></a>            ax.text(j, i, <span class="ss">f'</span><span class="sc">{</span>conf_matrix[i,j]<span class="sc">:.2f}</span><span class="ss">'</span>, ha<span class="op">=</span><span class="st">'center'</span>, va<span class="op">=</span><span class="st">'center'</span>,</span>
+<span id="cb3-53"><a href="#cb3-53" aria-hidden="true" tabindex="-1"></a>                    fontsize<span class="op">=</span><span class="dv">6</span>, color<span class="op">=</span><span class="st">'white'</span> <span class="cf">if</span> conf_matrix[i, j] <span class="op">&gt;</span> <span class="fl">0.4</span> <span class="cf">else</span> <span class="st">'black'</span>)</span>
+<span id="cb3-54"><a href="#cb3-54" aria-hidden="true" tabindex="-1"></a>plt.colorbar(im, ax<span class="op">=</span>ax, shrink<span class="op">=</span><span class="fl">0.8</span>, label<span class="op">=</span><span class="st">'P(consequent | antecedent)'</span>)</span>
+<span id="cb3-55"><a href="#cb3-55" aria-hidden="true" tabindex="-1"></a>ax.set_xlabel(<span class="st">'Consequent'</span>)<span class="op">;</span> ax.set_ylabel(<span class="st">'Antecedent'</span>)</span>
+<span id="cb3-56"><a href="#cb3-56" aria-hidden="true" tabindex="-1"></a>ax.set_title(<span class="st">'Label co-occurrence — P(B | A) from training set'</span>)</span>
+<span id="cb3-57"><a href="#cb3-57" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb3-58"><a href="#cb3-58" aria-hidden="true" tabindex="-1"></a>fig.savefig(FIGURES_DIR <span class="op">/</span> <span class="st">'assoc_rules_heatmap.png'</span>, dpi<span class="op">=</span><span class="dv">150</span>, bbox_inches<span class="op">=</span><span class="st">'tight'</span>)</span>
+<span id="cb3-59"><a href="#cb3-59" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'Saved assoc_rules_heatmap.png'</span>)<span class="op">;</span> plt.show()</span>
+<span id="cb3-60"><a href="#cb3-60" aria-hidden="true" tabindex="-1"></a><span class="co"># ── TF-IDF label prior: retrieve similar studies and compute empirical P(label | indication) ──</span></span>
+<span id="cb3-61"><a href="#cb3-61" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.feature_extraction.text <span class="im">import</span> TfidfVectorizer</span>
+<span id="cb3-62"><a href="#cb3-62" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.metrics.pairwise <span class="im">import</span> cosine_similarity <span class="im">as</span> _cosine_sim</span>
+<span id="cb3-63"><a href="#cb3-63" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-64"><a href="#cb3-64" aria-hidden="true" tabindex="-1"></a>_TFIDF_K      <span class="op">=</span> <span class="dv">20</span></span>
+<span id="cb3-65"><a href="#cb3-65" aria-hidden="true" tabindex="-1"></a>_MIN_SIM_TFIDF <span class="op">=</span> <span class="fl">0.05</span></span>
+<span id="cb3-66"><a href="#cb3-66" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-67"><a href="#cb3-67" aria-hidden="true" tabindex="-1"></a>train_indications_for_rules <span class="op">=</span> train_df[<span class="st">'indication'</span>].fillna(<span class="st">''</span>).astype(<span class="bu">str</span>).tolist()</span>
+<span id="cb3-68"><a href="#cb3-68" aria-hidden="true" tabindex="-1"></a>_rules_tfidf <span class="op">=</span> TfidfVectorizer(max_features<span class="op">=</span><span class="dv">5000</span>, stop_words<span class="op">=</span><span class="st">'english'</span>, ngram_range<span class="op">=</span>(<span class="dv">1</span>, <span class="dv">2</span>))</span>
+<span id="cb3-69"><a href="#cb3-69" aria-hidden="true" tabindex="-1"></a>_rules_tfidf_matrix <span class="op">=</span> _rules_tfidf.fit_transform(train_indications_for_rules)</span>
+<span id="cb3-70"><a href="#cb3-70" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'TF-IDF label-prior index: </span><span class="sc">{</span>_rules_tfidf_matrix<span class="sc">.</span>shape[<span class="dv">0</span>]<span class="sc">}</span><span class="ss"> docs × </span><span class="sc">{</span>_rules_tfidf_matrix<span class="sc">.</span>shape[<span class="dv">1</span>]<span class="sc">}</span><span class="ss"> features'</span>)</span>
+<span id="cb3-71"><a href="#cb3-71" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-72"><a href="#cb3-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-73"><a href="#cb3-73" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> retrieve_label_prior(indication: <span class="bu">str</span>, k: <span class="bu">int</span> <span class="op">=</span> _TFIDF_K) <span class="op">-&gt;</span> <span class="bu">dict</span>[<span class="bu">str</span>, <span class="bu">float</span>] <span class="op">|</span> <span class="va">None</span>:</span>
+<span id="cb3-74"><a href="#cb3-74" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Retrieve top-k similar training studies and return empirical label prevalence.</span></span>
+<span id="cb3-75"><a href="#cb3-75" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-76"><a href="#cb3-76" aria-hidden="true" tabindex="-1"></a><span class="co">    Returns None when indication is empty or max similarity is below threshold.</span></span>
+<span id="cb3-77"><a href="#cb3-77" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb3-78"><a href="#cb3-78" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> indication.strip():</span>
+<span id="cb3-79"><a href="#cb3-79" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">None</span></span>
+<span id="cb3-80"><a href="#cb3-80" aria-hidden="true" tabindex="-1"></a>    q <span class="op">=</span> _rules_tfidf.transform([indication])</span>
+<span id="cb3-81"><a href="#cb3-81" aria-hidden="true" tabindex="-1"></a>    sims <span class="op">=</span> _cosine_sim(q, _rules_tfidf_matrix).flatten()</span>
+<span id="cb3-82"><a href="#cb3-82" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> sims.<span class="bu">max</span>() <span class="op">&lt;</span> _MIN_SIM_TFIDF:</span>
+<span id="cb3-83"><a href="#cb3-83" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">None</span></span>
+<span id="cb3-84"><a href="#cb3-84" aria-hidden="true" tabindex="-1"></a>    top_idx <span class="op">=</span> sims.argsort()[::<span class="op">-</span><span class="dv">1</span>][:k]</span>
+<span id="cb3-85"><a href="#cb3-85" aria-hidden="true" tabindex="-1"></a>    subset  <span class="op">=</span> train_label_matrix[top_idx]          <span class="co"># shape (k, 14)</span></span>
+<span id="cb3-86"><a href="#cb3-86" aria-hidden="true" tabindex="-1"></a>    priors  <span class="op">=</span> <span class="bu">dict</span>(<span class="bu">zip</span>(CHEXBERT_LABELS, subset.mean(axis<span class="op">=</span><span class="dv">0</span>)))</span>
+<span id="cb3-87"><a href="#cb3-87" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> priors</span>
+<span id="cb3-88"><a href="#cb3-88" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-89"><a href="#cb3-89" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-90"><a href="#cb3-90" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> build_label_prior_hint(priors: <span class="bu">dict</span>[<span class="bu">str</span>, <span class="bu">float</span>], min_prevalence: <span class="bu">float</span> <span class="op">=</span> <span class="fl">0.30</span>) <span class="op">-&gt;</span> <span class="bu">str</span>:</span>
+<span id="cb3-91"><a href="#cb3-91" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Format empirical label prevalence from retrieved studies as a clinical context hint."""</span></span>
+<span id="cb3-92"><a href="#cb3-92" aria-hidden="true" tabindex="-1"></a>    relevant <span class="op">=</span> [(label, p) <span class="cf">for</span> label, p <span class="kw">in</span> priors.items()</span>
+<span id="cb3-93"><a href="#cb3-93" aria-hidden="true" tabindex="-1"></a>                <span class="cf">if</span> p <span class="op">&gt;=</span> min_prevalence <span class="kw">and</span> label <span class="op">!=</span> <span class="st">'No Finding'</span>]</span>
+<span id="cb3-94"><a href="#cb3-94" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> relevant:</span>
+<span id="cb3-95"><a href="#cb3-95" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">''</span></span>
+<span id="cb3-96"><a href="#cb3-96" aria-hidden="true" tabindex="-1"></a>    relevant.sort(key<span class="op">=</span><span class="kw">lambda</span> x: <span class="op">-</span>x[<span class="dv">1</span>])</span>
+<span id="cb3-97"><a href="#cb3-97" aria-hidden="true" tabindex="-1"></a>    lines <span class="op">=</span> [<span class="st">'Clinical context (based on similar studies in training set):'</span>]</span>
+<span id="cb3-98"><a href="#cb3-98" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> label, p <span class="kw">in</span> relevant:</span>
+<span id="cb3-99"><a href="#cb3-99" aria-hidden="true" tabindex="-1"></a>        lines.append(<span class="ss">f'  - </span><span class="sc">{</span>label<span class="sc">}</span><span class="ss">: present in </span><span class="sc">{</span><span class="dv">100</span><span class="op">*</span>p<span class="sc">:.0f}</span><span class="ss">% of similar cases.'</span>)</span>
+<span id="cb3-100"><a href="#cb3-100" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="st">'</span><span class="ch">\n</span><span class="st">'</span>.join(lines)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="step-3-prompt-conditioner-functionsdefines-the-two-tier-hint-builder--retrieve_label_prior-from-step-2-is-the-primary-source-empirical-plabel-similar-indication.--build_association_hint-is-the-keyword-based-fallback-for-studies-with-low-similarity-indications.--build_conditioned_prompt-selects-the-best-available-hint-and-formats-the-full-prompt.--_hint_fired-mirrors-the-selection-logic-without-generating-a-full-prompt-used-for-analysis." class="level2">
+<h2 class="anchored" data-anchor-id="step-3-prompt-conditioner-functionsdefines-the-two-tier-hint-builder--retrieve_label_prior-from-step-2-is-the-primary-source-empirical-plabel-similar-indication.--build_association_hint-is-the-keyword-based-fallback-for-studies-with-low-similarity-indications.--build_conditioned_prompt-selects-the-best-available-hint-and-formats-the-full-prompt.--_hint_fired-mirrors-the-selection-logic-without-generating-a-full-prompt-used-for-analysis.">STEP 3 — Prompt conditioner functionsDefines the two-tier hint builder:- <code>retrieve_label_prior</code> (from STEP 2) is the primary source — empirical P(label | similar indication).- <code>build_association_hint</code> is the keyword-based fallback for studies with low-similarity indications.- <code>build_conditioned_prompt</code> selects the best available hint and formats the full prompt.- <code>_hint_fired</code> mirrors the selection logic without generating a full prompt — used for analysis.</h2>
+<div id="step3-conditioner" class="cell">
+<details open="" class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>_INDICATION_KEYWORDS <span class="op">=</span> {    <span class="st">'Enlarged Cardiomediastinum'</span>: [<span class="st">'mediastinal widening'</span>, <span class="st">'mediastinum'</span>, <span class="st">'widened mediastinum'</span>],    <span class="st">'Cardiomegaly'</span>:     [<span class="st">'cardio'</span>, <span class="st">'cardiac'</span>, <span class="st">'heart'</span>, <span class="st">'cardiomeg'</span>],    <span class="st">'Lung Opacity'</span>:     [<span class="st">'opacity'</span>, <span class="st">'infiltrate'</span>, <span class="st">'airspace disease'</span>, <span class="st">'haziness'</span>],    <span class="st">'Lung Lesion'</span>:      [<span class="st">'nodule'</span>, <span class="st">'mass'</span>, <span class="st">'lesion'</span>, <span class="st">'lung lesion'</span>, <span class="st">'pulmonary nodule'</span>],    <span class="st">'Edema'</span>:            [<span class="st">'edema'</span>, <span class="st">'pulmonary edema'</span>, <span class="st">'fluid overload'</span>, <span class="st">'chf'</span>],    <span class="st">'Consolidation'</span>:    [<span class="st">'consolidation'</span>, <span class="st">'lobar consolidation'</span>, <span class="st">'airspace consolidation'</span>],    <span class="st">'Pneumonia'</span>:        [<span class="st">'pneumonia'</span>, <span class="st">'infection'</span>, <span class="st">'fever'</span>, <span class="st">'sepsis'</span>],    <span class="st">'Atelectasis'</span>:      [<span class="st">'atelectasis'</span>, <span class="st">'collapse'</span>, <span class="st">'subsegmental'</span>],    <span class="st">'Pneumothorax'</span>:     [<span class="st">'pneumothorax'</span>, <span class="st">'ptx'</span>, <span class="st">'chest pain'</span>, <span class="st">'trauma'</span>],    <span class="st">'Pleural Effusion'</span>: [<span class="st">'effusion'</span>, <span class="st">'pleural'</span>, <span class="st">'pleural fluid'</span>],    <span class="st">'Pleural Other'</span>:    [<span class="st">'pleural thickening'</span>, <span class="st">'pleural disease'</span>, <span class="st">'empyema'</span>],    <span class="st">'Fracture'</span>:         [<span class="st">'fracture'</span>, <span class="st">'rib fracture'</span>, <span class="st">'trauma'</span>, <span class="st">'fall'</span>],    <span class="st">'Support Devices'</span>:  [<span class="st">'intubated'</span>, <span class="st">'icu'</span>, <span class="st">'ventilated'</span>, <span class="st">'post-op'</span>, <span class="st">'line'</span>, <span class="st">'tube'</span>],}_NEGATION_PREFIXES <span class="op">=</span> (    <span class="st">'rule out'</span>, <span class="st">'r/o'</span>, <span class="st">'no '</span>, <span class="st">'without '</span>, <span class="st">'negative for'</span>, <span class="st">'exclude '</span>,    <span class="st">'unlikely'</span>, <span class="st">'no evidence'</span>, <span class="st">'no signs'</span>, <span class="st">'no sign of'</span>,)<span class="kw">def</span> infer_likely_labels(indication: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="bu">list</span>[<span class="bu">str</span>]:    indication_lower <span class="op">=</span> indication.lower()    triggered <span class="op">=</span> []    <span class="cf">for</span> label, kws <span class="kw">in</span> _INDICATION_KEYWORDS.items():        <span class="cf">for</span> kw <span class="kw">in</span> kws:            idx <span class="op">=</span> indication_lower.find(kw)            <span class="cf">if</span> idx <span class="op">==</span> <span class="op">-</span><span class="dv">1</span>:                <span class="cf">continue</span>            prefix <span class="op">=</span> indication_lower[<span class="bu">max</span>(<span class="dv">0</span>, idx <span class="op">-</span> <span class="dv">25</span>):idx]            <span class="cf">if</span> <span class="bu">any</span>(neg <span class="kw">in</span> prefix <span class="cf">for</span> neg <span class="kw">in</span> _NEGATION_PREFIXES):                <span class="cf">continue</span>            triggered.append(label)            <span class="cf">break</span>    <span class="cf">return</span> triggereddef build_association_hint(    likely_labels: <span class="bu">list</span>[<span class="bu">str</span>],    rules_df: pd.DataFrame,    min_confidence: <span class="bu">float</span> <span class="op">=</span> <span class="fl">0.25</span>,    min_lift: <span class="bu">float</span> <span class="op">=</span> <span class="fl">1.2</span>,    max_rules: <span class="bu">int</span> <span class="op">=</span> <span class="dv">4</span>,) <span class="op">-&gt;</span> <span class="bu">str</span>:    <span class="cf">if</span> <span class="kw">not</span> likely_labels:        <span class="cf">return</span> <span class="st">''</span>    relevant <span class="op">=</span> rules_df[        rules_df[<span class="st">'antecedent'</span>].isin(likely_labels) <span class="op">&amp;</span>        (rules_df[<span class="st">'confidence'</span>] <span class="op">&gt;=</span> min_confidence) <span class="op">&amp;</span>        (rules_df[<span class="st">'lift'</span>] <span class="op">&gt;=</span> min_lift)    ].sort_values(<span class="st">'confidence'</span>, ascending<span class="op">=</span><span class="va">False</span>).head(max_rules)    <span class="cf">if</span> relevant.empty:        <span class="cf">return</span> <span class="st">''</span>    lines <span class="op">=</span> [<span class="st">'Clinical association context (training set statistics):'</span>]    <span class="cf">for</span> _, rule <span class="kw">in</span> relevant.iterrows():        lines.append(            <span class="ss">f'  - </span><span class="sc">{</span>rule[<span class="st">"antecedent"</span>]<span class="sc">}</span><span class="ss"> co-occurs with </span><span class="sc">{</span>rule[<span class="st">"consequent"</span>]<span class="sc">}</span><span class="ss"> '</span>            <span class="ss">f'in </span><span class="sc">{</span><span class="dv">100</span><span class="op">*</span>rule[<span class="st">"confidence"</span>]<span class="sc">:.0f}</span><span class="ss">% of similar studies '</span>            <span class="ss">f'(lift=</span><span class="sc">{</span>rule[<span class="st">"lift"</span>]<span class="sc">:.2f}</span><span class="ss">).'</span>        )    <span class="cf">return</span> <span class="st">'</span><span class="ch">\n</span><span class="st">'</span>.join(lines)<span class="kw">def</span> build_conditioned_prompt(    indication: <span class="bu">str</span>,    rules_df: pd.DataFrame,    min_confidence: <span class="bu">float</span> <span class="op">=</span> <span class="fl">0.25</span>,    min_lift: <span class="bu">float</span> <span class="op">=</span> <span class="fl">1.2</span>,    system_prompt: <span class="bu">str</span> <span class="op">=</span> <span class="st">''</span>,) <span class="op">-&gt;</span> <span class="bu">str</span>:    likely_labels <span class="op">=</span> infer_likely_labels(indication)    rule_hint     <span class="op">=</span> build_association_hint(likely_labels, rules_df, min_confidence, min_lift)    <span class="co"># Primary: TF-IDF neighborhood prior. Fallback: keyword association rules.    priors     = retrieve_label_prior(indication)    prior_hint = build_label_prior_hint(priors) if priors is not None else ''    hint       = prior_hint if prior_hint else rule_hint    parts = []    if system_prompt:        parts.append(system_prompt)    if hint:        parts.append(hint)        parts.append('')    if indication.strip():        parts.append(f'Indication: {indication.strip()}')    parts.append('Findings:')    return '\n'.join(parts)def _hint_fired(indication: str) -&gt; bool:    """Return True if this indication would receive any hint (primary or fallback).    Mirrors build_conditioned_prompt's selection logic without building the full prompt.    Used to compute triggered/non-triggered masks for analysis.    """    if not indication.strip():        return False    priors = retrieve_label_prior(indication)    if priors is not None and build_label_prior_hint(priors):        return True    return bool(infer_likely_labels(indication))# ── Smoke test — shows the full injected prompt for representative cases ───────_SMOKE_SYSTEM = 'You are an expert radiologist. Write only the Findings section.'TEST_CASES = [    'Shortness of breath, rule out pleural effusion',    'Chest pain, history of CHF and pulmonary edema',    'Post-op day 1, patient intubated in ICU',    'Fever, cough, possible pneumonia',    'Routine PA and lateral, no specific indication',]for ind in TEST_CASES:    priors     = retrieve_label_prior(ind)    prior_hint = build_label_prior_hint(priors) if priors is not None else ''    kw_labels  = infer_likely_labels(ind)    kw_hint    = build_association_hint(kw_labels, rules_df)    path_used  = 'TF-IDF prior' if prior_hint else ('keyword rules' if kw_hint else 'no hint')    prompt     = build_conditioned_prompt(ind, rules_df, system_prompt=_SMOKE_SYSTEM)    print(f'=== "{ind}"')    print(f'    Path: {path_used}  |  hint fired: {_hint_fired(ind)}')    print('--- prompt ---')    print(prompt)    print()</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="step-4-conditioned-inference-on-test-set" class="level2">
+<h2 class="anchored" data-anchor-id="step-4-conditioned-inference-on-test-set">STEP 4 — Conditioned inference on test set</h2>
+<p>Injects the association rule hint into every test prompt where the indication triggers a rule. Cached to <code>reports/eval_hypotheses_assoc_rules_{VARIANT}.json</code>.</p>
+<div id="step4-inference" class="cell">
+<details open="" class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> PIL <span class="im">import</span> Imagefrom tqdm <span class="im">import</span> tqdmfrom peft <span class="im">import</span> PeftModelfrom src.training.model <span class="im">import</span> load_model_and_processorIMAGES_DIR <span class="op">=</span> REPO_ROOT <span class="op">/</span> params[<span class="st">'data'</span>][<span class="st">'images_dir'</span>] <span class="op">/</span> <span class="st">'images_normalized'</span>_BLANK <span class="op">=</span> Image.new(<span class="st">'RGB'</span>, (<span class="dv">224</span>, <span class="dv">224</span>), color<span class="op">=</span>(<span class="dv">128</span>, <span class="dv">128</span>, <span class="dv">128</span>))SYSTEM_PROMPT <span class="op">=</span> (    <span class="st">'You are an expert radiologist. '</span>    <span class="st">'Write only the Findings section of a radiology report for the chest X-ray shown. '</span>    <span class="st">'Be concise and clinical. Do not include an Impression section.'</span>)COND_VARIANT   <span class="op">=</span> <span class="st">'uniform_v3'</span>COND_MIN_CONF  <span class="op">=</span> <span class="fl">0.25</span><span class="er">COND_MIN_LIFT</span>  <span class="op">=</span> <span class="fl">1.2</span><span class="er">variant_key</span>    <span class="op">=</span> <span class="ss">f'assoc_rules_</span><span class="sc">{</span>COND_VARIANT<span class="sc">}</span><span class="ss">'</span>cache_hyps     <span class="op">=</span> REPO_ROOT <span class="op">/</span> <span class="st">'reports'</span> <span class="op">/</span> <span class="ss">f'eval_hypotheses_</span><span class="sc">{</span>variant_key<span class="sc">}</span><span class="ss">.json'</span><span class="kw">def</span> _load_image(row):    frontal <span class="op">=</span> row.get(<span class="st">'frontal'</span>, [])    <span class="cf">if</span> <span class="bu">hasattr</span>(frontal, <span class="st">'__len__'</span>) <span class="kw">and</span> <span class="bu">len</span>(frontal) <span class="op">&gt;</span> <span class="dv">0</span>:        p <span class="op">=</span> IMAGES_DIR <span class="op">/</span> <span class="bu">list</span>(frontal)[<span class="dv">0</span>]        <span class="cf">if</span> p.exists():            <span class="cf">try</span>: <span class="cf">return</span> Image.<span class="bu">open</span>(p).convert(<span class="st">'RGB'</span>)            <span class="cf">except</span> <span class="pp">Exception</span>: <span class="cf">pass</span>    <span class="cf">return</span> _BLANKif cache_hyps.exists():    cond_hyps <span class="op">=</span> json.loads(cache_hyps.read_text())    <span class="bu">print</span>(<span class="ss">f'Loaded </span><span class="sc">{</span><span class="bu">len</span>(cond_hyps)<span class="sc">}</span><span class="ss"> cached hypotheses from </span><span class="sc">{</span>cache_hyps<span class="sc">.</span>name<span class="sc">}</span><span class="ss">'</span>)<span class="cf">else</span>:    <span class="bu">print</span>(<span class="ss">f'Loading </span><span class="sc">{</span>COND_VARIANT<span class="sc">}</span><span class="ss"> for conditioned inference…'</span>)    model, processor <span class="op">=</span> load_model_and_processor(        model_id<span class="op">=</span>params[<span class="st">'model'</span>][<span class="st">'base_model_id'</span>],        quantization<span class="op">=</span>params[<span class="st">'model'</span>][<span class="st">'quantization'</span>],    )    adapter_path <span class="op">=</span> CHECKPOINT_DIR <span class="op">/</span> COND_VARIANT <span class="op">/</span> <span class="st">'best_model'</span>    <span class="cf">if</span> <span class="kw">not</span> adapter_path.exists():        adapter_path <span class="op">=</span> CHECKPOINT_DIR <span class="op">/</span> <span class="ss">f'qlora_</span><span class="sc">{</span>COND_VARIANT<span class="sc">}</span><span class="ss">'</span> <span class="op">/</span> <span class="st">'best_model'</span>    model <span class="op">=</span> PeftModel.from_pretrained(model, <span class="bu">str</span>(adapter_path))    model.<span class="bu">eval</span>()    cond_hyps <span class="op">=</span> []    <span class="cf">for</span> _, row <span class="kw">in</span> tqdm(test_df.iterrows(), total<span class="op">=</span><span class="bu">len</span>(test_df), desc<span class="op">=</span>variant_key):        indication <span class="op">=</span> <span class="bu">str</span>(row.get(<span class="st">'indication'</span>, <span class="st">''</span>) <span class="kw">or</span> <span class="st">''</span>).strip()        <span class="cf">if</span> indication.lower() <span class="kw">in</span> {<span class="st">'nan'</span>, <span class="st">'none'</span>, <span class="st">''</span>}: indication <span class="op">=</span> <span class="st">''</span>        user_text <span class="op">=</span> build_conditioned_prompt(            indication, rules_df,            min_confidence<span class="op">=</span>COND_MIN_CONF,            min_lift<span class="op">=</span>COND_MIN_LIFT,            system_prompt<span class="op">=</span>SYSTEM_PROMPT,        )        img <span class="op">=</span> _load_image(row)        content <span class="op">=</span> [{<span class="st">'type'</span>: <span class="st">'image'</span>}, {<span class="st">'type'</span>: <span class="st">'text'</span>, <span class="st">'text'</span>: user_text}]        prompt <span class="op">=</span> processor.apply_chat_template(            [{<span class="st">'role'</span>: <span class="st">'user'</span>, <span class="st">'content'</span>: content}],            add_generation_prompt<span class="op">=</span><span class="va">True</span>, tokenize<span class="op">=</span><span class="va">False</span>,        )        inputs <span class="op">=</span> processor(text<span class="op">=</span>prompt, images<span class="op">=</span>[img], return_tensors<span class="op">=</span><span class="st">'pt'</span>, padding<span class="op">=</span><span class="va">True</span>)        inputs <span class="op">=</span> {k: v.to(model.device) <span class="cf">for</span> k, v <span class="kw">in</span> inputs.items()}        <span class="cf">with</span> torch.inference_mode():            out <span class="op">=</span> model.generate(<span class="op">**</span>inputs,                max_new_tokens<span class="op">=</span>params[<span class="st">'model'</span>][<span class="st">'max_new_tokens'</span>],                do_sample<span class="op">=</span><span class="va">False</span>, pad_token_id<span class="op">=</span>processor.tokenizer.eos_token_id)        hyp <span class="op">=</span> processor.tokenizer.decode(            out[<span class="dv">0</span>][inputs[<span class="st">'input_ids'</span>].shape[<span class="dv">1</span>]:], skip_special_tokens<span class="op">=</span><span class="va">True</span>).strip()        cond_hyps.append(hyp)    cache_hyps.write_text(json.dumps(cond_hyps, ensure_ascii<span class="op">=</span><span class="va">False</span>, indent<span class="op">=</span><span class="dv">2</span>))    <span class="kw">del</span> model, processor<span class="op">;</span> torch.cuda.empty_cache()    <span class="bu">print</span>(<span class="ss">f'Done. </span><span class="sc">{</span><span class="bu">len</span>(cond_hyps)<span class="sc">}</span><span class="ss"> hypotheses saved.'</span>)<span class="co"># Count studies that actually received a hint (primary TF-IDF path OR keyword fallback).# _hint_fired mirrors build_conditioned_prompt's selection logic exactly.n_triggered = sum(    _hint_fired(str(row.get('indication', '') or '').strip())    for _, row in test_df.iterrows())print(f'Hint injected into {n_triggered}/{len(test_df)} studies ({100*n_triggered/len(test_df):.1f}%).')</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="step-5-compute-and-save-metrics" class="level2">
+<h2 class="anchored" data-anchor-id="step-5-compute-and-save-metrics">STEP 5 — Compute and save metrics</h2>
+<div id="step5-metrics" class="cell">
+<details open="" class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> bert_score.utils <span class="im">as</span> _bsu</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> bert_score <span class="im">import</span> score <span class="im">as</span> _bert_score</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> src.data.labels <span class="im">import</span> run_chexbert</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.metrics <span class="im">import</span> f1_score</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> evaluate <span class="im">as</span> hf_evaluate</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>_orig_sent_encode <span class="op">=</span> _bsu.sent_encode</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _safe_sent_encode(tokenizer, sent):</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="bu">getattr</span>(tokenizer, <span class="st">'model_max_length'</span>, <span class="dv">0</span>) <span class="op">&gt;</span> <span class="dv">10_000</span>:</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>        tokenizer.model_max_length <span class="op">=</span> <span class="dv">512</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> _orig_sent_encode(tokenizer, sent)</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>_bsu.sent_encode <span class="op">=</span> _safe_sent_encode</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>_bleu  <span class="op">=</span> hf_evaluate.load(<span class="st">'bleu'</span>)</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>_rouge <span class="op">=</span> hf_evaluate.load(<span class="st">'rouge'</span>)</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>cache_m <span class="op">=</span> REPO_ROOT <span class="op">/</span> <span class="st">'reports'</span> <span class="op">/</span> <span class="ss">f'eval_metrics_</span><span class="sc">{</span>variant_key<span class="sc">}</span><span class="ss">.json'</span></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> cache_m.exists():</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>    cond_metrics <span class="op">=</span> json.loads(cache_m.read_text())</span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f'Loaded metrics from </span><span class="sc">{</span>cache_m<span class="sc">.</span>name<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>    refs <span class="op">=</span> references</span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">'BERTScore…'</span>)</span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>    _, _, F <span class="op">=</span> _bert_score(cond_hyps, refs,</span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>        model_type<span class="op">=</span>params[<span class="st">'eval'</span>][<span class="st">'bertscore_model'</span>],</span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>        lang<span class="op">=</span><span class="st">'en'</span>, device<span class="op">=</span>DEVICE, verbose<span class="op">=</span><span class="va">False</span>, batch_size<span class="op">=</span><span class="dv">16</span>)</span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">'CheXbert…'</span>)</span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a>    hyp_labels <span class="op">=</span> run_chexbert(cond_hyps, uncertain_policy<span class="op">=</span><span class="st">'present'</span>, device<span class="op">=</span>DEVICE)</span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a>    ref_labels <span class="op">=</span> run_chexbert(refs,      uncertain_policy<span class="op">=</span><span class="st">'present'</span>, device<span class="op">=</span>DEVICE)</span>
+<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">'BLEU/ROUGE…'</span>)</span>
+<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a>    cond_metrics <span class="op">=</span> {</span>
+<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a>        <span class="st">'variant'</span>: variant_key,</span>
+<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a>        <span class="st">'bertscore_f1'</span>:      <span class="bu">float</span>(F.mean()),</span>
+<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a>        <span class="st">'chexbert_micro_f1'</span>: <span class="bu">float</span>(f1_score(ref_labels, hyp_labels, average<span class="op">=</span><span class="st">'micro'</span>, zero_division<span class="op">=</span><span class="dv">0</span>)),</span>
+<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a>        <span class="st">'chexbert_macro_f1'</span>: <span class="bu">float</span>(f1_score(ref_labels, hyp_labels, average<span class="op">=</span><span class="st">'macro'</span>, zero_division<span class="op">=</span><span class="dv">0</span>)),</span>
+<span id="cb6-36"><a href="#cb6-36" aria-hidden="true" tabindex="-1"></a>        <span class="st">'bleu4'</span>:             _bleu.compute(predictions<span class="op">=</span>cond_hyps, references<span class="op">=</span>[[r] <span class="cf">for</span> r <span class="kw">in</span> refs], max_order<span class="op">=</span><span class="dv">4</span>)[<span class="st">'bleu'</span>],</span>
+<span id="cb6-37"><a href="#cb6-37" aria-hidden="true" tabindex="-1"></a>        <span class="st">'rouge_l'</span>:           _rouge.compute(predictions<span class="op">=</span>cond_hyps, references<span class="op">=</span>refs)[<span class="st">'rougeL'</span>],</span>
+<span id="cb6-38"><a href="#cb6-38" aria-hidden="true" tabindex="-1"></a>        <span class="st">'per_label_f1'</span>:      {label: <span class="bu">float</span>(f1_score(ref_labels[:, i], hyp_labels[:, i], zero_division<span class="op">=</span><span class="dv">0</span>))</span>
+<span id="cb6-39"><a href="#cb6-39" aria-hidden="true" tabindex="-1"></a>                              <span class="cf">for</span> i, label <span class="kw">in</span> <span class="bu">enumerate</span>(CHEXBERT_LABELS)},</span>
+<span id="cb6-40"><a href="#cb6-40" aria-hidden="true" tabindex="-1"></a>        <span class="st">'bertscore_per_study'</span>: F.tolist(),</span>
+<span id="cb6-41"><a href="#cb6-41" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb6-42"><a href="#cb6-42" aria-hidden="true" tabindex="-1"></a>    cache_m.write_text(json.dumps(cond_metrics, indent<span class="op">=</span><span class="dv">2</span>))</span>
+<span id="cb6-43"><a href="#cb6-43" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f'Saved → </span><span class="sc">{</span>cache_m<span class="sc">.</span>name<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb6-44"><a href="#cb6-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-45"><a href="#cb6-45" aria-hidden="true" tabindex="-1"></a>_bsu.sent_encode <span class="op">=</span> _orig_sent_encode</span>
+<span id="cb6-46"><a href="#cb6-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-47"><a href="#cb6-47" aria-hidden="true" tabindex="-1"></a><span class="co"># Load baseline for comparison</span></span>
+<span id="cb6-48"><a href="#cb6-48" aria-hidden="true" tabindex="-1"></a>baseline_v3_path <span class="op">=</span> REPO_ROOT <span class="op">/</span> <span class="st">'reports'</span> <span class="op">/</span> <span class="st">'eval_metrics_uniform_v3.json'</span></span>
+<span id="cb6-49"><a href="#cb6-49" aria-hidden="true" tabindex="-1"></a>comparison <span class="op">=</span> {}</span>
+<span id="cb6-50"><a href="#cb6-50" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> baseline_v3_path.exists():</span>
+<span id="cb6-51"><a href="#cb6-51" aria-hidden="true" tabindex="-1"></a>    comparison[<span class="st">'uniform_v3'</span>] <span class="op">=</span> json.loads(baseline_v3_path.read_text())</span>
+<span id="cb6-52"><a href="#cb6-52" aria-hidden="true" tabindex="-1"></a>comparison[variant_key] <span class="op">=</span> cond_metrics</span>
+<span id="cb6-53"><a href="#cb6-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-54"><a href="#cb6-54" aria-hidden="true" tabindex="-1"></a>DISPLAY_NAMES <span class="op">=</span> {</span>
+<span id="cb6-55"><a href="#cb6-55" aria-hidden="true" tabindex="-1"></a>    <span class="st">'uniform_v3'</span>:              <span class="st">'QLoRA uniform (v3) — no conditioner'</span>,</span>
+<span id="cb6-56"><a href="#cb6-56" aria-hidden="true" tabindex="-1"></a>    <span class="st">'assoc_rules_uniform_v3'</span>:  <span class="st">'Assoc. rules conditioner (v3)'</span>,</span>
+<span id="cb6-57"><a href="#cb6-57" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb6-58"><a href="#cb6-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-59"><a href="#cb6-59" aria-hidden="true" tabindex="-1"></a>rows <span class="op">=</span> []</span>
+<span id="cb6-60"><a href="#cb6-60" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> v, m <span class="kw">in</span> comparison.items():</span>
+<span id="cb6-61"><a href="#cb6-61" aria-hidden="true" tabindex="-1"></a>    rows.append({<span class="st">'Model'</span>: DISPLAY_NAMES.get(v, v),</span>
+<span id="cb6-62"><a href="#cb6-62" aria-hidden="true" tabindex="-1"></a>                 <span class="st">'BERTScore-F1'</span>:      <span class="bu">round</span>(m[<span class="st">'bertscore_f1'</span>],      <span class="dv">4</span>),</span>
+<span id="cb6-63"><a href="#cb6-63" aria-hidden="true" tabindex="-1"></a>                 <span class="st">'CheXbert micro-F1'</span>: <span class="bu">round</span>(m[<span class="st">'chexbert_micro_f1'</span>], <span class="dv">4</span>),</span>
+<span id="cb6-64"><a href="#cb6-64" aria-hidden="true" tabindex="-1"></a>                 <span class="st">'CheXbert macro-F1'</span>: <span class="bu">round</span>(m[<span class="st">'chexbert_macro_f1'</span>], <span class="dv">4</span>),</span>
+<span id="cb6-65"><a href="#cb6-65" aria-hidden="true" tabindex="-1"></a>                 <span class="st">'BLEU-4'</span>:            <span class="bu">round</span>(m[<span class="st">'bleu4'</span>],             <span class="dv">4</span>),</span>
+<span id="cb6-66"><a href="#cb6-66" aria-hidden="true" tabindex="-1"></a>                 <span class="st">'ROUGE-L'</span>:           <span class="bu">round</span>(m[<span class="st">'rouge_l'</span>],           <span class="dv">4</span>)})</span>
+<span id="cb6-67"><a href="#cb6-67" aria-hidden="true" tabindex="-1"></a>display(pd.DataFrame(rows).set_index(<span class="st">'Model'</span>))</span>
+<span id="cb6-68"><a href="#cb6-68" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-69"><a href="#cb6-69" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="st">'uniform_v3'</span> <span class="kw">in</span> comparison:</span>
+<span id="cb6-70"><a href="#cb6-70" aria-hidden="true" tabindex="-1"></a>    delta <span class="op">=</span> cond_metrics[<span class="st">'bertscore_f1'</span>] <span class="op">-</span> comparison[<span class="st">'uniform_v3'</span>][<span class="st">'bertscore_f1'</span>]</span>
+<span id="cb6-71"><a href="#cb6-71" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f'</span><span class="ch">\n</span><span class="ss">Δ BERTScore vs no-conditioner baseline: </span><span class="sc">{</span>delta<span class="sc">:+.4f}</span><span class="ss">'</span>)</span>
+<span id="cb6-72"><a href="#cb6-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-73"><a href="#cb6-73" aria-hidden="true" tabindex="-1"></a><span class="co"># Bar chart</span></span>
+<span id="cb6-74"><a href="#cb6-74" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">7</span>, <span class="dv">4</span>))</span>
+<span id="cb6-75"><a href="#cb6-75" aria-hidden="true" tabindex="-1"></a>names  <span class="op">=</span> [DISPLAY_NAMES.get(v, v) <span class="cf">for</span> v <span class="kw">in</span> comparison]</span>
+<span id="cb6-76"><a href="#cb6-76" aria-hidden="true" tabindex="-1"></a>bscore <span class="op">=</span> [comparison[v][<span class="st">'bertscore_f1'</span>] <span class="cf">for</span> v <span class="kw">in</span> comparison]</span>
+<span id="cb6-77"><a href="#cb6-77" aria-hidden="true" tabindex="-1"></a>colors <span class="op">=</span> [<span class="st">'#1f77b4'</span>, <span class="st">'#ff7f0e'</span>]</span>
+<span id="cb6-78"><a href="#cb6-78" aria-hidden="true" tabindex="-1"></a>bars   <span class="op">=</span> ax.bar(names, bscore, color<span class="op">=</span>colors[:<span class="bu">len</span>(comparison)], alpha<span class="op">=</span><span class="fl">0.85</span>, edgecolor<span class="op">=</span><span class="st">'white'</span>)</span>
+<span id="cb6-79"><a href="#cb6-79" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> bar, val <span class="kw">in</span> <span class="bu">zip</span>(bars, bscore):</span>
+<span id="cb6-80"><a href="#cb6-80" aria-hidden="true" tabindex="-1"></a>    ax.text(bar.get_x() <span class="op">+</span> bar.get_width()<span class="op">/</span><span class="dv">2</span>, val <span class="op">+</span> <span class="fl">0.001</span>, <span class="ss">f'</span><span class="sc">{</span>val<span class="sc">:.4f}</span><span class="ss">'</span>,</span>
+<span id="cb6-81"><a href="#cb6-81" aria-hidden="true" tabindex="-1"></a>            ha<span class="op">=</span><span class="st">'center'</span>, va<span class="op">=</span><span class="st">'bottom'</span>, fontsize<span class="op">=</span><span class="dv">9</span>)</span>
+<span id="cb6-82"><a href="#cb6-82" aria-hidden="true" tabindex="-1"></a>ax.set_ylim(<span class="bu">min</span>(bscore) <span class="op">*</span> <span class="fl">0.98</span>, <span class="bu">max</span>(bscore) <span class="op">*</span> <span class="fl">1.04</span>)</span>
+<span id="cb6-83"><a href="#cb6-83" aria-hidden="true" tabindex="-1"></a>ax.set_ylabel(<span class="st">'BERTScore-F1'</span>)</span>
+<span id="cb6-84"><a href="#cb6-84" aria-hidden="true" tabindex="-1"></a>ax.set_title(<span class="st">'Association Rules Conditioner — impact on BERTScore-F1'</span>)</span>
+<span id="cb6-85"><a href="#cb6-85" aria-hidden="true" tabindex="-1"></a>ax.tick_params(axis<span class="op">=</span><span class="st">'x'</span>, labelrotation<span class="op">=</span><span class="dv">15</span>)</span>
+<span id="cb6-86"><a href="#cb6-86" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb6-87"><a href="#cb6-87" aria-hidden="true" tabindex="-1"></a>fig.savefig(FIGURES_DIR <span class="op">/</span> <span class="st">'eval_assoc_rules_comparison.png'</span>, dpi<span class="op">=</span><span class="dv">150</span>, bbox_inches<span class="op">=</span><span class="st">'tight'</span>)</span>
+<span id="cb6-88"><a href="#cb6-88" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'Saved eval_assoc_rules_comparison.png'</span>)<span class="op">;</span> plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="step-6-per-indication-analysis" class="level2">
+<h2 class="anchored" data-anchor-id="step-6-per-indication-analysis">STEP 6 — Per-indication analysis</h2>
+<p>Checks whether the conditioner helps specifically on the studies where a rule was triggered.</p>
+<div id="step6-breakdown" class="cell">
+<details open="" class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>baseline_v3_path <span class="op">=</span> REPO_ROOT <span class="op">/</span> <span class="st">'reports'</span> <span class="op">/</span> <span class="st">'eval_metrics_uniform_v3.json'</span><span class="cf">if</span> <span class="kw">not</span> baseline_v3_path.exists():    <span class="bu">print</span>(<span class="st">'Run notebook 04 first to generate eval_metrics_uniform_v3.json'</span>)<span class="cf">else</span>:    base_scores  <span class="op">=</span> np.array(json.loads(baseline_v3_path.read_text())[<span class="st">'bertscore_per_study'</span>])    cond_scores  <span class="op">=</span> np.array(cond_metrics[<span class="st">'bertscore_per_study'</span>])    <span class="co"># Use _hint_fired (not keyword-only infer_likely_labels) so the mask accurately    # reflects which studies received a hint under the two-tier mechanism.    triggered_mask = np.array([        _hint_fired(str(row.get('indication', '') or '').strip())        for _, row in test_df.iterrows()    ])    n_trig   = triggered_mask.sum()    n_notrig = (~triggered_mask).sum()    print(f'Studies that received a hint  : {n_trig} ({100*n_trig/len(test_df):.1f}%)')    print(f'Studies with standard prompt  : {n_notrig} ({100*n_notrig/len(test_df):.1f}%)')    print()    print('BERTScore — hinted subset:')    print(f'  Baseline (v3)  : {base_scores[triggered_mask].mean():.4f}')    print(f'  With conditioner: {cond_scores[triggered_mask].mean():.4f}')    print(f'  Δ              : {(cond_scores - base_scores)[triggered_mask].mean():+.4f}')    print()    print('BERTScore — non-hinted subset:')    print(f'  Baseline (v3)  : {base_scores[~triggered_mask].mean():.4f}')    print(f'  With conditioner: {cond_scores[~triggered_mask].mean():.4f}')    print(f'  Δ              : {(cond_scores - base_scores)[~triggered_mask].mean():+.4f}')    delta_scores = cond_scores - base_scores    fig, ax = plt.subplots(figsize=(9, 4))    ax.hist(delta_scores[triggered_mask],  bins=40, alpha=0.7,            label=f'Hinted (n={n_trig})',        color='#ff7f0e')    ax.hist(delta_scores[~triggered_mask], bins=40, alpha=0.7,            label=f'Standard prompt (n={n_notrig})', color='#1f77b4')    ax.axvline(0, color='black', linestyle='--', linewidth=1)    ax.set_xlabel('ΔBERT Score (conditioned − baseline)')    ax.set_ylabel('Count')    ax.set_title('Per-study BERTScore delta — conditioner vs baseline')    ax.legend()    plt.tight_layout()    fig.savefig(FIGURES_DIR / 'eval_assoc_rules_delta.png', dpi=150, bbox_inches='tight')    print('Saved eval_assoc_rules_delta.png'); plt.show()</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="done" class="level2">
+<h2 class="anchored" data-anchor-id="done">Done</h2>
+<p>Metrics written to <code>reports/eval_metrics_assoc_rules_uniform_v3.json</code>.<br>
+<strong>Next:</strong> return to notebook 04 STEP 7 and run the grand comparison cell — it will auto-discover all <code>eval_metrics_*.json</code> files including RAG (05) and association rules (06).</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+    const viewSource = window.document.getElementById('quarto-view-source') ||
+                       window.document.getElementById('quarto-code-tools-source');
+    if (viewSource) {
+      const sourceUrl = viewSource.getAttribute("data-quarto-source-url");
+      viewSource.addEventListener("click", function(e) {
+        if (sourceUrl) {
+          // rstudio viewer pane
+          if (/\bcapabilities=\b/.test(window.location)) {
+            window.open(sourceUrl);
+          } else {
+            window.location.href = sourceUrl;
+          }
+        } else {
+          const modal = new bootstrap.Modal(document.getElementById('quarto-embedded-source-code-modal'));
+          modal.show();
+        }
+        return false;
+      });
+    }
+    function toggleCodeHandler(show) {
+      return function(e) {
+        const detailsSrc = window.document.querySelectorAll(".cell > details > .sourceCode");
+        for (let i=0; i<detailsSrc.length; i++) {
+          const details = detailsSrc[i].parentElement;
+          if (show) {
+            details.open = true;
+          } else {
+            details.removeAttribute("open");
+          }
+        }
+        const cellCodeDivs = window.document.querySelectorAll(".cell > .sourceCode");
+        const fromCls = show ? "hidden" : "unhidden";
+        const toCls = show ? "unhidden" : "hidden";
+        for (let i=0; i<cellCodeDivs.length; i++) {
+          const codeDiv = cellCodeDivs[i];
+          if (codeDiv.classList.contains(fromCls)) {
+            codeDiv.classList.remove(fromCls);
+            codeDiv.classList.add(toCls);
+          } 
+        }
+        return false;
+      }
+    }
+    const hideAllCode = window.document.getElementById("quarto-hide-all-code");
+    if (hideAllCode) {
+      hideAllCode.addEventListener("click", toggleCodeHandler(false));
+    }
+    const showAllCode = window.document.getElementById("quarto-show-all-code");
+    if (showAllCode) {
+      showAllCode.addEventListener("click", toggleCodeHandler(true));
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/diegovillaba\.github\.io\/ReportCXR");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+<p>ReportCXR Technical Challenge</p>
+</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">
+<p>Built with Quarto</p>
+</div>
+  </div>
+</footer>
+
+
+
+
+</body></html>
