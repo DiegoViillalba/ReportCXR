@@ -1,5 +1,31 @@
 # Training Diary — ReportCXR
 
+<!--
+AGENT READING GUIDE
+===================
+This document has two zones:
+
+  ZONE 1 — Final Conclusions (lines below this block, up to the first "2026-06-23" heading)
+    The definitive summary of all experiments. Start here.
+    Contains: model spec, master results table, per-label analysis, figures index,
+    domain-shift results, Q&A summary, known limitations.
+
+  ZONE 2 — Chronological Entries (starting at "2026-06-23 — v1 post-mortem")
+    Detailed day-by-day experimental log. Read for engineering context, root-cause
+    analysis, negative results, and hypothesis evolution.
+
+Key files (all relative to repo root):
+  reports/eval_metrics_{variant_key}.json  — per-variant metrics (standard schema)
+  reports/eval_metrics_zero_shot.json      — zero-shot in standard schema
+  reports/acq_shift_uniform_v3_*.json      — acquisition shift sweep results
+  reports/figures/                         — all charts (listed in Figures Index below)
+  notebooks/02_baseline_zero_shot.ipynb    — zero-shot experiment
+  notebooks/03_train_local.ipynb           — QLoRA training
+  notebooks/04_eval_and_figures.ipynb      — evaluation, domain shift, grand comparison
+  notebooks/05_rag_retrieval.ipynb         — RAG experiment
+  notebooks/06_association_rules.ipynb     — association rules conditioner
+-->
+
 ---
 
 ## 2026-06-26 — Final conclusions for the technical challenge
@@ -7,6 +33,65 @@
 ### Overview
 
 This project fine-tunes **MedGemma 4B-it** (SigLIP vision encoder + Gemma 3 4B decoder, 4-bit NF4 QLoRA) to generate the Findings section of radiology reports from chest X-ray images and clinical indications. The evaluation framework combines BERTScore-F1 (primary, text quality) and CheXbert F1 (secondary, clinical label precision) over a fixed test set of 600 studies from IU X-Ray. Ten configurations were evaluated end-to-end; results are available in NB02 (zero-shot baseline), NB04 (fine-tuning + domain shift + grand comparison), NB05 (RAG), and NB06 (association rules).
+
+### Model & Training Specification
+
+| Parameter | Value |
+|---|---|
+| Base model | google/medgemma-4b-it |
+| Architecture | SigLIP vision encoder (frozen) + Gemma 3 4B decoder |
+| Quantization | 4-bit NF4 (bitsandbytes, double quant, compute dtype bfloat16) |
+| LoRA rank / alpha | 16 / 32 |
+| LoRA target modules | q_proj, k_proj, v_proj, o_proj (decoder only) |
+| LoRA dropout | 0.05 |
+| Learning rate | 5e-5 (AdamW) |
+| Epochs | 2 (best checkpoint: epoch 1 uniform_v3, epoch 2 weighted_v4) |
+| Effective batch size | 16 (bs=4 × grad_acc=4) |
+| Warmup ratio | 0.06 |
+| Checkpoint selection | BERTScore-F1 on validation set |
+| Hardware | NVIDIA RTX 4000 Ada Generation 21 GB |
+| Dataset | IU X-Ray — train 2,670 / val 334 / test 600 studies |
+| CheXbert labels | 14; highly imbalanced (No Finding 38.7%, Consolidation 0.7%) |
+| Primary eval metric | BERTScore-F1 (microsoft/deberta-xlarge-mnli, monkey-patched to cap 512 tokens) |
+| Secondary eval metric | CheXbert micro-F1 and macro-F1 (uncertain→present policy) |
+
+### Master Results Table — All 10 Configurations
+
+Sorted by CheXbert macro-F1. Test set n=600. JSON source: `reports/eval_metrics_{variant_key}.json`
+
+| # | Variant key | Display name | BERTScore-F1 | micro-F1 | macro-F1 | BLEU-4 | ROUGE-L |
+|---|---|---|---|---|---|---|---|
+| 1 | `assoc_rules_weighted_v4` | Assoc. rules + weighted_v4 | 0.6862 | 0.4559 | **0.1841** | 0.1073 | 0.2713 |
+| 2 | `weighted_v4` | QLoRA weighted (v4) | 0.6784 | 0.4423 | 0.1786 | 0.0829 | 0.2740 |
+| 3 | `assoc_rules_uniform_v3` | Assoc. rules (v3) | 0.6844 | 0.4424 | 0.1745 | 0.1100 | 0.2812 |
+| 4 | `nohint_weighted_v4` | Fair baseline nohint (v4 fmt) | 0.6876 | 0.4526 | 0.1581 | 0.1076 | 0.2720 |
+| 5 | `uniform_v3` | QLoRA uniform (v3) | 0.6925 | **0.4637** | 0.1651 | 0.1145 | 0.2915 |
+| 6 | `nohint_uniform_v3` | Fair baseline nohint (v3 fmt) | 0.6879 | 0.4404 | 0.1445 | 0.1128 | 0.2852 |
+| 7 | `zero_shot` | Zero-shot MedGemma | 0.6938 | 0.3967 | 0.1416 | 0.0957 | 0.2631 |
+| 8 | `rag_k3_uniform_v3` | RAG k=3 (v3) | **0.7076** | 0.3432 | 0.1160 | **0.1391** | **0.3051** |
+| 9 | `rag_assoc_combined_weighted_v4` | Combined RAG + Assoc. (v4) | 0.7019 | 0.2694 | 0.1037 | 0.1352 | 0.2842 |
+| 10 | `rag_assoc_combined_uniform_v3` | Combined RAG + Assoc. (v3) | 0.7033 | 0.2567 | 0.0954 | 0.1337 | 0.2870 |
+
+### Figures Index
+
+All files in `reports/figures/`.
+
+| File | Source | Description |
+|---|---|---|
+| `baseline_per_label_f1.png` | NB02 STEP 9 | Per-label CheXbert F1, zero-shot baseline (14 labels, bar chart) |
+| `baseline_policy_ablation.png` | NB02 STEP 9 | Micro/macro F1 under present vs absent uncertainty policy |
+| `baseline_score_distributions.png` | NB02 STEP 9 | Per-study BERTScore and BLEU-4 distributions (histograms) |
+| `baseline_qualitative_examples.png` | NB02 STEP 9 | Good / median / poor generated report examples (table figure) |
+| `baseline_metric_summary.png` | NB02 STEP 9 | Summary table of all zero-shot metrics |
+| `eval_metric_summary.png` | NB04 STEP 4 | 3-way bar chart: zero-shot vs uniform_v3 vs weighted_v4 |
+| `eval_per_label_f1.png` | NB04 STEP 4 | Per-label F1 comparison across fine-tuned variants (14 labels) |
+| `eval_acquisition_shift.png` | NB04 STEP 5 | BERTScore vs perturbation magnitude (5 perturbation types) |
+| `eval_prevalence_shift.png` | NB04 STEP 6 | BERTScore under prevalence shift for 4 rare labels |
+| `eval_grand_comparison.png` | NB04 STEP 7 | Grand comparison bar chart — all 10 variants, 3 metrics |
+| `eval_scatter_fluency_vs_coverage.png` | NB04 STEP 7b | Scatter BERTScore-F1 (x) vs macro-F1 (y): Pareto frontier |
+| `eval_per_label_heatmap.png` | NB04 STEP 7b | Heatmap 7 variants × 6 rare labels (YlOrRd, vmax=0.5) |
+| `eval_delta_from_baseline.png` | NB04 STEP 7b | Δ from fair baseline: grouped bars for BERTScore, micro, macro |
+| `assoc_rules_fair_comparison.png` | NB06 STEP 7 | Heatmap 3 conditions × 13 labels (baseline / nohint / conditioned) |
 
 ---
 
@@ -712,3 +797,4 @@ Testing whether the stronger `weighted_v4` base model changes the destructive in
 3. **Support Devices is the anomalous gainer.** Both combined variants show Support Devices ≈ 0.449 (vs 0.353 in zero-shot and 0.356 with assoc. alone). The RAG anchor likely retrieves ICU/post-op reports frequently (they are common in IU X-Ray training data), injecting device mentions into most generated reports regardless of the actual indication. This is a form of retrieval bias, not genuine detection.
 
 **Conclusion: the combined failure generalizes across base models.** The destructive interference between RAG and assoc. rules is a property of the prompt structure, not of the specific checkpoint. The mechanism is the same: a full findings text injected as RAG context establishes a concrete generation template that the subsequent label hint cannot override, regardless of whether the model was trained with uniform sampling or ESS. The correct framing remains: RAG and assoc. rules are best used exclusively, not combined.
+
