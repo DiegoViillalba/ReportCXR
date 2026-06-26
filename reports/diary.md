@@ -459,3 +459,40 @@ Neither dominates. The right choice is use-case driven:
 - **Both**: neither alone; combination would require label-aware retrieval to fix RAG's noise problem
 
 This structure (two complementary strategies with distinct trade-offs) is the central finding of the prompt engineering section.
+
+### Combined RAG + Association Rules — negative result (2026-06-26)
+
+Hypothesis: combining both conditioning signals in a single prompt (RAG style anchor + label prior hint) could capture the fluency gains of RAG and the rare-label coverage gains of association rules simultaneously.
+
+**Four-way comparison (all vs fair baseline `nohint_uniform_v3`):**
+
+| Condition | BERTScore-F1 | CheXbert micro-F1 | CheXbert macro-F1 | BLEU-4 | ROUGE-L |
+|---|---|---|---|---|---|
+| Fair baseline (no hint) | 0.6879 | 0.4404 | 0.1445 | 0.1128 | 0.2852 |
+| RAG k=3 | **0.7076** | 0.3432 | 0.1160 | **0.1391** | **0.3051** |
+| Assoc. rules conditioner | 0.6844 | **0.4424** | **0.1745** | 0.1100 | 0.2812 |
+| Combined RAG + Assoc. rules | 0.7033 | 0.2567 | 0.0954 | 0.1337 | 0.2870 |
+
+**Per-label F1 — rare pathologies:**
+
+| Label | Baseline | RAG k=3 | Assoc. rules | Combined |
+|---|---|---|---|---|
+| Edema | 0.000 | 0.000 | **0.222** | 0.000 |
+| Lung Lesion | 0.000 | **0.133** | 0.000 | 0.056 |
+| Pleural Effusion | 0.286 | 0.160 | **0.345** | 0.000 |
+| Support Devices | 0.377 | 0.211 | **0.400** | 0.326 |
+
+**Result: the combined approach is the worst of all four on CheXbert** — lowest micro-F1 (0.2567) and lowest macro-F1 (0.0954). It does not inherit the best of either strategy.
+
+**Interference effect — why it fails:**
+
+The prompt structure is: `SYSTEM → RAG example findings → label hint → Indication → Findings:`. The RAG example (full findings text from the best-matching training study) acts as a **primary generation template** — the model anchors to its structure and vocabulary. The label hint that follows competes with this anchor but loses: the model has already committed to a generation mode based on the retrieved example. Two observable consequences:
+
+1. **Edema reverts to 0.000.** Assoc. rules activated it to 0.222 by being the sole conditioning signal. In combined, the RAG example overrides the hint — if the retrieved case does not mention edema, neither does the model.
+2. **Pleural Effusion collapses to 0.000.** It was 0.286 at baseline and 0.345 with assoc. rules. RAG alone brings it to 0.160 (label noise from mismatched retrievals). Combined brings it to 0.000 — the additional prompt complexity degrades even the residual signal that RAG was preserving.
+
+The CheXbert micro-F1 drop (0.4404 → 0.2567, −38%) is the largest regression observed in any experiment. This is not additive noise — it is destructive interference.
+
+**Root cause:** the two strategies are complementary at the use-case level but antagonistic at the mechanism level. Both inject information into the prompt, but RAG provides a *concrete generation template* while the label hint provides *abstract categorical guidance*. When both are present, the concrete template dominates. Naive concatenation of conditioning signals does not work with instruction-tuned LLMs for this task.
+
+**Conclusion:** do not use the combined prompt. The right framing remains: choose RAG *or* association rules based on the desired trade-off (fluency vs. rare-label coverage). A genuinely additive combination would require label-aware retrieval — retrieving training studies that share labels with the indication rather than sharing TF-IDF vocabulary — so that the RAG example and label hint are consistent rather than conflicting.
