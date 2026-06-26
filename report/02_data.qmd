@@ -25,6 +25,68 @@ Clinical data distributions and label statistics.
 
 The severe class imbalance is illustrated in @fig-prevalences and @fig-cooccurrence. To further quantify the representation of rare pathologies, we compute the Effective Sample Size (ESS) per class (see @fig-ess).
 
+## Hierarchical Clustering & Label Associations
+
+To understand how clinical findings co-occur and group together, we performed hierarchical agglomerative clustering on the binary CheXbert label vectors from the training set.
+
+### Hierarchical Agglomerative Clustering Implementation
+
+Each label $l \in L$ is represented as a boolean occurrence vector $v_l \in \{0, 1\}^N$ over the $N = 2,670$ training studies. We define the pairwise distance between label occurrence vectors using the Jaccard distance metric to measure the relative co-occurrence similarity:
+
+$$d(A, B) = 1 - \frac{|A \cap B|}{|A \cup B|} = 1 - \frac{\sum_{i=1}^N (L_{i, A} \wedge L_{i, B})}{\sum_{i=1}^N (L_{i, A} \vee L_{i, B})}$$
+
+The condensed distance matrix was computed via SciPy's `pdist`. We then performed agglomerative clustering via the average linkage method:
+
+$$d(u, v) = \sum_{i \in u, j \in v} \frac{d(i, j)}{|u||v|}$$
+
+The clustering tree was visualized as a dendrogram (see @fig-dendrogram), with the cluster color threshold set at $0.7 \times \max(Z[:, 2])$ to group labels into distinct clinical families.
+
+::: {#fig-clustering-results layout="[1, 1]"}
+![Label Hierarchical Clustering Dendrogram](../reports/figures/label_dendrogram.png){#fig-dendrogram}
+
+![Pairwise Association Rules Heatmap](../reports/figures/assoc_rules_heatmap.png){#fig-assoc-heatmap}
+
+Clustering and co-occurrence analysis.
+:::
+
+The dendrogram in @fig-dendrogram reveals distinct clinical syndromes that align with medical logic:
+1.  **Cardiac Cluster**: Cardiomegaly, Edema, and Enlarged Cardiomediastinum group closely together, reflecting congestive heart failure progression.
+2.  **Infection/Airspace Cluster**: Pneumonia and Consolidation form a tight cluster, indicating airspace disease.
+3.  **Pleural Cluster**: Pleural Effusion and Pleural Other group together, showing pleural space pathology.
+
+---
+
+### Association Rules Mining Implementation
+
+This co-occurrence structure confirms that X-ray findings do not occur independently. To mine directional relationships between findings, we implemented association rules mining over the binary label matrix. For each candidate pair of pathologies $A \rightarrow B$, we compute:
+
+1.  **Support**: The joint prevalence of both findings in the dataset:
+    $$\text{Support}(A \rightarrow B) = P(A \wedge B) = \frac{\sum_{i=1}^N L_{i, A} L_{i, B}}{N}$$
+2.  **Confidence**: The conditional probability of consequent $B$ given antecedent $A$:
+    $$\text{Confidence}(A \rightarrow B) = P(B \mid A) = \frac{P(A \wedge B)}{P(A)} = \frac{\sum_{i=1}^N L_{i, A} L_{i, B}}{\sum_{i=1}^N L_{i, A}}$$
+3.  **Lift**: The ratio of confidence to the baseline prevalence of $B$. A lift greater than 1.0 indicates a positive clinical co-occurrence beyond random chance:
+    $$\text{Lift}(A \rightarrow B) = \frac{P(B \mid A)}{P(B)} = \frac{N \sum_{i=1}^N L_{i, A} L_{i, B}}{\left(\sum_{i=1}^N L_{i, A}\right) \left(\sum_{i=1}^N L_{i, B}\right)}$$
+
+We mined a total of 90 directional rules (excluding the baseline `No Finding` label, as it is a status indicator rather than a pathology). To filter out noise, we selected strong rules using thresholds of **confidence $\ge 0.25$** and **lift $\ge 1.5$**, which yielded 12 clinically significant rules:
+
+| Antecedent ($A$) | Consequent ($B$) | Support | Confidence | Lift |
+|---|---|---|---|---|
+| **Edema** | Pleural Effusion | $0.0039$ | $0.2955$ | $9.3898$ |
+| **Edema** | Cardiomegaly | $0.0081$ | $0.6136$ | $4.9461$ |
+| **Atelectasis** | Lung Opacity | $0.0363$ | $0.5402$ | $4.0057$ |
+| **Lung Opacity** | Atelectasis | $0.0363$ | $0.2689$ | $4.0057$ |
+| **Pleural Effusion** | Lung Opacity | $0.0141$ | $0.4476$ | $3.3193$ |
+| **Edema** | Lung Opacity | $0.0051$ | $0.3864$ | $2.8651$ |
+| **Pleural Other** | Lung Opacity | $0.0054$ | $0.3673$ | $2.7241$ |
+| **Pleural Effusion** | Cardiomegaly | $0.0105$ | $0.3333$ | $2.6868$ |
+| **Enlarged Cardiomediastinum** | Cardiomegaly | $0.0222$ | $0.2972$ | $2.3955$ |
+| **Pleural Other** | Cardiomegaly | $0.0039$ | $0.2653$ | $2.1385$ |
+| **Enlarged Cardiomediastinum** | Lung Opacity | $0.0198$ | $0.2651$ | $1.9656$ |
+| **Support Devices** | Lung Opacity | $0.0117$ | $0.2549$ | $1.8902$ |
+
+These 12 rules (visualized in @fig-assoc-heatmap) represent highly strong, non-trivial clinical dependencies (e.g. Edema has a confidence of $61.4\%$ of co-occurring with Cardiomegaly, and is $9.39\times$ more likely to co-occur with Pleural Effusion than a study drawn at random). This motivates injecting these prior conditional probabilities into the prompting pipeline at test time: if a clinical indication triggers antecedent $A$, we can supply the conditional probability of consequent $B$ as a soft prior context hint.
+
+
 ## Importance Sampling & Sampler Correction
 
 To prevent the model from collapsing to the majority class and simply predicting "normal" for all patients, we implement a `WeightedRandomSampler`. For each study $j$, we compute an importance weight $w_j$ based on the target prevalences specified in `params.yaml`:

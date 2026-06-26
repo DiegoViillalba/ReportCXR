@@ -76,3 +76,104 @@ Clinical association context (training set statistics):
 
 ### 2.3 Empirical TF-IDF Prior Overrides
 To handle complex cases where keywords are insufficient, we implement an alternative prior estimator: we retrieve the top-$K$ ($K=20$) similar training indications via TF-IDF and compute the empirical label prevalence vector directly over this neighborhood. If this retrieval succeeds, the empirical priors are formatted as a direct prompt context, overriding the rule-based hints.
+
+---
+
+## 3. Experimental Results & Prompt Engineering Trade-offs
+
+We evaluated ten different configurations end-to-end on our holdout test set ($n=600$ studies). The results reveal a clear performance-style trade-off frontier. Rather than one single method dominating all others, we find two Pareto-optimal paths: a **fluency track** driven by RAG, and a **clinical precision track** driven by label prior conditioning.
+
+### 3.1 Quantitative Metrics Comparison
+
+To isolate the causal impact of the conditioning prompts from minor formatting shifts, we evaluated each strategy against its respective **fair baseline** (which uses the exact same template and `\nFindings:` suffix but without injecting hints or RAG examples).
+
+#### Uniform Sampler Checkpoint (`uniform_v3`) Comparison
+
+| Configuration | BERTScore-F1 | CheXbert micro-F1 | CheXbert macro-F1 | BLEU-4 | ROUGE-L |
+|---|---|---|---|---|---|
+| **Fair Baseline (`nohint_uniform_v3`)** | $0.6879$ | $0.4404$ | $0.1445$ | $0.1128$ | $0.2852$ |
+| **RAG $k=3$ (`rag_k3_uniform_v3`)** | **$0.7076$** | $0.3432$ | $0.1160$ | **$0.1391$** | **$0.3051$** |
+| **Assoc. Rules (`assoc_rules_uniform_v3`)** | $0.6844$ | **$0.4424$** | **$0.1745$** | $0.1100$ | $0.2812$ |
+| **Combined RAG + Rules** | $0.7033$ | $0.2567$ | $0.0954$ | $0.1337$ | $0.2870$ |
+
+#### Weighted Sampler Checkpoint (`weighted_v4`) Comparison
+
+| Configuration | BERTScore-F1 | CheXbert micro-F1 | CheXbert macro-F1 | BLEU-4 | ROUGE-L |
+|---|---|---|---|---|---|
+| **Fair Baseline (`nohint_weighted_v4`)** | **$0.6876$** | $0.4526$ | $0.1581$ | **$0.1076$** | $0.2720$ |
+| **Assoc. Rules (`assoc_rules_weighted_v4`)** | $0.6862$ | **$0.4559$** | **$0.1841$** | $0.1073$ | $0.2713$ |
+| **Combined RAG + Rules** | $0.7019$ | $0.2694$ | $0.1037$ | $0.1352$ | **$0.2842$** |
+
+::: {#fig-prompt-experiments layout="[[1, 1], [1]]"}
+![RAG Performance vs. Fair Baseline](../reports/figures/eval_rag_comparison.png){#fig-rag-comp}
+
+![Association Rules Performance vs. Fair Baseline](../reports/figures/eval_assoc_rules_comparison.png){#fig-assoc-comp}
+
+![F1-Score Delta from Fair Baseline](../reports/figures/eval_assoc_rules_delta.png){#fig-assoc-delta}
+
+Prompt engineering ablation results on the test set.
+:::
+
+---
+
+### 3.2 Analysis of the RAG Label Noise Problem
+
+Retrieval-augmented generation ($k=3$) shows a major split in outcomes (see @fig-rag-comp):
+*   **Textual Quality Gains**: BERTScore-F1 improves by $+0.020$ over the fair baseline, BLEU-4 rises by $+23\%$ relative, and ROUGE-L rises by $+7\%$. 
+*   **Clinical Accuracy Degradation**: CheXbert micro-F1 drops by $-0.097$ ($-22\%$), and macro-F1 regresses by $-0.029$.
+
+To diagnose this degradation, we performed a Jaccard similarity analysis between the true label vectors of the target studies and the retrieved training examples (see @fig-label-overlap).
+
+::: {#fig-rag-diagnostics layout="[1, 1]"}
+![TF-IDF Retrieval Label Overlap Diagnostic](../reports/figures/rag_label_overlap_diagnostic.png){#fig-label-overlap}
+
+![RAG Retrieval Quality Comparison](../reports/figures/rag_fair_comparison.png){#fig-rag-fair}
+
+RAG retrieval quality and diagnostic statistics.
+:::
+
+The analysis reveals that **$57.5\%$ of retrievals share zero active labels (Jaccard = 0.0) with the target study**. Because clinical indications are brief and unstandardized (e.g. "pain," "pre-op"), TF-IDF similarity over indication text is clinically blind. It frequently retrieves normal reports for pathological X-rays or vice versa. 
+
+Because the VLM anchors heavily to the retrieved examples, it copies their structured vocabulary verbatim. When retrieval is incorrect, the model copies incorrect clinical findings, introducing label noise. While this improves text fluency metrics (the copied text has excellent syntax), it severely harms diagnostic reliability. RAG is thus unsuitable for clinical triage where pathology recall is critical, unless paired with a label-aware retriever.
+
+---
+
+### 3.3 Analysis of Association Rules Conditioner
+
+In contrast to RAG, the association rules conditioner achieves clinical precision gains with near-zero fluency penalty (see @fig-assoc-comp and @fig-assoc-delta):
+*   **True Conditioner Effect**: Compared to the fair baseline, the conditioner yields **$+0.030$ CheXbert macro-F1** ($+20.8\%$) for `uniform_v3` and **$+0.026$** ($+16.5\%$) for `weighted_v4`, while costing only $-0.0035$ BERTScore.
+*   **Unlocking Rare Pathologies**: The conditioner successfully activates detection for classes that the base models completely missed. For example, **Edema** (which scored $0.0$ in zero-shot, baseline, and RAG runs) rises to **$0.222$** with `uniform_v3` and **$0.200$** with `weighted_v4`. The conditioner uses co-occurrence rules to nudge the model to report edema when indications suggest congestive heart failure and cardiac enlargement is detected in the image.
+
+---
+
+### 3.4 Destructive Interference in Combined Prompts
+
+When we naively combine both conditioning signals (RAG examples + label prior hints), the model suffers a **catastrophic clinical collapse**: CheXbert micro-F1 drops to $0.2567$ (the lowest observed across all runs), and macro-F1 collapses to $0.0954$ (worse than zero-shot).
+
+This collapse occurs due to a format conflict:
+1.  The retrieved findings text in the RAG block acts as a concrete generation template.
+2.  The label prior hint provides abstract statistical guidance.
+3.  The model's attention mechanism prioritizes the concrete template, completely overriding the statistical guidance.
+
+As a result, the rare pathology detections unlocked by the sampler and rules are erased (Edema drops back to $0.0$, and Pleural Effusion drops from $0.345$ to $0.0$). Thus, combining RAG and statistical hints is counter-productive.
+
+---
+
+### 3.5 Additive Synergy: Weighted Sampler + Association Rules
+
+The highest overall rare-label coverage is achieved by combining training-time weighting and inference-time association rules: **`assoc_rules_weighted_v4` reaches a test-set macro-F1 of $0.1841$** ($+30\%$ over zero-shot).
+
+Unlike RAG + rules, training-time conditioning (the ESS-based `WeightedRandomSampler`) and inference-time conditioning (the association rules conditioner) do not compete. The weighted sampler alters the model's internal representations during backpropagation, while the conditioner alters the attention distribution during decoding. Because they operate at different layers of the generation pipeline, their effects are additive. For example, `weighted_v4` is the only model that learns to detect **Lung Lesion** ($0.154$ F1) without hints, and adding the conditioner preserves this capability while unlocking Edema ($0.200$ F1).
+
+::: {#fig-grand-comparison-layout layout="[[1, 1], [1]]"}
+![Grand Metrics Comparison - All 10 Variants](../reports/figures/eval_grand_comparison.png){#fig-grand-comp}
+
+![Trade-off Space: Fluency vs. Pathology Coverage](../reports/figures/eval_scatter_fluency_vs_coverage.png){#fig-scatter}
+
+![Rare Pathology F1-Score Heatmap](../reports/figures/eval_per_label_heatmap.png){#fig-heatmap}
+
+Grand comparison of all ten configurations.
+:::
+
+The overall trade-off space is visualized in @fig-scatter and @fig-heatmap. The scatter plot maps the Pareto frontier: RAG occupies the high-fluency/low-precision region, while `assoc_rules_weighted_v4` occupies the high-precision/low-fluency region. The heatmap (@fig-heatmap) illustrates how the weighted sampler and association rules conditioner stack together to achieve the most balanced and comprehensive clinical detection profiles.
+

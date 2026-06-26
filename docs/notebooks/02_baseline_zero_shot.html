@@ -296,7 +296,7 @@ STEP 8  Metric summary table
 STEP 9  Report figures
 STEP 10 Save results to disk</code></pre>
 <p><strong>Requires:</strong> GPU with ≥ 16 GB VRAM (T4 / L4 / A10G).</p>
-<div id="nb02-setup" class="cell" data-execution_count="24">
+<div id="nb02-setup" class="cell" data-execution_count="1">
 <details open="" class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
@@ -343,7 +343,7 @@ Hyp cache: ../data/processed/zero_shot_hypotheses.txt  (exists=True)</code></pre
 <section id="step-1-load-test-split" class="level2">
 <h2 class="anchored" data-anchor-id="step-1-load-test-split">STEP 1 — Load test split</h2>
 <p>Evaluate: correct size? Label columns present? <code>frontal</code> column has filenames?</p>
-<div id="nb02-step1-load" class="cell" data-execution_count="25">
+<div id="nb02-step1-load" class="cell" data-execution_count="2">
 <details open="" class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> src.data.labels <span class="im">import</span> CHEXBERT_LABELS</span>
@@ -398,7 +398,7 @@ Pneumothorax                  0.005000</code></pre>
 <h2 class="anchored" data-anchor-id="step-2-load-medgemma-4b-it">STEP 2 — Load MedGemma 4B-it</h2>
 <p>4-bit NF4 quantization via bitsandbytes. Fits comfortably in 16 GB VRAM.<br>
 First run downloads ~8 GB from HuggingFace — ensure <code>HF_TOKEN</code> is set.</p>
-<div id="nb02-step2-load" class="cell" data-execution_count="26">
+<div id="nb02-step2-load" class="cell" data-execution_count="3">
 <details open="" class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> transformers <span class="im">import</span> AutoProcessor, AutoModelForCausalLM, BitsAndBytesConfig</span>
@@ -432,13 +432,15 @@ First run downloads ~8 GB from HuggingFace — ensure <code>HF_TOKEN</code> is s
 <span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f'GPU memory after load: </span><span class="sc">{</span>used<span class="sc">:.2f}</span><span class="ss"> GB'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO HTTP Request: HEAD https://huggingface.co/google/medgemma-4b-it/resolve/main/processor_config.json "HTTP/1.1 200 OK"</code></pre>
+<pre><code>/home/jvazquez/diego_villalba/ReportCXR/.venv/lib/python3.10/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+  from .autonotebook import tqdm as notebook_tqdm</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Loading processor from google/medgemma-4b-it ...</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>INFO HTTP Request: GET https://huggingface.co/api/models/google/medgemma-4b-it/tree/main/additional_chat_templates?recursive=false&amp;expand=false "HTTP/1.1 404 Not Found"
+<pre><code>INFO HTTP Request: HEAD https://huggingface.co/google/medgemma-4b-it/resolve/main/processor_config.json "HTTP/1.1 200 OK"
+INFO HTTP Request: GET https://huggingface.co/api/models/google/medgemma-4b-it/tree/main/additional_chat_templates?recursive=false&amp;expand=false "HTTP/1.1 404 Not Found"
 INFO HTTP Request: HEAD https://huggingface.co/google/medgemma-4b-it/resolve/main/processor_config.json "HTTP/1.1 200 OK"
 INFO HTTP Request: HEAD https://huggingface.co/google/medgemma-4b-it/resolve/main/chat_template.json "HTTP/1.1 404 Not Found"
 INFO HTTP Request: HEAD https://huggingface.co/google/medgemma-4b-it/resolve/main/chat_template.jinja "HTTP/1.1 200 OK"
@@ -458,19 +460,20 @@ INFO HTTP Request: GET https://huggingface.co/api/models/google/medgemma-4b-it/t
 INFO HTTP Request: GET https://huggingface.co/api/models/google/medgemma-4b-it/tree/main?recursive=true&amp;expand=false "HTTP/1.1 200 OK"
 INFO HTTP Request: GET https://huggingface.co/api/models/google/medgemma-4b-it "HTTP/1.1 200 OK"
 INFO HTTP Request: HEAD https://huggingface.co/google/medgemma-4b-it/resolve/main/config.json "HTTP/1.1 200 OK"
-INFO HTTP Request: HEAD https://huggingface.co/google/medgemma-4b-it/resolve/main/config.json "HTTP/1.1 200 OK"</code></pre>
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Loading model (4-bit NF4) ...</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>Loading weights: 100%|██████████| 883/883 [00:01&lt;00:00, 510.06it/s] 
+<pre><code>INFO HTTP Request: HEAD https://huggingface.co/google/medgemma-4b-it/resolve/main/config.json "HTTP/1.1 200 OK"
+Loading weights: 100%|██████████| 883/883 [00:01&lt;00:00, 612.24it/s] 
 INFO HTTP Request: HEAD https://huggingface.co/google/medgemma-4b-it/resolve/main/generation_config.json "HTTP/1.1 200 OK"</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
 <pre><code>
 Model loaded. Total parameters: 2.49 B
-GPU memory after load: 7.84 GB</code></pre>
+GPU memory after load: 3.23 GB</code></pre>
 </div>
 </div>
 </section>
@@ -482,7 +485,7 @@ GPU memory after load: 7.84 GB</code></pre>
 <li>Hypotheses saved to <code>data/processed/zero_shot_hypotheses.txt</code> — <strong>skip inference on re-run</strong></li>
 </ul>
 <p>Evaluate: do the generated reports look clinically plausible?</p>
-<div id="nb02-step3-fn" class="cell" data-execution_count="27">
+<div id="nb02-step3-fn" class="cell" data-execution_count="4">
 <details open="" class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> PIL <span class="im">import</span> Image</span>
@@ -547,7 +550,7 @@ GPU memory after load: 7.84 GB</code></pre>
 <pre><code>generate_report() defined. Ready to run inference.</code></pre>
 </div>
 </div>
-<div id="nb02-step3-run" class="cell" data-execution_count="28">
+<div id="nb02-step3-run" class="cell" data-execution_count="5">
 <details open="" class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tqdm.auto <span class="im">import</span> tqdm</span>
@@ -582,7 +585,7 @@ Loaded 600 hypotheses.
 Hypotheses: 600  |  References: 600</code></pre>
 </div>
 </div>
-<div id="nb02-step3-peek" class="cell" data-execution_count="29">
+<div id="nb02-step3-peek" class="cell" data-execution_count="6">
 <details open="" class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Qualitative sanity check — 3 examples</span></span>
@@ -617,7 +620,7 @@ UID 8 | indication: XXXX-year-old with XXXX on XXXX. Dyspnea. History of mitral 
 <p>Run CheXbert over both hypotheses and references under both uncertainty policies.<br>
 Cached to parquet after first run (each pass takes ~5–10 min on CPU, &lt;1 min on GPU).</p>
 <p>Evaluate: do hypothesis label distributions look reasonable compared to references?</p>
-<div id="nb02-step4-label" class="cell" data-execution_count="30">
+<div id="nb02-step4-label" class="cell" data-execution_count="7">
 <details open="" class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> src.data.labels <span class="im">import</span> run_chexbert</span>
@@ -762,7 +765,7 @@ Label prevalence comparison (policy=present):</code></pre>
 </div>
 </div>
 </div>
-<div id="nb02-step4-absent" class="cell" data-execution_count="31">
+<div id="nb02-step4-absent" class="cell" data-execution_count="8">
 <details open="" class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Policy = 'absent'  (uncertain → 0; ablation)</span></span>
@@ -787,7 +790,7 @@ Done.</code></pre>
 <p>Compute micro-average F1, macro-average F1, and per-label F1 using sklearn’s <code>classification_report</code> on the CheXbert label matrices.<br>
 Both policies are computed; <code>present</code> is the primary metric.</p>
 <p>Evaluate: which labels does zero-shot MedGemma fail on?</p>
-<div id="nb02-step5-f1" class="cell" data-execution_count="32">
+<div id="nb02-step5-f1" class="cell" data-execution_count="9">
 <details open="" class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.metrics <span class="im">import</span> classification_report</span>
@@ -915,7 +918,7 @@ Per-label F1 (policy = present):</code></pre>
 <p>Contextual similarity using DeBERTa-XL-MNLI as the reference model.<br>
 Returns per-study F1 scores (useful for distribution plots).</p>
 <p>Evaluate: mean BERTScore F1 — is the model generating plausible clinical language?</p>
-<div id="nb02-step6-bertscore" class="cell" data-execution_count="33">
+<div id="nb02-step6-bertscore" class="cell" data-execution_count="10">
 <details open="" class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> bert_score.utils <span class="im">as</span> _bsu</span>
@@ -989,7 +992,7 @@ INFO HTTP Request: HEAD https://huggingface.co/microsoft/deberta-xlarge-mnli/res
 
 INFO HTTP Request: HEAD https://huggingface.co/microsoft/deberta-xlarge-mnli/resolve/refs%2Fpr%2F10/model.safetensors "HTTP/1.1 302 Found"
 
-Loading weights: 100%|██████████| 772/772 [00:00&lt;00:00, 43742.02it/s]
+Loading weights: 100%|██████████| 772/772 [00:00&lt;00:00, 56816.04it/s]
 
 [transformers] <span class="ansi-bold">DebertaModel LOAD REPORT</span> from: microsoft/deberta-xlarge-mnli
 
@@ -997,13 +1000,13 @@ Key                 | Status     |  |
 
 --------------------+------------+--+-
 
+pooler.dense.weight | UNEXPECTED |  | 
+
 classifier.bias     | UNEXPECTED |  | 
 
 classifier.weight   | UNEXPECTED |  | 
 
 pooler.dense.bias   | UNEXPECTED |  | 
-
-pooler.dense.weight | UNEXPECTED |  | 
 
 
 
@@ -1018,16 +1021,16 @@ Notes:
 computing bert embedding.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>100%|██████████| 11/11 [00:08&lt;00:00,  1.25it/s]</code></pre>
+<pre><code>100%|██████████| 11/11 [00:08&lt;00:00,  1.28it/s]</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
 <pre><code>computing greedy matching.</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
-<pre><code>100%|██████████| 10/10 [00:00&lt;00:00, 116.37it/s]</code></pre>
+<pre><code>100%|██████████| 10/10 [00:00&lt;00:00, 109.40it/s]</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code>done in 8.88 seconds, 67.57 sentences/sec
+<pre><code>done in 8.72 seconds, 68.82 sentences/sec
 
 BERTScore — precision: 0.6961 | recall: 0.6948 | F1: 0.6938</code></pre>
 </div>
@@ -1040,7 +1043,7 @@ BERTScore — precision: 0.6961 | recall: 0.6948 | F1: 0.6938</code></pre>
 <h2 class="anchored" data-anchor-id="step-7-bleu-4-rouge-l">STEP 7 — BLEU-4 / ROUGE-L</h2>
 <p>NLG metrics reported for cross-paper comparability only.<br>
 <strong>Note:</strong> BLEU / ROUGE measure n-gram overlap, not clinical correctness; they are secondary to F1-CheXbert and BERTScore in this project’s hierarchy.</p>
-<div id="nb02-step7-nlg" class="cell" data-execution_count="34">
+<div id="nb02-step7-nlg" class="cell" data-execution_count="11">
 <details open="" class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> evaluate</span>
@@ -1077,22 +1080,18 @@ BERTScore — precision: 0.6961 | recall: 0.6948 | F1: 0.6938</code></pre>
 <span id="cb34-32"><a href="#cb34-32" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'ROUGE-L : </span><span class="sc">{</span>rouge_l<span class="sc">:.4f}</span><span class="ss">'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stderr">
-<pre><code>Downloading builder script: 5.94kB [00:00, 3.82MB/s]
-Downloading extra modules: 4.07kB [00:00, 9.79MB/s]                   
-Downloading extra modules: 3.34kB [00:00, 3.37MB/s]
-Downloading builder script: 6.14kB [00:00, 10.2MB/s]
-INFO Using default tokenizer.</code></pre>
+<pre><code>INFO Using default tokenizer.</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
 <pre><code>BLEU-4  : 0.0957
-ROUGE-L : 0.2635</code></pre>
+ROUGE-L : 0.2631</code></pre>
 </div>
 </div>
 </section>
 <section id="step-8-metric-summary-table" class="level2">
 <h2 class="anchored" data-anchor-id="step-8-metric-summary-table">STEP 8 — Metric summary table</h2>
 <p>Primary metrics in bold — NLG metrics are secondary.</p>
-<div id="nb02-step8-table" class="cell" data-execution_count="35">
+<div id="nb02-step8-table" class="cell" data-execution_count="12">
 <details open="" class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>summary <span class="op">=</span> {</span>
@@ -1151,7 +1150,7 @@ ROUGE-L : 0.2635</code></pre>
 </tr>
 <tr class="odd">
 <th data-quarto-table-cell-role="th">ROUGE-L</th>
-<td>0.2635</td>
+<td>0.2631</td>
 </tr>
 </tbody>
 </table>
@@ -1193,7 +1192,7 @@ ROUGE-L : 0.2635</code></pre>
 </tr>
 </tbody>
 </table>
-<div id="nb02-fig1-per-label-f1" class="cell" data-execution_count="36">
+<div id="nb02-fig1-per-label-f1" class="cell" data-execution_count="13">
 <details open="" class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb38"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Figure 1: Per-label F1 (policy = present) ─────────────────────────────────</span></span>
@@ -1241,7 +1240,7 @@ ROUGE-L : 0.2635</code></pre>
 </div>
 </div>
 </div>
-<div id="nb02-fig2-policy-ablation" class="cell" data-execution_count="37">
+<div id="nb02-fig2-policy-ablation" class="cell" data-execution_count="14">
 <details open="" class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb40"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Figure 2: Policy ablation (present vs absent) ─────────────────────────────</span></span>
@@ -1292,7 +1291,7 @@ ROUGE-L : 0.2635</code></pre>
 </div>
 </div>
 </div>
-<div id="nb02-fig3-score-dist" class="cell" data-execution_count="38">
+<div id="nb02-fig3-score-dist" class="cell" data-execution_count="15">
 <details open="" class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb42"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Figure 3: Per-study score distributions ────────────────────────────────────</span></span>
@@ -1339,7 +1338,7 @@ ROUGE-L : 0.2635</code></pre>
 </div>
 </div>
 </div>
-<div id="nb02-fig4-qualitative" class="cell" data-execution_count="39">
+<div id="nb02-fig4-qualitative" class="cell" data-execution_count="16">
 <details open="" class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb44"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Figure 4: Qualitative examples (rendered as matplotlib table) ──────────────</span></span>
@@ -1406,7 +1405,7 @@ ROUGE-L : 0.2635</code></pre>
 </div>
 </div>
 </div>
-<div id="nb02-fig5-metric-summary" class="cell" data-execution_count="40">
+<div id="nb02-fig5-metric-summary" class="cell" data-execution_count="17">
 <details open="" class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb46"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ── Figure 5: Metric summary as a clean table figure ──────────────────────────</span></span>
@@ -1466,7 +1465,7 @@ ROUGE-L : 0.2635</code></pre>
 </section>
 <section id="step-10-save-results-to-disk" class="level2">
 <h2 class="anchored" data-anchor-id="step-10-save-results-to-disk">STEP 10 — Save results to disk</h2>
-<div id="nb02-step10-save" class="cell" data-execution_count="41">
+<div id="nb02-step10-save" class="cell" data-execution_count="18">
 <details open="" class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb48"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a>results_payload <span class="op">=</span> {</span>
@@ -1507,6 +1506,53 @@ All figures saved to reports/figures/:
   baseline_policy_ablation.png
   baseline_qualitative_examples.png
   baseline_score_distributions.png</code></pre>
+</div>
+</div>
+<div id="670020b9" class="cell" data-execution_count="19">
+<details open="" class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb50"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ── STEP 11 — Export eval_metrics_zero_shot.json in standard format ───────────</span></span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
+<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a><span class="co"># baseline_results.json uses different key names than eval_metrics_*.json files:</span></span>
+<span id="cb50-4"><a href="#cb50-4" aria-hidden="true" tabindex="-1"></a><span class="co">#   f1_chexbert_micro_present  →  chexbert_micro_f1</span></span>
+<span id="cb50-5"><a href="#cb50-5" aria-hidden="true" tabindex="-1"></a><span class="co">#   f1_chexbert_macro_present  →  chexbert_macro_f1</span></span>
+<span id="cb50-6"><a href="#cb50-6" aria-hidden="true" tabindex="-1"></a><span class="co">#   per_label_f1_present       →  per_label_f1</span></span>
+<span id="cb50-7"><a href="#cb50-7" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
+<span id="cb50-8"><a href="#cb50-8" aria-hidden="true" tabindex="-1"></a><span class="co"># This cell reshapes the already-computed metrics into the canonical format so</span></span>
+<span id="cb50-9"><a href="#cb50-9" aria-hidden="true" tabindex="-1"></a><span class="co"># NB04's grand comparison can load the zero-shot row uniformly alongside</span></span>
+<span id="cb50-10"><a href="#cb50-10" aria-hidden="true" tabindex="-1"></a><span class="co"># fine-tuned variants — no model inference is run here.</span></span>
+<span id="cb50-11"><a href="#cb50-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-12"><a href="#cb50-12" aria-hidden="true" tabindex="-1"></a>eval_metrics_zero_shot <span class="op">=</span> {</span>
+<span id="cb50-13"><a href="#cb50-13" aria-hidden="true" tabindex="-1"></a>    <span class="st">'variant'</span>:             <span class="st">'zero_shot'</span>,</span>
+<span id="cb50-14"><a href="#cb50-14" aria-hidden="true" tabindex="-1"></a>    <span class="st">'bertscore_f1'</span>:        results_payload[<span class="st">'metrics'</span>][<span class="st">'bertscore_f1'</span>],</span>
+<span id="cb50-15"><a href="#cb50-15" aria-hidden="true" tabindex="-1"></a>    <span class="st">'chexbert_micro_f1'</span>:   results_payload[<span class="st">'metrics'</span>][<span class="st">'f1_chexbert_micro_present'</span>],</span>
+<span id="cb50-16"><a href="#cb50-16" aria-hidden="true" tabindex="-1"></a>    <span class="st">'chexbert_macro_f1'</span>:   results_payload[<span class="st">'metrics'</span>][<span class="st">'f1_chexbert_macro_present'</span>],</span>
+<span id="cb50-17"><a href="#cb50-17" aria-hidden="true" tabindex="-1"></a>    <span class="st">'bleu4'</span>:               results_payload[<span class="st">'metrics'</span>][<span class="st">'bleu4'</span>],</span>
+<span id="cb50-18"><a href="#cb50-18" aria-hidden="true" tabindex="-1"></a>    <span class="st">'rouge_l'</span>:             results_payload[<span class="st">'metrics'</span>][<span class="st">'rouge_l'</span>],</span>
+<span id="cb50-19"><a href="#cb50-19" aria-hidden="true" tabindex="-1"></a>    <span class="st">'per_label_f1'</span>:        results_payload[<span class="st">'metrics'</span>][<span class="st">'per_label_f1_present'</span>],</span>
+<span id="cb50-20"><a href="#cb50-20" aria-hidden="true" tabindex="-1"></a>    <span class="st">'bertscore_per_study'</span>: results_payload[<span class="st">'bertscore_per_study'</span>],</span>
+<span id="cb50-21"><a href="#cb50-21" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb50-22"><a href="#cb50-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-23"><a href="#cb50-23" aria-hidden="true" tabindex="-1"></a>out_zs <span class="op">=</span> RESULTS_DIR <span class="op">/</span> <span class="st">'eval_metrics_zero_shot.json'</span></span>
+<span id="cb50-24"><a href="#cb50-24" aria-hidden="true" tabindex="-1"></a>out_zs.write_text(json.dumps(eval_metrics_zero_shot, indent<span class="op">=</span><span class="dv">2</span>))</span>
+<span id="cb50-25"><a href="#cb50-25" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Saved → </span><span class="sc">{</span>out_zs<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb50-26"><a href="#cb50-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-27"><a href="#cb50-27" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"</span><span class="ch">\n</span><span class="ss">Zero-shot metrics (standard format):"</span>)</span>
+<span id="cb50-28"><a href="#cb50-28" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"  BERTScore-F1       : </span><span class="sc">{</span>eval_metrics_zero_shot[<span class="st">'bertscore_f1'</span>]<span class="sc">:.4f}</span><span class="ss">"</span>)</span>
+<span id="cb50-29"><a href="#cb50-29" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"  CheXbert micro-F1  : </span><span class="sc">{</span>eval_metrics_zero_shot[<span class="st">'chexbert_micro_f1'</span>]<span class="sc">:.4f}</span><span class="ss">"</span>)</span>
+<span id="cb50-30"><a href="#cb50-30" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"  CheXbert macro-F1  : </span><span class="sc">{</span>eval_metrics_zero_shot[<span class="st">'chexbert_macro_f1'</span>]<span class="sc">:.4f}</span><span class="ss">"</span>)</span>
+<span id="cb50-31"><a href="#cb50-31" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"  BLEU-4             : </span><span class="sc">{</span>eval_metrics_zero_shot[<span class="st">'bleu4'</span>]<span class="sc">:.4f}</span><span class="ss">"</span>)</span>
+<span id="cb50-32"><a href="#cb50-32" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"  ROUGE-L            : </span><span class="sc">{</span>eval_metrics_zero_shot[<span class="st">'rouge_l'</span>]<span class="sc">:.4f}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>Saved → ../reports/eval_metrics_zero_shot.json
+
+Zero-shot metrics (standard format):
+  BERTScore-F1       : 0.6938
+  CheXbert micro-F1  : 0.3967
+  CheXbert macro-F1  : 0.1416
+  BLEU-4             : 0.0957
+  ROUGE-L            : 0.2631</code></pre>
 </div>
 </div>
 </section>
