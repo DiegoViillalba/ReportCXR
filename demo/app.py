@@ -3,14 +3,19 @@ ReportCXR Demo — MedGemma 4B-it + QLoRA weighted_v4 adapter
 HuggingFace Spaces (ZeroGPU / A10G)
 """
 
-import re
-import spaces
 import gradio as gr
 import torch
 from PIL import Image
 from transformers import AutoProcessor, BitsAndBytesConfig
 from transformers import AutoModelForImageTextToText
 from peft import PeftModel
+
+try:
+    import spaces
+    GPU = spaces.GPU
+except Exception:
+    def GPU(fn):  # no-op when not running on ZeroGPU
+        return fn
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -87,7 +92,7 @@ def _run(messages: list, image: Image.Image | None, max_new_tokens: int = 300) -
     return processor.decode(generated, skip_special_tokens=True).strip()
 
 
-@spaces.GPU
+@GPU
 def generate_report(image: Image.Image, indication: str) -> str:
     _load_model()
 
@@ -109,7 +114,7 @@ def generate_report(image: Image.Image, indication: str) -> str:
     return _run(messages, image, max_new_tokens=350)
 
 
-@spaces.GPU
+@GPU
 def free_chat(image: Image.Image, history: list, user_message: str) -> tuple[list, str]:
     _load_model()
 
