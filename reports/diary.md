@@ -6,11 +6,11 @@
 
 ### Overview
 
-This project fine-tunes **MedGemma 4B-it** (SigLIP vision encoder + Gemma 3 4B decoder, 4-bit NF4 QLoRA) to generate the Findings section of radiology reports from chest X-ray images and clinical indications. The evaluation framework combines BERTScore-F1 (primary, text quality) and CheXbert F1 (secondary, clinical label precision) over a fixed test set of 600 studies from IU X-Ray.
+This project fine-tunes **MedGemma 4B-it** (SigLIP vision encoder + Gemma 3 4B decoder, 4-bit NF4 QLoRA) to generate the Findings section of radiology reports from chest X-ray images and clinical indications. The evaluation framework combines BERTScore-F1 (primary, text quality) and CheXbert F1 (secondary, clinical label precision) over a fixed test set of 600 studies from IU X-Ray. Ten configurations were evaluated end-to-end; results are available in NB02 (zero-shot baseline), NB04 (fine-tuning + domain shift + grand comparison), NB05 (RAG), and NB06 (association rules).
 
 ---
 
-### Conclusion 1 — Zero-shot MedGemma is fluent but label-biased
+### Conclusion 1 — Zero-shot MedGemma is fluent but severely label-biased
 
 | Metric | Value |
 |---|---|
@@ -20,62 +20,97 @@ This project fine-tunes **MedGemma 4B-it** (SigLIP vision encoder + Gemma 3 4B d
 | BLEU-4 | 0.0957 |
 | ROUGE-L | 0.2631 |
 
-Without fine-tuning, MedGemma-4B-it produces fluent, grammatically correct reports but exhibits a severe **normal-report bias**: it predicts "No Finding" in 92.8% of generated reports vs. 38.7% true prevalence in the test set. Seven of 14 CheXbert labels score F1 = 0 (Enlarged Cardiomediastinum, Cardiomegaly, Atelectasis, Edema, Consolidation, Pleural Other, and all near-zero). Only high-frequency or distinctive-vocabulary labels achieve meaningful F1 (No Finding: 0.560, Pneumothorax: 0.500, Support Devices: 0.353).
+Without fine-tuning, MedGemma-4B-it produces fluent, grammatically correct reports but exhibits a severe **normal-report bias**: it predicts "No Finding" in 92.8% of generated reports vs. 38.7% true prevalence. Seven of 14 CheXbert labels score F1 = 0 (Enlarged Cardiomediastinum, Cardiomegaly, Atelectasis, Edema, Consolidation, Pleural Other, Pneumonia). Only labels with highly distinctive vocabulary achieve meaningful F1 (No Finding: 0.560, Pneumothorax: 0.500, Support Devices: 0.353).
 
-**Implication:** the BERTScore of 0.6938 reflects the model's ability to generate plausible radiological language, not its ability to detect pathology. Any strategy that improves CheXbert precision is clinically more valuable than one that only improves fluency.
-
----
-
-### Conclusion 2 — QLoRA fine-tuning substantially improves clinical label precision
-
-| Condition | BERTScore-F1 | CheXbert micro-F1 | CheXbert macro-F1 |
-|---|---|---|---|
-| Zero-shot baseline | 0.6938 | 0.3967 | 0.1416 |
-| QLoRA uniform (v3) | 0.6925 | **0.4637** | 0.1651 |
-| QLoRA weighted (v4) | 0.6784 | 0.4423 | **0.1786** |
-
-Fine-tuning with QLoRA (rank=16, alpha=32, 4-bit NF4, 2 epochs, LR=5e-5) converts the model from a fluent normal-report generator into a pathology-aware reporter:
-
-- **Micro-F1 +16.9%** (uniform_v3 vs zero-shot): the model now generates findings that align with the most frequent pathology classes.
-- **Macro-F1 +16.6%** (uniform_v3) and **+26.1%** (weighted_v4): rare-label coverage improves substantially. The ESS-based WeightedRandomSampler (`weighted_v4`) further boosts macro-F1 by 8.2% over uniform sampling, at a small BERTScore cost (−0.013).
-- **BERTScore is stable** (−0.13% for uniform_v3, −2.2% for weighted_v4): fine-tuning on IU X-Ray reports teaches the model the IU vocabulary, slightly narrowing its style range but not degrading fluency meaningfully.
-
-The weighted_v4 checkpoint demonstrates that **training-time label rebalancing is the most impactful single intervention** for clinical precision, operating directly on what the model learns rather than on what it is told at inference.
+This establishes a crucial asymmetry in the evaluation: **BERTScore measures fluency and style transfer; CheXbert macro-F1 measures clinically relevant pathology detection.** A model can score well on BERTScore by generating generic "lungs are clear" reports and badly on macro-F1 by missing rare conditions. All subsequent experiments are interpreted against both dimensions.
 
 ---
 
-### Conclusion 3 — Association rules conditioner is the best inference-time strategy
+### Conclusion 2 — QLoRA fine-tuning breaks the normal-report bias
 
-Two inference-time strategies were evaluated: RAG (TF-IDF retrieval of similar training reports) and association rules (statistical label co-occurrence hints injected into the prompt).
+| Condition | BERTScore-F1 | CheXbert micro-F1 | CheXbert macro-F1 | BLEU-4 | ROUGE-L |
+|---|---|---|---|---|---|
+| Zero-shot baseline | 0.6938 | 0.3967 | 0.1416 | 0.0957 | 0.2631 |
+| QLoRA uniform (v3) | 0.6925 | **0.4637** | 0.1651 | 0.1145 | 0.2915 |
+| QLoRA weighted (v4) | 0.6784 | 0.4423 | **0.1786** | 0.0829 | 0.2740 |
 
-**Full experiment matrix (all configurations, test set n=600):**
+Fine-tuning with QLoRA (rank=16, alpha=32, 4-bit NF4, 2 epochs, LR=5e-5) substantially shifts the model toward pathology-aware generation:
 
-| Configuration | BERTScore-F1 | CheXbert micro-F1 | CheXbert macro-F1 |
-|---|---|---|---|
-| RAG k=3 (v3) | **0.7076** | 0.3432 | 0.1160 |
-| Zero-shot baseline | 0.6938 | 0.3967 | 0.1416 |
-| QLoRA uniform (v3) | 0.6925 | 0.4637 | 0.1651 |
-| Fair baseline — nohint (v3 format) | 0.6879 | 0.4404 | 0.1445 |
-| Fair baseline — nohint (v4 format) | 0.6876 | 0.4526 | 0.1581 |
-| Assoc. rules (v3) | 0.6844 | 0.4424 | 0.1745 |
-| QLoRA weighted (v4) | 0.6784 | 0.4423 | 0.1786 |
-| **Assoc. rules + weighted_v4** | 0.6862 | 0.4559 | **0.1841** |
+- **Micro-F1 +16.9%** (uniform_v3): the model learns the IU X-Ray label vocabulary and stops defaulting to "No Finding." BLEU-4 also rises +19.7%, confirming improved lexical alignment with references.
+- **Macro-F1 +16.6%** (uniform_v3) and **+26.1%** (weighted_v4): rare-label coverage improves. The ESS-based WeightedRandomSampler in `weighted_v4` oversamples rare-label studies during training, boosting macro-F1 a further 8.2% over uniform sampling.
+- **BERTScore cost is minimal** (−0.13% for v3, −2.2% for v4): the v4 BERTScore drop reflects that the ESS sampler biases the model toward rarer, more specific reports — at the cost of some stylistic generality. This is the expected trade-off.
 
-**RAG profile**: +0.020 BERTScore vs fine-tuned baseline, −0.120 micro-F1. RAG retrieves high-quality text anchors that improve surface fluency, but 57.5% of retrievals have Jaccard=0 with the target labels — the model borrows vocabulary from the retrieved report, overwriting correct pathology generation with the retrieved case's pathology pattern.
-
-**Association rules profile**: −0.003 BERTScore vs fair baseline, +0.030 macro-F1. The conditioner injects TF-IDF neighborhood priors or keyword-triggered statistical hints (P(label|indication) from training set). This shifts the model's attention toward rare labels at inference time without providing a full text template, so it cannot overwrite the model's image-based reasoning.
-
-**Best single configuration: `weighted_v4 + assoc. rules`** achieves macro-F1 = **0.1841** — the highest across all experiments. The Δ vs fair baseline is +0.026 macro-F1 at negligible BERTScore cost (−0.001). The ESS sampler (training-time) and assoc. rules conditioner (inference-time) are **additive**: they operate on different layers of the generation process and do not compete.
-
-**Combined RAG + assoc. rules is the worst configuration** (micro-F1 0.2567, macro-F1 0.0954). A full findings text (RAG) acts as a primary generation template; the subsequent label hint loses to this anchor. The two strategies are mechanistically antagonistic when combined in a single prompt, regardless of the base checkpoint.
+**Per-label note:** after fine-tuning with uniform_v3, Fracture jumps from zero-shot to 0.258 — the strongest single-label gain. Pleural Effusion reaches 0.308 and Support Devices 0.400. Edema, Consolidation, and most rare labels remain at 0, motivating the inference-time conditioning experiments.
 
 ---
 
-### Conclusion 4 — The model is robust to realistic acquisition shifts
+### Conclusion 3 — Two Pareto-optimal strategies; no single model dominates
 
-The fine-tuned uniform_v3 model was evaluated under five image perturbation types across realistic magnitude ranges:
+Ten configurations were evaluated against a **fair baseline** (`nohint_uniform_v3`: same prompt format as conditioned inference, no hint). The scatter plot `eval_scatter_fluency_vs_coverage.png` and the delta chart `eval_delta_from_baseline.png` visualise the trade-off space.
 
-| Perturbation | Magnitude range | Max BERTScore degradation |
+**Full results (all 10 configurations, test set n=600):**
+
+| Configuration | BERTScore-F1 | CheXbert micro-F1 | CheXbert macro-F1 | BLEU-4 | ROUGE-L |
+|---|---|---|---|---|---|
+| **RAG k=3 (v3)** | **0.7076** | 0.3432 | 0.1160 | **0.1391** | **0.3051** |
+| RAG + Assoc. (v3) | 0.7033 | 0.2567 | 0.0954 | 0.1337 | 0.2870 |
+| RAG + Assoc. (v4) | 0.7019 | 0.2694 | 0.1037 | 0.1352 | 0.2842 |
+| Zero-shot | 0.6938 | 0.3967 | 0.1416 | 0.0957 | 0.2631 |
+| QLoRA uniform (v3) | 0.6925 | 0.4637 | 0.1651 | 0.1145 | 0.2915 |
+| Fair baseline nohint (v3) | 0.6879 | 0.4404 | 0.1445 | 0.1128 | 0.2852 |
+| Fair baseline nohint (v4) | 0.6876 | 0.4526 | 0.1581 | 0.1076 | 0.2720 |
+| Assoc. rules (v3) | 0.6844 | 0.4424 | 0.1745 | 0.1100 | 0.2812 |
+| QLoRA weighted (v4) | 0.6784 | 0.4423 | 0.1786 | 0.0829 | 0.2740 |
+| **Assoc. rules + weighted_v4** | 0.6862 | **0.4559** | **0.1841** | 0.1073 | 0.2713 |
+
+**There is no Pareto-dominant configuration.** The scatter plot reveals a clear fluency–precision frontier: RAG sits in the upper-left (best fluency, worst clinical precision) and `assoc_rules_weighted_v4` sits in the lower-right (modest fluency cost, best rare-label coverage). The use case determines the choice:
+
+**RAG k=3 — fluency track:**
+- BERTScore +0.020 vs fair baseline, BLEU +0.026, ROUGE +0.020
+- micro-F1 −0.097 vs fair baseline (−22%), macro-F1 −0.029
+- Mechanism: retrieved findings text anchors generation to a high-quality style template. When 57.5% of retrievals have Jaccard=0 with target labels, the template overwrites correct pathology generation. Best for NLG benchmark metrics; not suitable for clinical decision support.
+
+**Assoc. rules + weighted_v4 — clinical precision track:**
+- BERTScore −0.002 vs fair baseline (v4), macro-F1 +0.026 (+16.5%)
+- micro-F1 +0.003; BLEU −0.000; ROUGE −0.001
+- Best macro-F1 across all ten configurations: **0.1841** (+30% over zero-shot)
+- Mechanism: ESS sampler shifts what the model learns at training time; assoc. rules hint shifts what it attends to at inference time. These operate on different generation layers and are additive, not competing.
+
+**Combined RAG + assoc. rules — destructive interference:**
+- Both base models (v3 and v4) show catastrophic CheXbert collapse: micro drops to 0.2567/0.2694, macro to 0.0954/0.1037
+- A full retrieved findings text is a concrete generation template that overrides subsequent label hints. This antagonism is a property of prompt structure, not of the specific checkpoint. ESS advantages (Edema 0.200, Lung Lesion 0.154 with v4+assoc alone) are completely erased by adding RAG.
+
+---
+
+### Conclusion 4 — Per-label analysis: what each strategy actually detects
+
+The heatmap `eval_per_label_heatmap.png` shows F1 per rare label across 7 key variants. The table below (6 rare labels) reveals which labels each strategy unlocks:
+
+| Label | fair nohint | uniform_v3 | weighted_v4 | RAG k=3 | assoc (v3) | combined (v3) | **assoc+v4** |
+|---|---|---|---|---|---|---|---|
+| Edema | 0.000 | 0.000 | 0.000 | 0.000 | **0.222** | 0.000 | **0.200** |
+| Consolidation | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
+| Lung Lesion | 0.000 | 0.000 | 0.062 | 0.133 | 0.000 | 0.056 | **0.154** |
+| Pleural Effusion | 0.286 | 0.308 | 0.311 | 0.160 | **0.345** | 0.000 | 0.270 |
+| Support Devices | 0.377 | **0.400** | 0.311 | 0.211 | **0.400** | 0.326 | 0.356 |
+| Fracture | 0.069 | **0.258** | 0.145 | 0.069 | 0.062 | 0.067 | 0.041 |
+
+Key label-level observations:
+
+- **Edema is exclusively unlocked by the conditioner.** It is 0 in every non-conditioned variant — zero-shot, fine-tuned, RAG, and all baselines. Only assoc. rules activates it (0.222/0.200), because the TF-IDF prior reliably fires on CHF/fluid overload indications. This is the clearest proof of the conditioner's causal value.
+- **Consolidation is undetectable by any configuration.** Training set prevalence is 0.7% — too rare to appear in any learned or retrieved context. This is the hard floor of the method; a larger or more balanced dataset would be required.
+- **Lung Lesion benefits from ESS training.** `weighted_v4` detects it (0.062) without any hint — the first non-zero score for this label without either RAG or assoc. rules. `assoc_rules_weighted_v4` then doubles it to 0.154, confirming both effects stack.
+- **Fracture is learned best by fine-tuning alone.** uniform_v3 reaches 0.258 — the highest fracture F1 observed — without any inference-time hint. Fracture vocabulary ("rib fracture", "osseous structures") is distinctive enough that standard fine-tuning captures it.
+- **Pleural Effusion is damaged by RAG** (0.286 baseline → 0.160 with RAG; 0.000 combined). The retrieved example rarely mentions effusion when the similarity is based on indication text rather than label content.
+- **Support Devices is robust across strategies.** High enough frequency (4.7% prevalence) that most fine-tuned variants detect it reliably.
+
+---
+
+### Conclusion 5 — Acquisition shift robustness
+
+The fine-tuned `uniform_v3` model was evaluated under five image perturbation types across realistic magnitude ranges:
+
+| Perturbation | Range | Max BERTScore degradation |
 |---|---|---|
 | Brightness | 0.5 – 1.6× | < 0.4% |
 | Contrast | 0.5 – 2.0× | < 0.4% |
@@ -83,24 +118,21 @@ The fine-tuned uniform_v3 model was evaluated under five image perturbation type
 | Gaussian noise | σ = 0 – 50 | < 0.7% |
 | JPEG compression | quality 95 – 10 | < 1.3% |
 
-All perturbations cause less than 1.3% BERTScore degradation across the entire tested magnitude range. Even extreme degradation (JPEG quality=10, gaussian noise σ=50) does not meaningfully impair report generation. This robustness is attributable to the frozen SigLIP vision encoder: its pre-trained perceptual representations are stable under photometric and compression shifts that would be common in real clinical deployment.
+All perturbations cause less than 1.3% BERTScore degradation across the full tested range — including extreme conditions (JPEG quality=10, Gaussian σ=50) that would be visually severe. This robustness is attributable to the frozen SigLIP vision encoder: its pre-trained perceptual representations are stable under the photometric and compression shifts typical in real clinical scanner output.
 
 ---
 
 ### Summary for the technical challenge write-up
 
-The experimental programme answers three questions relevant to clinical deployment:
+| Question | Answer |
+|---|---|
+| Can a 4B VLM generate diagnostic-quality reports? | Yes — micro-F1 +16.9% over zero-shot, BERTScore −0.13%, stable BLEU/ROUGE |
+| What drives rare-label coverage most? | ESS sampler (training-time) + assoc. rules conditioner (inference-time): macro-F1 = **0.1841** (+30% over zero-shot) |
+| Is RAG useful? | For fluency benchmarks (+2% BERTScore), not for clinical precision (−22% micro-F1) |
+| Can signals be combined? | Training-time + inference-time: yes (additive). Two inference-time signals: no (destructive interference) |
+| Is the model robust to image acquisition shifts? | Yes — < 1.3% degradation across all perturbation types tested |
 
-**1. Can a 4B VLM generate diagnostic-quality radiology reports?**
-Yes. QLoRA fine-tuning on IU X-Ray achieves CheXbert micro-F1 = 0.4637, a +16.9% improvement over zero-shot, with negligible fluency cost (BERTScore −0.13%). The model learns the clinical vocabulary of the target dataset and shifts from normal-report bias to pathology-aware generation.
-
-**2. What is the best strategy for rare-label coverage — the primary clinical challenge?**
-Training-time label rebalancing (ESS WeightedRandomSampler) combined with inference-time association rules conditioning achieves the highest macro-F1 (0.1841, +30% over zero-shot). Training-time and inference-time interventions are complementary. RAG retrieval improves surface fluency but actively degrades rare-label precision and should not be used for clinical applications.
-
-**3. Is the fine-tuned model clinically deployable under real-world image conditions?**
-Yes, for the acquisition conditions tested. The model degrades by less than 1.3% across a full range of brightness, contrast, gamma, Gaussian noise, and JPEG compression perturbations — well within acceptable margins for a decision-support system.
-
-**Known limitation:** The training collator builds prompts with `Indication:` before the system message, while inference builds prompts with the system message first. This discrepancy contributes approximately 1–2% of the observed validation-to-test BERTScore gap. All test-set comparisons are internally consistent (same format across variants); the relative ordering of configurations is unaffected.
+**Known limitation:** The training collator builds prompts with `Indication:` before the system message, while inference builds prompts with the system message first. This contributes approximately 1–2% of the observed validation-to-test BERTScore gap. All test-set comparisons are internally consistent (same format across variants); the relative ordering of all 10 configurations is unaffected.
 
 ---
 
