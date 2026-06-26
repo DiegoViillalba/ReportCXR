@@ -533,3 +533,48 @@ Testing the association rules conditioner on the `weighted_v4` checkpoint (ESS-b
 | uniform_v3 alone (NB04 format) | 0.1651 |
 
 **Revised conclusion:** training-time conditioning (ESS sampler) and inference-time conditioning (association rules) are complementary and additive — unlike RAG + assoc. rules, which are antagonistic. The mechanism difference is critical: the ESS sampler shifts what the model has learned to generate; the assoc. rules hint shifts what the model attends to at inference. These operate on different layers and do not compete. The combination `weighted_v4 + assoc. rules` is the strongest configuration overall for rare-label coverage.
+
+---
+
+### Combined RAG + Assoc. rules on weighted_v4 — interference pattern confirmed (2026-06-26)
+
+Testing whether the stronger `weighted_v4` base model changes the destructive interference observed in the `uniform_v3` combined experiment.
+
+**Two-way comparison: combined vs standalone assoc. rules (both on weighted_v4):**
+
+| Condition | BERTScore-F1 | CheXbert micro-F1 | CheXbert macro-F1 | BLEU-4 | ROUGE-L |
+|---|---|---|---|---|---|
+| weighted_v4 + assoc. rules | 0.6862 | **0.4559** | **0.1841** | 0.1073 | 0.2713 |
+| combined (RAG + assoc.) weighted_v4 | 0.7019 | 0.2694 | 0.1037 | 0.1352 | 0.2842 |
+| Δ (combined − assoc. only) | +0.016 | **−0.186** | **−0.080** | +0.028 | +0.013 |
+
+**Cross-base-model comparison of combined variants:**
+
+| Combined variant | BERTScore-F1 | CheXbert micro-F1 | CheXbert macro-F1 |
+|---|---|---|---|
+| combined uniform_v3 | 0.7033 | 0.2567 | 0.0954 |
+| combined weighted_v4 | 0.7019 | 0.2694 | 0.1037 |
+| Δ (v4 − v3) | −0.001 | +0.013 | +0.008 |
+
+**Per-label F1 — rare pathologies:**
+
+| Label | assoc. weighted_v4 | combined weighted_v4 | Δ |
+|---|---|---|---|
+| Edema | **0.200** | 0.000 | −0.200 |
+| Lung Lesion | **0.154** | 0.059 | −0.095 |
+| Pleural Effusion | 0.270 | 0.000 | −0.270 |
+| Atelectasis | — | 0.031 | — |
+| Support Devices | 0.356 | **0.449** | +0.093 |
+| No Finding | — | **0.449** | — |
+
+**Result: the interference pattern is fully reproduced on weighted_v4.** The stronger base model does not resolve the antagonism — the RAG template continues to dominate label hints regardless of training-time conditioning.
+
+**New observations vs the uniform_v3 combined experiment:**
+
+1. **ESS advantage is completely erased by the combined prompt.** `assoc_weighted_v4` had achieved Edema=0.200 and Lung Lesion=0.154 — capabilities earned through ESS training. Both collapse to near-zero when a RAG example is added to the prompt. The model's learned rare-label detection is bypassed entirely once it anchors to a retrieved findings template.
+
+2. **weighted_v4 combined is marginally better than uniform_v3 combined** on CheXbert micro (+0.013) and macro (+0.008) — suggesting the ESS advantage survives partially at the aggregate level, even when individual rare labels collapse. The model is "less bad" in combined mode, but still far below any standalone strategy.
+
+3. **Support Devices is the anomalous gainer.** Both combined variants show Support Devices ≈ 0.449 (vs 0.353 in zero-shot and 0.356 with assoc. alone). The RAG anchor likely retrieves ICU/post-op reports frequently (they are common in IU X-Ray training data), injecting device mentions into most generated reports regardless of the actual indication. This is a form of retrieval bias, not genuine detection.
+
+**Conclusion: the combined failure generalizes across base models.** The destructive interference between RAG and assoc. rules is a property of the prompt structure, not of the specific checkpoint. The mechanism is the same: a full findings text injected as RAG context establishes a concrete generation template that the subsequent label hint cannot override, regardless of whether the model was trained with uniform sampling or ESS. The correct framing remains: RAG and assoc. rules are best used exclusively, not combined.
