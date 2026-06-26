@@ -65,7 +65,7 @@ def _load_model():
 
 # ── Inference helpers ──────────────────────────────────────────────────────────
 
-def _run(messages: list, image: Image.Image | None, max_new_tokens: int = 300) -> str:
+def _run(messages: list, max_new_tokens: int = 300) -> str:
     inputs = processor.apply_chat_template(
         messages,
         add_generation_prompt=True,
@@ -73,12 +73,8 @@ def _run(messages: list, image: Image.Image | None, max_new_tokens: int = 300) -
         return_dict=True,
         return_tensors="pt",
     )
-    if image is not None:
-        # inject pixel values for the <image> token
-        img_inputs = processor(images=image, return_tensors="pt")
-        inputs["pixel_values"] = img_inputs["pixel_values"]
-
-    inputs = {k: v.to(model.device) for k, v in inputs.items()}
+    # apply_chat_template handles pixel_values when image is in messages content
+    inputs = {k: v.to(model.device) for k, v in inputs.items() if isinstance(v, torch.Tensor)}
     input_len = inputs["input_ids"].shape[-1]
 
     with torch.inference_mode():
@@ -111,7 +107,7 @@ def generate_report(image: Image.Image, indication: str) -> str:
             ],
         }
     ]
-    return _run(messages, image, max_new_tokens=350)
+    return _run(messages, max_new_tokens=350)
 
 
 @GPU
@@ -136,7 +132,7 @@ def free_chat(image: Image.Image, history: list, user_message: str) -> tuple[lis
         ],
     })
 
-    reply = _run(messages, image, max_new_tokens=400)
+    reply = _run(messages, max_new_tokens=400)
     history = history + [
         {"role": "user",      "content": user_message.strip()},
         {"role": "assistant", "content": reply},
