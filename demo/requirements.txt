@@ -1,3 +1,5 @@
+gradio>=5.29.0
+spaces>=0.19.0
 transformers>=4.47.0
 peft>=0.13.0
 bitsandbytes>=0.43.0
