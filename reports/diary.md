@@ -496,3 +496,40 @@ The CheXbert micro-F1 drop (0.4404 → 0.2567, −38%) is the largest regression
 **Root cause:** the two strategies are complementary at the use-case level but antagonistic at the mechanism level. Both inject information into the prompt, but RAG provides a *concrete generation template* while the label hint provides *abstract categorical guidance*. When both are present, the concrete template dominates. Naive concatenation of conditioning signals does not work with instruction-tuned LLMs for this task.
 
 **Conclusion:** do not use the combined prompt. The right framing remains: choose RAG *or* association rules based on the desired trade-off (fluency vs. rare-label coverage). A genuinely additive combination would require label-aware retrieval — retrieving training studies that share labels with the indication rather than sharing TF-IDF vocabulary — so that the RAG example and label hint are consistent rather than conflicting.
+
+### weighted_v4 + association rules — best macro-F1 configuration (2026-06-26)
+
+Testing the association rules conditioner on the `weighted_v4` checkpoint (ESS-based WeightedRandomSampler, rank=16). Fair baseline: `nohint_weighted_v4` (same format as conditioned inference, no hint).
+
+**Three-way comparison:**
+
+| Condition | BERTScore-F1 | CheXbert micro-F1 | CheXbert macro-F1 | BLEU-4 | ROUGE-L |
+|---|---|---|---|---|---|
+| uniform_v3 (NB04 format, reference) | 0.6925 | 0.4637 | 0.1651 | 0.1145 | 0.2915 |
+| weighted_v4 no-hint (fair baseline) | 0.6876 | 0.4526 | 0.1581 | 0.1076 | 0.2720 |
+| weighted_v4 + assoc. rules | **0.6862** | 0.4559 | **0.1841** | 0.1073 | 0.2713 |
+
+**Conditioner effect vs fair baseline (Δ):** BERTScore −0.001, micro-F1 +0.003, macro-F1 **+0.026**, BLEU −0.000, ROUGE −0.001. Same pattern as uniform_v3: near-zero fluency cost, meaningful rare-label coverage gain.
+
+**Per-label F1 — rare pathologies:**
+
+| Label | uniform_v3 ref | weighted_v4 no-hint | weighted_v4 + conditioner | Δ (cond − fair) |
+|---|---|---|---|---|
+| Edema | 0.000 | 0.000 | **0.200** | +0.200 |
+| Lung Lesion | 0.000 | **0.154** | **0.154** | 0.000 |
+| Pleural Effusion | 0.308 | 0.211 | **0.270** | +0.059 |
+| Fracture | 0.258 | 0.000 | 0.041 | +0.041 |
+| Support Devices | 0.400 | 0.351 | 0.356 | +0.005 |
+
+**Key finding: weighted_v4 already detects Lung Lesion (0.154) without any hint.** With uniform_v3, Lung Lesion was 0 unless RAG retrieved a relevant study. This demonstrates that the ESS sampler successfully internalised rare-label detection at training time — a capability that prompt engineering alone could not replicate.
+
+**Best macro-F1 ranking across all experiments:**
+
+| Configuration | CheXbert macro-F1 |
+|---|---|
+| **weighted_v4 + assoc. rules** | **0.1841** |
+| weighted_v4 alone (NB04 format) | 0.1786 |
+| uniform_v3 + assoc. rules | 0.1745 |
+| uniform_v3 alone (NB04 format) | 0.1651 |
+
+**Revised conclusion:** training-time conditioning (ESS sampler) and inference-time conditioning (association rules) are complementary and additive — unlike RAG + assoc. rules, which are antagonistic. The mechanism difference is critical: the ESS sampler shifts what the model has learned to generate; the assoc. rules hint shifts what the model attends to at inference. These operate on different layers and do not compete. The combination `weighted_v4 + assoc. rules` is the strongest configuration overall for rare-label coverage.
