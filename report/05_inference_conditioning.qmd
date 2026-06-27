@@ -22,7 +22,7 @@ Because clinical indications are dense, structured text, we construct a CPU-effi
 
 $$TF\text{-}IDF(t, d) = TF(t, d) \times IDF(t)$$
 
-We extract unigrams and bigrams, capping features at 5,000. At inference time, the query indication $q$ is vectorized, and cosine similarity is computed against all training vectors:
+We extract unigrams and bigrams, capping features at 5,000 (actual vocabulary after fitting on 2,403 training indications: **3,329 features**). At inference time, the query indication $q$ is vectorized, and cosine similarity is computed against all training vectors:
 
 $$\text{similarity}(q, d_i) = \frac{q \cdot d_i}{\|q\| \|d_i\|}$$
 
@@ -46,9 +46,9 @@ This grounds the model in target-vocabulary phrasing before generation, helping 
 
 ---
 
-## 2. Soft Label Priors via Association Rules [@singh2026clinicalreasoningvlm]
+## 2. Soft Label Priors via Association Rules
 
-Medical findings do not occur in isolation; they follow logical clinical associations. To steer the decoder toward plausible reports without modifying model weights or gathering more data, we introduce soft label priors derived from label association rules, as proposed in Singh et al. [@singh2026clinicalreasoningvlm].
+Medical findings do not occur in isolation; they follow logical clinical associations. To steer the decoder toward plausible reports without modifying model weights or gathering more data, we introduce soft label priors derived from label co-occurrence statistics mined from the training set.
 
 
 ### 2.1 Mining Co-occurrence Statistics
@@ -74,16 +74,31 @@ $$\hat{P}(B \mid q) = \frac{1}{K} \sum_{i \in \text{top-}K} \mathbf{1}[B_i = 1]$
 
 Labels with $\hat{P}(B \mid q) \geq 0.30$ are injected as a structured prevalence hint. The `No Finding` label is explicitly excluded from the hint regardless of prevalence. If any label clears the threshold, this prior is used and the pipeline stops.
 
-**Fallback — Keyword Association Rules:** Only when the TF-IDF neighborhood produces no label above the prevalence threshold, we fall back to keyword matching. We scan the indication text for 13 pathology keyword dictionaries with negation filtering (prefixes such as "rule out", "no evidence of", "r/o" suppress the match within a 25-character context window). Triggered antecedents $A$ are then expanded via the mined rules: all consequents $B$ with confidence $\geq 0.25$ and lift $\geq 1.2$ are included in the hint:
+**Fallback — Keyword Association Rules:** Only when the TF-IDF neighborhood produces no label above the prevalence threshold, we fall back to keyword matching. We scan the indication text for 13 pathology keyword dictionaries with negation filtering (prefixes such as "rule out", "no evidence of", "r/o", "no ", "without " suppress the match within a 25-character context window). Triggered antecedents $A$ are then expanded via the mined rules: all consequents $B$ with confidence $\geq 0.25$ and lift $\geq 1.2$ are included in the hint.
 
+The two paths produce distinct hint formats injected after the system prompt, before `Findings:`:
+
+**TF-IDF prior (primary path):**
+```
+Clinical context (based on similar studies in training set):
+  - Cardiomegaly: present in 30% of similar cases.
+```
+
+**Keyword association rules (fallback path):**
 ```
 Clinical association context (training set statistics):
-  - Atelectasis co-occurs with Lung Opacity in 45% of similar studies (lift=1.82).
+  - Edema co-occurs with Cardiomegaly in 61% of similar studies (lift=4.93).
+  - Edema co-occurs with Lung Opacity in 39% of similar studies (lift=2.87).
+  - Edema co-occurs with Pleural Effusion in 32% of similar studies (lift=10.20).
 ```
+
+The fallback example above is for the indication *"Chest pain, history of CHF and pulmonary edema"* — the keyword `edema`/`chf` triggers the Edema antecedent, which expands to its three strongest consequents.
 
 ### 2.3 Hint Coverage in Practice
 
-Because TF-IDF similarity over brief, unstandardized indication text is inherently noisy, many queries fall below the similarity threshold and are routed to keyword rules instead. Studies with no indication text receive no hint (`_hint_fired = False`). This two-tier design prioritizes the richer statistical signal of the neighborhood prior when retrieval quality is sufficient, while ensuring broad coverage via the deterministic keyword fallback.
+On the 600-study test set, the conditioner injects a hint into **241 studies (40.2%)**. The remaining 59.8% receive the standard prompt — either because the indication is empty/missing or because neither path produced a confident signal. Studies with no indication text always receive no hint.
+
+This two-tier design prioritises the richer statistical signal of the neighbourhood prior when retrieval quality is sufficient, while ensuring broad coverage via the deterministic keyword fallback. The selection is fully deterministic (no sampling) and adds no latency beyond a CPU-side TF-IDF lookup.
 
 ---
 
@@ -93,7 +108,7 @@ We evaluated ten different configurations end-to-end on our holdout test set ($n
 
 ### 3.1 Quantitative Metrics Comparison
 
-To isolate the causal impact of the conditioning prompts from minor formatting shifts, we evaluated each strategy against its respective **fair baseline** (which uses the exact same template and `\nFindings:` suffix but without injecting hints or RAG examples).
+To isolate the causal impact of the conditioning prompts from minor formatting shifts, we evaluated each strategy against its respective **fair baseline** (which uses the exact same template and `\nFindings:` suffix but without injecting hints or RAG examples). The `nohint_uniform_v3` and `nohint_weighted_v4` fair baselines are generated in Notebook 06 STEP 7 — they re-run inference on the same checkpoints with the conditioning prompt format but omitting the hint block, so any metric difference is causally attributable to the hint content.
 
 #### Uniform Sampler Checkpoint (`uniform_v3`) Comparison
 
