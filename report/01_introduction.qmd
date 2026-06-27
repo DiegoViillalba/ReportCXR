@@ -1,24 +1,100 @@
 ---
 title: "1. Introduction & Strategic Thesis"
 author: "Diego Villalba (Applied Research Candidate)"
-date: "2026-06-25"
+date: "2026-06-26"
+bibliography: ../references.bib
 ---
 
 ::: {.non-technical-summary}
 ##### Section Summary (Non-Technical)
-This section introduces the core clinical motivation of the project. Chest X-ray models are usually trained on massive datasets from large US hospitals, which contain mostly English reports and a very high percentage of normal X-rays. When trying to deploy these models in Latin American (LATAM) clinics, they face three major changes: different image properties from different X-ray machines, different languages (Spanish instead of English), and different rates of disease. We frame this problem not as a simple translation or accuracy task, but as a systematic domain shift diagnostic challenge.
+This section introduces the core clinical motivation of the project and documents the literature review that shaped the experimental design. Chest X-ray models are typically trained on massive datasets from large US hospitals, which contain mostly English reports and a very high proportion of normal X-rays. Deploying these models in Latin American clinics introduces three types of failure: different image properties from different X-ray machines, different reporting languages (Spanish instead of English), and different rates of disease. We frame this not as a translation or accuracy task, but as a systematic domain-shift diagnostic challenge. The literature review also defines which evaluation metrics are meaningful in a clinical setting—and why standard NLP metrics like BLEU fall short.
 :::
 
-## Clinical Domain Shift
+## 1. Clinical Domain Shift
 
 Developing a multimodal medical vision-language foundation model that generates chest X-ray findings is one of the key challenges in medical AI. However, deploying such a model in a real clinical setting—particularly across distinct geographic regions like Latin America—introduces severe out-of-distribution (OOD) shifts:
 
-1.  **Acquisition Shift**: Differences in scanner hardware manufacturers, kVp exposure calibrations, and sensor resolutions produce raw image distributions that diverge from the clean datasets used during pre-training.
-2.  **Prevalence Shift**: Regional epidemiological patterns result in different baseline frequencies of pathologies. For example, Latin American public clinics may exhibit higher prevalences of Tuberculosis or Chagas disease compared to standard Western benchmarks.
-3.  **Language Shift**: Pre-trained clinical vision-language models like MedGemma are pre-trained predominantly on English corpora (e.g., MIMIC-CXR). Clinicians in LATAM dictate findings and indications in Spanish.
+1. **Acquisition Shift**: Differences in scanner hardware manufacturers, kVp exposure calibrations, and sensor resolutions produce raw image distributions that diverge from the distributions encountered during pre-training.
+2. **Prevalence Shift**: Regional epidemiological patterns result in different baseline frequencies of pathologies. Latin American public clinics may exhibit higher prevalences of Tuberculosis or Chagas disease compared to standard Western benchmarks.
+3. **Language Shift**: Pre-trained clinical VLMs like MedGemma are pre-trained predominantly on English corpora (e.g., MIMIC-CXR). Clinicians in LATAM dictate findings and indications in Spanish.
 
-## The Strategic Thesis
+## 2. The Strategic Thesis
 
-Our thesis is that **cross-geographic deployment must be framed as a distributional discrepancy audit**. Rather than optimizing a model to achieve maximum accuracy on a single dataset, we construct a reusable diagnostic infrastructure—the `DomainShiftAudit` class—capable of auditing models under simulated shifts. 
+Our thesis is that **cross-geographic deployment must be framed as a distributional discrepancy audit**. Rather than optimising a model to achieve maximum accuracy on a single dataset, we construct a reusable diagnostic infrastructure—the `DomainShiftAudit` class—capable of auditing models under simulated shifts.
 
-By validating this diagnostic protocol on controlled, synthetic perturbations within the Indiana University Chest X-ray (IU CXR) dataset, we ensure that the auditing infrastructure is fully developed and ready to be run on real, local clinical data from day one.
+By validating this diagnostic protocol on controlled, synthetic perturbations within the Indiana University Chest X-ray (IU CXR) dataset, we ensure that the auditing infrastructure is fully developed and ready to be run on real local clinical data from day one.
+
+---
+
+## 3. Literature Survey: Clinical Accuracy in VLMs for Radiology
+
+Before defining our experimental design, I conducted a structured survey of recent advances in vision-language models for chest X-ray report generation, anchored in the MedGemma technical report [@sellergren2025medgemma] as the foundation for understanding the model family we fine-tune.
+
+The central observation from this survey is that the field has **pivoted away from standard NLP metrics** (BLEU, METEOR, ROUGE) toward metrics that measure clinical accuracy and logical consistency. The papers below represent the frontier of this pivot.
+
+### 3.1 Survey Table
+
+| Paper | Key Contribution |
+|---|---|
+| MedGemma [@sellergren2025medgemma] | Medical VLM pre-trained on clinical images and text; frozen SigLIP encoder + Gemma decoder. Establishes the base model for this project. |
+| EditGRPO [@editgrpo2025] | Post-Rollout Edit strategy with Group Relative Policy Optimization (GRPO) to correct clinical errors in generated drafts without full retraining. |
+| CCS [@ccs2025radiology] | Generates multiple report candidates and applies a clinical consensus mechanism to select the one with highest cross-candidate agreement. |
+| Formal Verification [@singh2026clinicalreasoningvlm] | Applies formal logic to verify that a model's diagnostic impression is logically entailed by its own perceptual findings, preventing self-contradiction hallucinations. |
+| SRRG [@kang2025structuredradiology] | Generates reports in a structured format (SRRG) with rich patient context, improving diagnostic relevance and radiologist verifiability. |
+| RadAlign [@radalign2024] | Vision-language concept alignment to bridge the gap between image region features and medical terminology—targeting the vocabulary mismatch problem. |
+| EviAgent [@eviagent2025] | Agentic framework that requires the model to cite specific visual evidence before making any diagnostic claim, enforcing grounded reasoning. |
+| RadVLM [@radvlm2024] | Multitask conversational model trained on chest X-rays for both report generation and free-form clinical queries. |
+
+### 3.2 Notable Trends
+
+Three structural patterns emerge across this literature:
+
+**Clinical consistency over lexical overlap.** Models are increasingly evaluated with CheXbert [@chen2024chexagent] and RadGraph, which extract clinical entities (e.g., "pleural effusion," "cardiomegaly") from both generated and reference reports and measure F1 over those entities—rather than counting matched word n-grams. This is the direct motivation for choosing CheXbert macro-F1 as our primary metric.
+
+**Rare-label coverage as a first-class objective.** Standard accuracy metrics mask performance collapse on infrequent pathologies because the test set is dominated by normal studies. Several of these papers introduce macro-averaged or weighted metrics that give equal weight to each pathology class regardless of prevalence. This drove our use of **macro-F1** over micro-F1 as the primary signal for model comparison.
+
+**Structured versus free-text generation.** There is a growing shift toward Structured Radiology Report Generation (SRRG) as seen in [@kang2025structuredradiology], which makes reports more interoperable and easier to audit. While we generate free-text Findings sections to match the IU CXR dataset format, this trend validates using CheXbert label extraction as a post-hoc structuring layer for evaluation.
+
+---
+
+## 4. Metric Selection Rationale
+
+The literature survey directly informed our choice of evaluation metrics. This section makes those choices explicit.
+
+### 4.1 Why Not Standard NLP Metrics as Primary?
+
+**BLEU-4** and **ROUGE-L** measure n-gram overlap between the generated and reference text. In radiology report generation, this is insufficient:
+
+- A report saying *"The lungs are clear. No pleural effusion."* and a report saying *"Clear lungs. Pleural effusion is absent."* are clinically identical but score poorly on n-gram overlap.
+- A report that hallucinates a plausible-sounding finding can still score high on BLEU if the writing style matches the reference.
+- These metrics do not penalise a model for missing pathology labels the reference mentions.
+
+We retain BLEU-4 and ROUGE-L as **secondary fluency metrics** to characterise the style-vs-accuracy trade-off seen in RAG.
+
+### 4.2 Primary Metric: CheXbert Macro-F1
+
+CheXbert [@chen2024chexagent] is a fine-tuned classifier that extracts a 14-dimensional binary label vector from free-text radiology reports. By running it on both the generated report and the ground-truth report and computing F1 at the label level, we get a **pathology-aware** measure.
+
+We use the **macro-averaged** variant (equal weight per class regardless of prevalence) as our primary metric because:
+
+- The IU CXR dataset is 83% "No Finding". Micro-F1 would be dominated by the normal class.
+- A model that predicts "No Finding" for every study achieves high micro-F1 but zero macro-F1—exactly the zero-shot MedGemma behaviour we observe.
+- The challenge is rare-label detection: Edema (2.3%), Consolidation (0.7%), Pneumonia (1.0%). Macro-F1 forces every label to contribute equally to the final score.
+
+### 4.3 Secondary Metric: BERTScore-F1
+
+**BERTScore** [@sellergren2025medgemma] measures token-level semantic similarity using contextual embeddings rather than exact word matches. We use `microsoft/deberta-xlarge-mnli` as the scoring model, which was chosen for its strong natural language inference capabilities relevant to clinical text.
+
+BERTScore is used as the **fluency and semantic quality** signal. It captures whether the generated report conveys the right clinical concepts even when phrased differently from the reference, and it is robust to paraphrasing in a way BLEU is not. Its limitation is that it does not directly measure pathology-level recall—two reports can have similar BERTScore while differing entirely on which labels are present.
+
+### 4.4 Summary
+
+| Metric | Type | What it measures | Role |
+|---|---|---|---|
+| CheXbert macro-F1 | Clinical label recall | Pathology detection (equal weight per class) | **Primary** |
+| CheXbert micro-F1 | Clinical label accuracy | Overall label accuracy (prevalence-weighted) | Supporting |
+| BERTScore-F1 | Semantic similarity | Report fluency and concept coverage | Secondary |
+| BLEU-4 | Lexical overlap | Writing style proximity to reference | Secondary |
+| ROUGE-L | Sequence overlap | Longest common subsequence match | Secondary |
+
+This metric stack allows us to characterise each experimental configuration along two independent axes—**clinical precision** (CheXbert) and **textual quality** (BERTScore/BLEU)—which is exactly the Pareto trade-off observed across the ten inference configurations in Section 5.
