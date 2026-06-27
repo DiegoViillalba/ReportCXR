@@ -2,33 +2,70 @@
 title: "ReportCXR"
 subtitle: "Automated Radiological Report Generation via Vision-Language Models"
 author: "Diego Villalba (Applied Research Candidate)"
-date: "2026-06-25"
+date: "2026-06-26"
 bibliography: references.bib
 ---
 
 ::: {.non-technical-summary}
 ##### Executive Summary (Non-Technical)
-This project is an AI system built for automated chest X-ray interpretation. Instead of simply fine-tuning a general-purpose model, this work addresses a critical, real-world challenge in healthcare AI: domain shift. Medical AI models trained on United States clinical datasets (which are predominantly English and heavily biased towards normal findings) often fail when deployed out of distribution domains, like hospitals in other regions due to differences in scanner equipment, local patient populations (prevalences of disease), and local reporting languages [@sellergren2025medgemma], [@chen2024chexagent].
+This project is an AI system built for automated chest X-ray interpretation. Instead of simply fine-tuning a general-purpose model, this work addresses a critical, real-world challenge in healthcare AI: **domain shift**. Medical AI models trained on United States clinical datasets—which are predominantly English and heavily biased towards normal findings—often fail when deployed in out-of-distribution domains, such as hospitals in other regions, due to differences in scanner equipment, local patient populations, and reporting languages [@sellergren2025medgemma; @chen2024chexagent].
 
-Here, we build a robust and reproducible clinical vision-language pipeline based on Google’s MedGemma 4B-it. The system is implemented end-to-end, from data preparation and model adaptation to evaluation and experiment tracking. To ensure reproducibility and auditability, the pipeline integrates DVC for dataset and artifact versioning, together with Weights & Biases for experiment tracking, metric logging, and model comparison. In addition, we introduce a Domain Shift Audit Protocol designed to systematically quantify model degradation under simulated shifts in imaging equipment, reporting language, and disease prevalence.
+Here, we build a robust and reproducible clinical vision-language pipeline based on Google's MedGemma 4B-it. The system is implemented end-to-end: from data preparation and model adaptation to evaluation and experiment tracking. To ensure reproducibility and auditability, the pipeline integrates DVC for dataset and artifact versioning, together with Weights & Biases for experiment tracking, metric logging, and model comparison. In addition, we introduce a **Domain Shift Audit Protocol** designed to systematically quantify model degradation under simulated shifts in imaging equipment, reporting language, and disease prevalence.
 
-Beyond this baseline pipeline, we implement and evaluate two research-driven extensions inspired by recent work. First, we incorporate a retrieval-augmented generation strategy that conditions the model on clinically similar prior reports [@kang2025structuredradiology], allowing the system to use case-based context at inference time. Second, we introduce soft label priors derived from association rules between radiological findings and diagnoses, which are injected into the prompting or decoding process to guide the model toward clinically plausible outputs without requiring additional supervised fine-tuning data [@singh2026clinicalreasoningvlm].
+Beyond the baseline pipeline, we implement and evaluate two research-driven inference-time strategies. First, a **retrieval-augmented generation** (RAG) approach that conditions the model on clinically similar prior reports at inference time [@kang2025structuredradiology]. Second, **soft label priors** derived from association rules between radiological findings, which are injected as structured text hints into the prompt to guide the model toward clinically plausible outputs without additional training [@singh2026clinicalreasoningvlm].
 
+The best configuration—QLoRA fine-tuning with effective sample weighting plus inference-time association rule conditioning—achieves a CheXbert macro-F1 of **0.1841** on the holdout test set, representing a **+30% improvement over the zero-shot MedGemma baseline** (0.1416).
 :::
 
 ## Project Overview
 
-The ReportCXR project is developed as part of the Eden AI technical challenge for the Applied Research role. The system fine-tunes a medical vision-language model, google/medgemma-4b-it (which combines a frozen medical SigLIP image encoder and a Gemma 3 4B-it language decoder), to generate radiological reports (specifically the Findings section) conditioned on Clinical Indications.
+The ReportCXR project is developed as part of the Eden AI technical challenge for the Applied Research role. The system fine-tunes `google/medgemma-4b-it`—a medical vision-language model combining a frozen SigLIP vision encoder with a Gemma 3 4B-it language decoder—to generate the Findings section of radiological reports, conditioned on clinical indication text, using QLoRA parameter-efficient fine-tuning.
 
 ### The Strategic Thesis: Domain Shift Auditing
 
-Our central premise is that deploying medical models across geographies is a distributional shift problem. Rather than reporting static accuracy metrics on a clean dataset, this project designs and validates a reusable diagnostic infrastructure—the DomainShiftAudit framework—on simulated shifts inside the Indiana University Chest X-ray (IU CXR) dataset.
+Our central premise is that deploying medical models across geographies is a **distributional shift problem**. Rather than reporting static accuracy metrics on a clean dataset, this project designs and validates a reusable diagnostic infrastructure—the `DomainShiftAudit` framework—on simulated shifts inside the Indiana University Chest X-ray (IU CXR) dataset.
 
-This protocol acts as a diagnostic suite. It measures the robustness of models before they go live:
+This protocol measures model robustness before deployment across three axes:
 
-1. **Acquisition Shift**: Simulates older equipment or different scanner manufacturers by applying synthetic noise, contrast adjustments, and compression.
-2. **Language Shift**: Assesses how a model trained in English performs when prompting and generating in Spanish.
-3. **Prevalence Shift**: Simulates different disease rates using importance sampling to evaluate how the model handles a LATAM patient distribution.
+1. **Acquisition Shift**: Simulates older or different scanner hardware by applying synthetic noise, contrast adjustments, brightness, gamma correction, and JPEG compression. **Executed**: BERTScore-F1 degrades less than 1.3% across all perturbation types—but this apparent robustness masks a critical safety failure mode ("hallucination towards normal") where the decoder defaults to fluent but clinically blind normal reports when the visual signal is corrupted.
+
+2. **Language Shift**: Assesses behavior when prompting and generating in Spanish, using pseudo-references produced by machine translation of the English ground truth. **Infrastructure built** (`src/domain_shift_audit/language_shift.py`) and validated on local samples; full test-set execution requires remote GPU and was deferred due to resource constraints.
+
+3. **Prevalence Shift**: Simulates different regional disease distributions using importance sampling to re-weight test metrics. **Executed**: The weighted sampler model (`weighted_v4`) shows substantially more stable performance than the uniform model as pathology prevalence increases, confirming the training-time benefit of effective sample size weighting.
+
+---
+
+## Key Quantitative Results
+
+| Configuration | BERTScore-F1 | micro-F1 | macro-F1 | BLEU-4 | ROUGE-L |
+|---|---|---|---|---|---|
+| Zero-shot MedGemma | 0.6938 | 0.3967 | 0.1416 | 0.0957 | 0.2631 |
+| Fine-tuned (nohint_weighted_v4) | 0.6876 | 0.4526 | 0.1578 | 0.1076 | 0.2720 |
+| RAG k=3 (uniform_v3) | **0.7076** | 0.3432 | 0.1160 | **0.1391** | **0.3051** |
+| **Assoc. rules + weighted_v4** | 0.6862 | **0.4559** | **0.1841** | 0.1073 | 0.2713 |
+
+> All metrics on the IU CXR holdout test set (n=600 studies). micro/macro-F1 = CheXbert label-based; BERTScore uses `microsoft/deberta-xlarge-mnli`.
+
+**Key findings:**
+
+- Zero-shot MedGemma predicts "No Finding" for 92.8% of studies and achieves F1=0 on 7 of 14 pathology labels.
+- QLoRA fine-tuning raises macro-F1 by **+11.4%** (0.1416 → 0.1578) with matched prompt format fair baseline.
+- RAG improves BERTScore and BLEU (fluency track) but degrades macro-F1 by −0.029 due to label noise in retrieved examples (57.5% of retrievals share zero active labels with the target).
+- Association rules + ESS-weighted training are **additive** (+30% macro-F1 over zero-shot), while combining RAG + association rules causes destructive interference (macro-F1 collapses to 0.0954).
+- The `Edema` label—F1=0 in all runs without conditioning—rises to 0.200 with association rule hints on the `weighted_v4` checkpoint.
+
+> **Known limitation**: a prompt format inversion exists between training (`Indication: {text}\nSYSTEM_PROMPT`) and inference (`SYSTEM_PROMPT\nIndication: {text}`). All test comparisons use the same inverted format, so relative rankings are valid, but absolute BERTScore may be 1–2% below the achievable ceiling.
+
+---
+
+## Live Interactive Demo
+
+The fine-tuned adapter is publicly available on HuggingFace Hub and deployed as a live web application:
+
+- **Adapter**: [`diegoi-io-0306/reportcxr-medgemma-weighted-v4`](https://huggingface.co/diegoi-io-0306/reportcxr-medgemma-weighted-v4) — QLoRA weights (~48MB), loaded over `google/medgemma-4b-it` in 4-bit NF4 quantization.
+- **Interactive Space**: [`diegoi-io-0306/ReportCXR-Demo`](https://huggingface.co/spaces/diegoi-io-0306/ReportCXR-Demo) — upload a chest X-ray and either generate a structured Findings section or ask free-form questions in natural language.
+
+> ⚠️ MedGemma requires accepting [Google's Health AI Developer Foundations license](https://huggingface.co/google/medgemma-4b-it). The demo is for research purposes only and is not intended for clinical use.
 
 ---
 
@@ -36,9 +73,9 @@ This protocol acts as a diagnostic suite. It measures the robustness of models b
 
 Use the navigation menu at the top to explore the work:
 
-*   **Technical Report**: A modular, multi-part deep dive into the strategic thesis, data distribution, model training, evaluation metrics, domain shift experiments, and production scaling.
-*   **Code Documentation**: Detailed module-by-module documentation of every component in the codebase (data loading, label extraction, QLoRA training, metric evaluation, and synthetic shifts).
-*   **Notebooks**: Step-by-step interactive implementations of our entire pipeline (EDA, baseline zero-shot, training, and evaluation).
+- **Technical Report**: A modular, multi-part deep dive into the strategic thesis, data distribution, model training, evaluation metrics, inference conditioning experiments, and domain shift results.
+- **Code Documentation**: Module-by-module documentation of every component in the codebase (data loading, label extraction, QLoRA training, metric evaluation, and synthetic shifts).
+- **Notebooks**: Step-by-step interactive implementations of the entire pipeline (EDA, baseline zero-shot, training, evaluation, RAG, and association rules).
 
 ---
 
@@ -46,29 +83,28 @@ Use the navigation menu at the top to explore the work:
 
 This project is built for complete mathematical reproducibility. Data, parameters, and pipelines are versioned.
 
-### 1. Versioned Parameters (params.yaml)
-Every parameter (from QLoRA rank to target sampler disease prevalences) is declared in a single source of truth: [params.yaml](file:///Users/diegovillaba/Code/ReportCXR/params.yaml). No thresholds or weights are hardcoded inside the code in `src/`.
+### 1. Versioned Parameters (`params.yaml`)
+Every parameter—from QLoRA rank to target sampler disease prevalences—is declared in a single source of truth: `params.yaml`. No thresholds or weights are hardcoded inside `src/`.
 
-### 2. DVC Pipeline (dvc.yaml)
+### 2. DVC Pipeline (`dvc.yaml`)
 The data pipeline is managed via DVC (Data Version Control). To reproduce the pipeline stages, run:
 
 ```bash
-# Verify status of data and steps
-dvc status
-
-# Reproduce the entire pipeline (loading -> labeling -> splitting -> training -> evaluation)
-dvc repro
+dvc status      # Verify status of data and steps
+dvc repro       # Reproduce the entire pipeline
 ```
 
-The pipeline contains the following stages defined in [dvc.yaml](file:///Users/diegovillaba/Code/ReportCXR/dvc.yaml):
+The pipeline stages are:
 
-*   `load`: Joins reports and projections CSVs and links images.
-*   `labels`: Processes free-text findings with a CheXbert labeler to build a 14-dimensional pathology matrix.
-*   `split`: Employs iterative multi-label stratification to split studies cleanly without patient leakage.
-*   `eda`: Computes prevalences and class statistics, outputting training distribution plots.
-*   `train_uniform`: Trains QLoRA on a uniform distribution.
-*   `train_weighted`: Trains QLoRA with active sampling weights.
-*   `eval`: Computes test metrics on the best saved models.
+| Stage | Description |
+|---|---|
+| `load` | Joins reports and projections CSVs and links images |
+| `labels` | Processes free-text findings with CheXbert to build a 14-label binary matrix |
+| `split` | Multi-label stratified split without patient leakage |
+| `eda` | Computes prevalences and class statistics |
+| `train_uniform` | QLoRA fine-tuning on uniform distribution |
+| `train_weighted` | QLoRA fine-tuning with ESS-based WeightedRandomSampler |
+| `eval` | Test-set metrics on the best saved checkpoints |
 
 ### 3. Experiment Tracking (Weights and Biases)
 All training runs, validation curves, and sampler weight distributions are synced to Weights and Biases under the project `reportcxr`.
