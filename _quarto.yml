@@ -80,8 +80,8 @@ website:
             href: notebooks/01_eda.ipynb
           - text: "02: Zero-Shot Baseline"
             href: notebooks/02_baseline_zero_shot.ipynb
-          - text: "03: Training (Local)"
-            href: notebooks/03_train_local.ipynb
+          # - text: "03: Training (Local)"
+          #   href: notebooks/03_train_local.ipynb
           - text: "03: Training (Kaggle)"
             href: notebooks/03_train_kaggle.ipynb
           - text: "04: Evaluation"
