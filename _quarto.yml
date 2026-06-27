@@ -17,6 +17,7 @@ project:
     - doc/training_pipeline.qmd
     - doc/evaluation_modules.qmd
     - doc/domain_shift_modules.qmd
+    - doc/demo_deployment.qmd
     # Notebooks
     - notebooks/01_eda.ipynb
     - notebooks/02_baseline_zero_shot.ipynb
@@ -71,6 +72,8 @@ website:
             href: doc/evaluation_modules.qmd
           - text: "Domain Shift Audit"
             href: doc/domain_shift_modules.qmd
+          - text: "Demo & Deployment"
+            href: doc/demo_deployment.qmd
       - text: "Notebooks"
         menu:
           - text: "01: Exploratory Data Analysis"
@@ -103,3 +106,4 @@ format:
     code-fold: show
     code-tools: true
     highlight-style: github
+    lightbox: true
