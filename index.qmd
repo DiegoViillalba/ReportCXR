@@ -21,6 +21,8 @@ The system fine-tunes Google's MedGemma 4B-it via QLoRA, then experiments with t
 
 **Evaluation:** Primary metric is CheXbert macro-F1 over 14 pathology labels (captures rare-label performance). Secondary: BERTScore-F1 with `microsoft/deberta-xlarge-mnli` (captures report fluency). All configurations are compared against matched **fair baselines** that use the identical prompt format but without the conditioning signal, isolating the causal effect of each strategy.
 
+**Training compute:** Both QLoRA runs (`uniform_v3` and `weighted_v4`) were trained on **Kaggle free GPU tier (2× NVIDIA T4, 16 GB VRAM total)** — no paid cloud resources. 4-bit NF4 quantization via bitsandbytes made the 4B-parameter model fit within this budget.
+
 **Infrastructure:** DVC pipeline for data versioning, Weights & Biases for experiment tracking, and a `DomainShiftAudit` class for systematic robustness evaluation under simulated distribution shifts.
 
 ---
