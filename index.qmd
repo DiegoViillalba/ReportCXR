@@ -17,7 +17,7 @@ The system fine-tunes Google's MedGemma 4B-it via QLoRA, then experiments with t
 
 ## What Was Built
 
-**Model:** `google/medgemma-4b-it` (frozen SigLIP vision encoder + Gemma 3 4B decoder) fine-tuned with QLoRA (rank 16, NF4 4-bit, target: `{q,k,v,o}_proj`) on the Indiana University Chest X-Ray dataset (3,955 train / 600 test studies). An ESS-based `WeightedRandomSampler` oversamples rare-label studies to counteract the dataset's 83% "No Finding" rate.
+**Model:** `google/medgemma-4b-it` (frozen SigLIP vision encoder + Gemma 3 4B decoder) fine-tuned with QLoRA (rank 16, NF4 4-bit, target: `{q,k,v,o}_proj`) on the Indiana University Chest X-Ray dataset (3,337 usable studies: 2,403 train / 334 val / 600 test, after filtering 514 studies with empty findings). An ESS-based `WeightedRandomSampler` oversamples rare-label studies to counteract severe class imbalance (38.7% "No Finding", 9 of 14 labels below 5% prevalence).
 
 **Evaluation:** Primary metric is CheXbert macro-F1 over 14 pathology labels (captures rare-label performance). Secondary: BERTScore-F1 with `microsoft/deberta-xlarge-mnli` (captures report fluency). All configurations are compared against matched **fair baselines** that use the identical prompt format but without the conditioning signal, isolating the causal effect of each strategy.
 
