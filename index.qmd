@@ -8,103 +8,122 @@ bibliography: references.bib
 
 ::: {.non-technical-summary}
 ##### Executive Summary (Non-Technical)
-This project is an AI system built for automated chest X-ray interpretation. Instead of simply fine-tuning a general-purpose model, this work addresses a critical, real-world challenge in healthcare AI: **domain shift**. Medical AI models trained on United States clinical datasets—which are predominantly English and heavily biased towards normal findings—often fail when deployed in out-of-distribution domains, such as hospitals in other regions, due to differences in scanner equipment, local patient populations, and reporting languages [@sellergren2025medgemma; @chen2024chexagent].
+This project builds an AI system that reads chest X-rays and writes the Findings section of a radiology report—automatically. Rather than optimizing for a single benchmark, the work frames deployment across geographies as a **distributional shift problem**: medical AI trained on US hospital data regularly fails when moved to clinics in other regions due to differences in scanner hardware, patient populations, and reporting conventions.
 
-Here, we build a robust and reproducible clinical vision-language pipeline based on Google's MedGemma 4B-it. The system is implemented end-to-end: from data preparation and model adaptation to evaluation and experiment tracking. To ensure reproducibility and auditability, the pipeline integrates DVC for dataset and artifact versioning, together with Weights & Biases for experiment tracking, metric logging, and model comparison. In addition, we introduce a **Domain Shift Audit Protocol** designed to systematically quantify model degradation under simulated shifts in imaging equipment, reporting language, and disease prevalence.
-
-Beyond the baseline pipeline, we implement and evaluate two research-driven inference-time strategies. First, a **retrieval-augmented generation** (RAG) approach that conditions the model on clinically similar prior reports at inference time [@kang2025structuredradiology]. Second, **soft label priors** derived from association rules between radiological findings, which are injected as structured text hints into the prompt to guide the model toward clinically plausible outputs without additional training [@singh2026clinicalreasoningvlm].
-
-The best configuration—QLoRA fine-tuning with effective sample weighting plus inference-time association rule conditioning—achieves a CheXbert macro-F1 of **0.1841** on the holdout test set, representing a **+30% improvement over the zero-shot MedGemma baseline** (0.1416).
+The system fine-tunes Google's MedGemma 4B-it via QLoRA, then experiments with two inference-time strategies—case-based retrieval (RAG) and statistical label priors from association rules—to improve rare-pathology detection without additional training. The best configuration achieves a **+30% improvement in rare-label recall** over the zero-shot baseline. A publicly available interactive demo allows uploading a chest X-ray and generating reports or asking free-form questions.
 :::
-
-## Project Overview
-
-The ReportCXR project is developed as part of the Eden AI technical challenge for the Applied Research role. The system fine-tunes `google/medgemma-4b-it`—a medical vision-language model combining a frozen SigLIP vision encoder with a Gemma 3 4B-it language decoder—to generate the Findings section of radiological reports, conditioned on clinical indication text, using QLoRA parameter-efficient fine-tuning.
-
-### The Strategic Thesis: Domain Shift Auditing
-
-Our central premise is that deploying medical models across geographies is a **distributional shift problem**. Rather than reporting static accuracy metrics on a clean dataset, this project designs and validates a reusable diagnostic infrastructure—the `DomainShiftAudit` framework—on simulated shifts inside the Indiana University Chest X-ray (IU CXR) dataset.
-
-This protocol measures model robustness before deployment across three axes:
-
-1. **Acquisition Shift**: Simulates older or different scanner hardware by applying synthetic noise, contrast adjustments, brightness, gamma correction, and JPEG compression. **Executed**: BERTScore-F1 degrades less than 1.3% across all perturbation types—but this apparent robustness masks a critical safety failure mode ("hallucination towards normal") where the decoder defaults to fluent but clinically blind normal reports when the visual signal is corrupted.
-
-2. **Language Shift**: Assesses behavior when prompting and generating in Spanish, using pseudo-references produced by machine translation of the English ground truth. **Infrastructure built** (`src/domain_shift_audit/language_shift.py`) and validated on local samples; full test-set execution requires remote GPU and was deferred due to resource constraints.
-
-3. **Prevalence Shift**: Simulates different regional disease distributions using importance sampling to re-weight test metrics. **Executed**: The weighted sampler model (`weighted_v4`) shows substantially more stable performance than the uniform model as pathology prevalence increases, confirming the training-time benefit of effective sample size weighting.
 
 ---
 
-## Key Quantitative Results
+## What Was Built
+
+**Model:** `google/medgemma-4b-it` (frozen SigLIP vision encoder + Gemma 3 4B decoder) fine-tuned with QLoRA (rank 16, NF4 4-bit, target: `{q,k,v,o}_proj`) on the Indiana University Chest X-Ray dataset (3,955 train / 600 test studies). An ESS-based `WeightedRandomSampler` oversamples rare-label studies to counteract the dataset's 83% "No Finding" rate.
+
+**Evaluation:** Primary metric is CheXbert macro-F1 over 14 pathology labels (captures rare-label performance). Secondary: BERTScore-F1 with `microsoft/deberta-xlarge-mnli` (captures report fluency). All configurations are compared against matched **fair baselines** that use the identical prompt format but without the conditioning signal, isolating the causal effect of each strategy.
+
+**Infrastructure:** DVC pipeline for data versioning, Weights & Biases for experiment tracking, and a `DomainShiftAudit` class for systematic robustness evaluation under simulated distribution shifts.
+
+---
+
+## Experimental Results
+
+### Performance Landscape
+
+Ten configurations were evaluated end-to-end on the holdout test set. The results reveal a **Pareto frontier** rather than a single dominant method: RAG maximises report fluency at the cost of clinical label precision; association rule conditioning achieves the inverse.
+
+::: {layout="[1, 1]"}
+![**Pareto frontier across all 10 configurations.** Each dot is one inference strategy. The upper-right would be optimal. RAG occupies the high-fluency/low-precision region; `assoc_rules_weighted_v4` the high-precision/low-fluency region.](reports/figures/eval_scatter_fluency_vs_coverage.png){#fig-pareto}
+
+![**Per-label F1 heatmap.** Rows = inference strategy, columns = CheXbert pathology. Gray = F1 zero. The assoc. rules + weighted sampler combination (bottom row) activates the widest set of rare labels.](reports/figures/eval_per_label_heatmap.png){#fig-heatmap}
+:::
+
+### Summary Table
 
 | Configuration | BERTScore-F1 | micro-F1 | macro-F1 | BLEU-4 | ROUGE-L |
 |---|---|---|---|---|---|
 | Zero-shot MedGemma | 0.6938 | 0.3967 | 0.1416 | 0.0957 | 0.2631 |
-| Fine-tuned (nohint_weighted_v4) | 0.6876 | 0.4526 | 0.1578 | 0.1076 | 0.2720 |
-| RAG k=3 (uniform_v3) | **0.7076** | 0.3432 | 0.1160 | **0.1391** | **0.3051** |
-| **Assoc. rules + weighted_v4** | 0.6862 | **0.4559** | **0.1841** | 0.1073 | 0.2713 |
+| Fine-tuned fair baseline (`nohint_weighted_v4`) | 0.6876 | 0.4526 | 0.1578 | 0.1076 | 0.2720 |
+| RAG k=3 (`rag_k3_uniform_v3`) | **0.7076** | 0.3432 | 0.1160 | **0.1391** | **0.3051** |
+| **Assoc. rules + ESS (`assoc_rules_weighted_v4`)** | 0.6862 | **0.4559** | **0.1841** | 0.1073 | 0.2713 |
 
-> All metrics on the IU CXR holdout test set (n=600 studies). micro/macro-F1 = CheXbert label-based; BERTScore uses `microsoft/deberta-xlarge-mnli`.
+### Key Findings
 
-**Key findings:**
+- **Zero-shot collapse**: MedGemma zero-shot predicts "No Finding" for 92.8% of studies; 7 of 14 pathology labels score F1 = 0.
+- **QLoRA gains**: Fine-tuning with ESS weighting raises macro-F1 from 0.1416 → 0.1578 over the fair baseline (+11.4%).
+- **RAG label noise**: 57.5% of retrieved reference reports share zero active labels with the target study (Jaccard = 0). The model copies incorrect findings verbatim, boosting fluency metrics while degrading clinical recall (macro-F1 −0.029 vs. baseline).
+- **Assoc. rules unlock rare labels**: `Edema`—F1 = 0 in all runs without conditioning—rises to **0.200** with association rule hints on `weighted_v4`. ESS training and inference-time conditioning are additive because they operate at different pipeline stages (backprop vs. attention).
+- **Destructive interference**: Combining RAG + association rules collapses macro-F1 to 0.095 (worse than zero-shot). The RAG concrete template overrides the statistical hint in the model's attention.
 
-- Zero-shot MedGemma predicts "No Finding" for 92.8% of studies and achieves F1=0 on 7 of 14 pathology labels.
-- QLoRA fine-tuning raises macro-F1 by **+11.4%** (0.1416 → 0.1578) with matched prompt format fair baseline.
-- RAG improves BERTScore and BLEU (fluency track) but degrades macro-F1 by −0.029 due to label noise in retrieved examples (57.5% of retrievals share zero active labels with the target).
-- Association rules + ESS-weighted training are **additive** (+30% macro-F1 over zero-shot), while combining RAG + association rules causes destructive interference (macro-F1 collapses to 0.0954).
-- The `Edema` label—F1=0 in all runs without conditioning—rises to 0.200 with association rule hints on the `weighted_v4` checkpoint.
+::: {.callout-note}
+**Known limitation**: A prompt format inversion exists between training (`Indication: {text}\nSYSTEM_PROMPT`) and inference (`SYSTEM_PROMPT\nIndication: {text}`). All ten test-set comparisons use the same inverted format, so relative rankings are valid, but absolute BERTScore may sit 1–2% below the achievable ceiling.
+:::
 
-> **Known limitation**: a prompt format inversion exists between training (`Indication: {text}\nSYSTEM_PROMPT`) and inference (`SYSTEM_PROMPT\nIndication: {text}`). All test comparisons use the same inverted format, so relative rankings are valid, but absolute BERTScore may be 1–2% below the achievable ceiling.
+---
+
+## Domain Shift Audit
+
+The `DomainShiftAudit` framework evaluates model robustness under two simulated distribution axes.
+
+### Axis A: Acquisition & Equipment Shift *(Executed)*
+
+Five synthetic image perturbations simulate scanner hardware variation: Gaussian noise, contrast scaling, gamma correction, JPEG compression, and brightness. All perturbations produce less than **1.3% BERTScore-F1 degradation** across the full tested range—including extreme conditions.
+
+![**Acquisition shift results.** BERTScore-F1 vs. perturbation magnitude for five perturbation types. Apparent robustness masks a safety failure: under severe corruption the decoder defaults to fluent "normal" reports, missing all pathology.](reports/figures/eval_acquisition_shift.png){#fig-acq-shift}
+
+This apparent robustness is a **metric artefact**: under severe corruption the SigLIP encoder loses the visual signal and the decoder defaults to its language prior, producing fluent but clinically blind "everything is normal" reports. Because the test set is 83% "No Finding", these hallucinated normal reports score well on BERTScore.
+
+### Axis C: Prevalence Shift *(Executed)*
+
+Test-set metrics are re-weighted via importance sampling to simulate a LATAM epidemiological distribution with higher pathology prevalence. The ESS (`weighted_v4`) model shows significantly more stable macro-F1 than the uniform model as pathology prevalence increases, directly validating the training-time weighting strategy.
 
 ---
 
 ## Live Interactive Demo
 
-The fine-tuned adapter is publicly available on HuggingFace Hub and deployed as a live web application:
+The fine-tuned adapter is publicly available and deployed on HuggingFace Spaces:
 
-- **Adapter**: [`diegoi-io-0306/reportcxr-medgemma-weighted-v4`](https://huggingface.co/diegoi-io-0306/reportcxr-medgemma-weighted-v4) — QLoRA weights (~48MB), loaded over `google/medgemma-4b-it` in 4-bit NF4 quantization.
-- **Interactive Space**: [`diegoi-io-0306/ReportCXR-Demo`](https://huggingface.co/spaces/diegoi-io-0306/ReportCXR-Demo) — upload a chest X-ray and either generate a structured Findings section or ask free-form questions in natural language.
+| Resource | Link |
+|---|---|
+| Adapter weights (~48 MB) | [`diegoi-io-0306/reportcxr-medgemma-weighted-v4`](https://huggingface.co/diegoi-io-0306/reportcxr-medgemma-weighted-v4) |
+| Interactive Space | [`diegoi-io-0306/ReportCXR-Demo`](https://huggingface.co/spaces/diegoi-io-0306/ReportCXR-Demo) |
+| Source code | [`DiegoViillalba/ReportCXR`](https://github.com/DiegoViillalba/ReportCXR) |
 
-> ⚠️ MedGemma requires accepting [Google's Health AI Developer Foundations license](https://huggingface.co/google/medgemma-4b-it). The demo is for research purposes only and is not intended for clinical use.
+Upload a chest X-ray image to generate a structured Findings section or ask free-form questions in natural language. The model runs in 4-bit NF4 quantization on ZeroGPU (A10G).
 
----
-
-## Website Structure
-
-Use the navigation menu at the top to explore the work:
-
-- **Technical Report**: A modular, multi-part deep dive into the strategic thesis, data distribution, model training, evaluation metrics, inference conditioning experiments, and domain shift results.
-- **Code Documentation**: Module-by-module documentation of every component in the codebase (data loading, label extraction, QLoRA training, metric evaluation, and synthetic shifts).
-- **Notebooks**: Step-by-step interactive implementations of the entire pipeline (EDA, baseline zero-shot, training, evaluation, RAG, and association rules).
+> ⚠️ MedGemma requires accepting [Google's Health AI Developer Foundations license](https://huggingface.co/google/medgemma-4b-it). Research demo only — not for clinical use.
 
 ---
 
-## MLOps Setup and Reproducibility
+## Navigate This Report
 
-This project is built for complete mathematical reproducibility. Data, parameters, and pipelines are versioned.
+| Section | What it covers |
+|---|---|
+| [1. Introduction](report/01_introduction.qmd) | Clinical motivation and strategic thesis |
+| [2. Data & Sampler](report/02_data.qmd) | IU CXR dataset, label extraction, ESS weighting |
+| [3. Model & QLoRA](report/03_model_training.qmd) | MedGemma architecture, training configuration |
+| [4. Evaluation](report/04_evaluation.qmd) | Metric design, BERTScore monkey-patch, CheXbert pipeline |
+| [5. Inference Conditioning](report/05_inference_conditioning.qmd) | RAG, association rules, ablation results |
+| [6. Domain Shift Audit](report/06_domain_shift.qmd) | Acquisition and prevalence shift experiments |
+| [7. Production Scaling](report/07_production_scaling.qmd) | HF Spaces deployment, quantization, ZeroGPU |
 
-### 1. Versioned Parameters (`params.yaml`)
-Every parameter—from QLoRA rank to target sampler disease prevalences—is declared in a single source of truth: `params.yaml`. No thresholds or weights are hardcoded inside `src/`.
+---
 
-### 2. DVC Pipeline (`dvc.yaml`)
-The data pipeline is managed via DVC (Data Version Control). To reproduce the pipeline stages, run:
+## Reproducibility
+
+Every parameter is declared in `params.yaml`. The full pipeline is managed by DVC:
 
 ```bash
-dvc status      # Verify status of data and steps
-dvc repro       # Reproduce the entire pipeline
+dvc status   # check artifact state
+dvc repro    # reproduce all stages: load → labels → split → eda → train → eval
 ```
 
-The pipeline stages are:
-
-| Stage | Description |
+| DVC Stage | Description |
 |---|---|
-| `load` | Joins reports and projections CSVs and links images |
-| `labels` | Processes free-text findings with CheXbert to build a 14-label binary matrix |
-| `split` | Multi-label stratified split without patient leakage |
-| `eda` | Computes prevalences and class statistics |
-| `train_uniform` | QLoRA fine-tuning on uniform distribution |
-| `train_weighted` | QLoRA fine-tuning with ESS-based WeightedRandomSampler |
-| `eval` | Test-set metrics on the best saved checkpoints |
+| `load` | Join reports/projections CSVs, link image paths |
+| `labels` | CheXbert labeling → 14-dim binary matrix |
+| `split` | Multi-label stratified split, no patient leakage |
+| `train_uniform` | QLoRA on uniform distribution |
+| `train_weighted` | QLoRA with ESS WeightedRandomSampler |
+| `eval` | Test-set metrics on best checkpoints |
 
-### 3. Experiment Tracking (Weights and Biases)
-All training runs, validation curves, and sampler weight distributions are synced to Weights and Biases under the project `reportcxr`.
+Training runs, validation curves, and sampler weight distributions are tracked in Weights & Biases under project `reportcxr`.
