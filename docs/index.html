@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Diego Villalba (Applied Research Candidate)">
-<meta name="dcterms.date" content="2026-06-25">
+<meta name="dcterms.date" content="2026-06-26">
 
 <title>ReportCXR</title>
 <style>
@@ -57,27 +57,7 @@ div.sourceCode
 @media screen {
 pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
-/* CSS for citations */
-div.csl-bib-body { }
-div.csl-entry {
-  clear: both;
-  margin-bottom: 0em;
-}
-.hanging-indent div.csl-entry {
-  margin-left:2em;
-  text-indent:-2em;
-}
-div.csl-left-margin {
-  min-width:2em;
-  float:left;
-}
-div.csl-right-inline {
-  margin-left:2em;
-  padding-left:1em;
-}
-div.csl-indent {
-  margin-left: 2em;
-}</style>
+</style>
 
 
 <script src="site_libs/quarto-nav/quarto-nav.js"></script>
@@ -98,6 +78,9 @@ div.csl-indent {
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="site_libs/bootstrap/bootstrap-e9614ef202455b86b71b0557e717d80d.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script src="site_libs/quarto-contrib/glightbox/glightbox.min.js"></script>
+<link href="site_libs/quarto-contrib/glightbox/glightbox.min.css" rel="stylesheet">
+<link href="site_libs/quarto-contrib/glightbox/lightbox.css" rel="stylesheet">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -211,6 +194,10 @@ div.csl-indent {
     <a class="dropdown-item" href="./doc/domain_shift_modules.html">
  <span class="dropdown-text">Domain Shift Audit</span></a>
   </li>  
+        <li>
+    <a class="dropdown-item" href="./doc/demo_deployment.html">
+ <span class="dropdown-text">Demo &amp; Deployment</span></a>
+  </li>  
     </ul>
   </li>
   <li class="nav-item dropdown ">
@@ -264,17 +251,21 @@ div.csl-indent {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#project-overview" id="toc-project-overview" class="nav-link active" data-scroll-target="#project-overview">Project Overview</a>
+  <li><a href="#what-was-built" id="toc-what-was-built" class="nav-link active" data-scroll-target="#what-was-built">What Was Built</a></li>
+  <li><a href="#experimental-results" id="toc-experimental-results" class="nav-link" data-scroll-target="#experimental-results">Experimental Results</a>
   <ul class="collapse">
-  <li><a href="#the-strategic-thesis-domain-shift-auditing" id="toc-the-strategic-thesis-domain-shift-auditing" class="nav-link" data-scroll-target="#the-strategic-thesis-domain-shift-auditing">The Strategic Thesis: Domain Shift Auditing</a></li>
+  <li><a href="#performance-landscape" id="toc-performance-landscape" class="nav-link" data-scroll-target="#performance-landscape">Performance Landscape</a></li>
+  <li><a href="#summary-table" id="toc-summary-table" class="nav-link" data-scroll-target="#summary-table">Summary Table</a></li>
+  <li><a href="#key-findings" id="toc-key-findings" class="nav-link" data-scroll-target="#key-findings">Key Findings</a></li>
   </ul></li>
-  <li><a href="#website-structure" id="toc-website-structure" class="nav-link" data-scroll-target="#website-structure">Website Structure</a></li>
-  <li><a href="#mlops-setup-and-reproducibility" id="toc-mlops-setup-and-reproducibility" class="nav-link" data-scroll-target="#mlops-setup-and-reproducibility">MLOps Setup and Reproducibility</a>
+  <li><a href="#domain-shift-audit" id="toc-domain-shift-audit" class="nav-link" data-scroll-target="#domain-shift-audit">Domain Shift Audit</a>
   <ul class="collapse">
-  <li><a href="#versioned-parameters-params.yaml" id="toc-versioned-parameters-params.yaml" class="nav-link" data-scroll-target="#versioned-parameters-params.yaml">1. Versioned Parameters (params.yaml)</a></li>
-  <li><a href="#dvc-pipeline-dvc.yaml" id="toc-dvc-pipeline-dvc.yaml" class="nav-link" data-scroll-target="#dvc-pipeline-dvc.yaml">2. DVC Pipeline (dvc.yaml)</a></li>
-  <li><a href="#experiment-tracking-weights-and-biases" id="toc-experiment-tracking-weights-and-biases" class="nav-link" data-scroll-target="#experiment-tracking-weights-and-biases">3. Experiment Tracking (Weights and Biases)</a></li>
+  <li><a href="#axis-a-acquisition-equipment-shift-executed" id="toc-axis-a-acquisition-equipment-shift-executed" class="nav-link" data-scroll-target="#axis-a-acquisition-equipment-shift-executed">Axis A: Acquisition &amp; Equipment Shift <em>(Executed)</em></a></li>
+  <li><a href="#axis-c-prevalence-shift-executed" id="toc-axis-c-prevalence-shift-executed" class="nav-link" data-scroll-target="#axis-c-prevalence-shift-executed">Axis C: Prevalence Shift <em>(Executed)</em></a></li>
   </ul></li>
+  <li><a href="#live-interactive-demo" id="toc-live-interactive-demo" class="nav-link" data-scroll-target="#live-interactive-demo">Live Interactive Demo</a></li>
+  <li><a href="#navigate-this-report" id="toc-navigate-this-report" class="nav-link" data-scroll-target="#navigate-this-report">Navigate This Report</a></li>
+  <li><a href="#reproducibility" id="toc-reproducibility" class="nav-link" data-scroll-target="#reproducibility">Reproducibility</a></li>
   </ul>
 </nav>
     </div>
@@ -301,7 +292,7 @@ div.csl-indent {
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">June 25, 2026</p>
+      <p class="date">June 26, 2026</p>
     </div>
   </div>
   
@@ -315,86 +306,278 @@ div.csl-indent {
 
 <section id="executive-summary-non-technical" class="level5 non-technical-summary">
 <h5 class="anchored" data-anchor-id="executive-summary-non-technical">Executive Summary (Non-Technical)</h5>
-<p>This project is an AI system built for automated chest X-ray interpretation. Instead of simply fine-tuning a general-purpose model, this work addresses a critical, real-world challenge in healthcare AI: domain shift. Medical AI models trained on United States clinical datasets (which are predominantly English and heavily biased towards normal findings) often fail when deployed out of distribution domains, like hospitals in other regions due to differences in scanner equipment, local patient populations (prevalences of disease), and local reporting languages <span class="citation" data-cites="sellergren2025medgemma">(<a href="#ref-sellergren2025medgemma" role="doc-biblioref">Sellergren et al. 2025</a>)</span>, <span class="citation" data-cites="chen2024chexagent">(<a href="#ref-chen2024chexagent" role="doc-biblioref">Chen et al. 2024</a>)</span>.</p>
-<p>Here, we build a robust and reproducible clinical vision-language pipeline based on Google’s MedGemma 4B-it. The system is implemented end-to-end, from data preparation and model adaptation to evaluation and experiment tracking. To ensure reproducibility and auditability, the pipeline integrates DVC for dataset and artifact versioning, together with Weights &amp; Biases for experiment tracking, metric logging, and model comparison. In addition, we introduce a Domain Shift Audit Protocol designed to systematically quantify model degradation under simulated shifts in imaging equipment, reporting language, and disease prevalence.</p>
-<p>Beyond this baseline pipeline, we implement and evaluate two research-driven extensions inspired by recent work. First, we incorporate a retrieval-augmented generation strategy that conditions the model on clinically similar prior reports <span class="citation" data-cites="kang2025structuredradiology">(<a href="#ref-kang2025structuredradiology" role="doc-biblioref">Kang et al. 2025</a>)</span>, allowing the system to use case-based context at inference time. Second, we introduce soft label priors derived from association rules between radiological findings and diagnoses, which are injected into the prompting or decoding process to guide the model toward clinically plausible outputs without requiring additional supervised fine-tuning data <span class="citation" data-cites="singh2026clinicalreasoningvlm">(<a href="#ref-singh2026clinicalreasoningvlm" role="doc-biblioref">Singh et al. 2026</a>)</span>.</p>
+<p>This project builds an AI system that reads chest X-rays and writes the Findings section of a radiology report—automatically. Rather than optimizing for a single benchmark, the work frames deployment across geographies as a <strong>distributional shift problem</strong>: medical AI trained on US hospital data regularly fails when moved to clinics in other regions due to differences in scanner hardware, patient populations, and reporting conventions.</p>
+<p>The system fine-tunes Google’s MedGemma 4B-it via QLoRA, then experiments with two inference-time strategies—case-based retrieval (RAG) and statistical label priors from association rules—to improve rare-pathology detection without additional training. The best configuration achieves a <strong>+30% improvement in rare-label recall</strong> over the zero-shot baseline. A publicly available interactive demo allows uploading a chest X-ray and generating reports or asking free-form questions.</p>
 </section>
-<section id="project-overview" class="level2">
-<h2 class="anchored" data-anchor-id="project-overview">Project Overview</h2>
-<p>The ReportCXR project is developed as part of the Eden AI technical challenge for the Applied Research role. The system fine-tunes a medical vision-language model, google/medgemma-4b-it (which combines a frozen medical SigLIP image encoder and a Gemma 3 4B-it language decoder), to generate radiological reports (specifically the Findings section) conditioned on Clinical Indications.</p>
-<section id="the-strategic-thesis-domain-shift-auditing" class="level3">
-<h3 class="anchored" data-anchor-id="the-strategic-thesis-domain-shift-auditing">The Strategic Thesis: Domain Shift Auditing</h3>
-<p>Our central premise is that deploying medical models across geographies is a distributional shift problem. Rather than reporting static accuracy metrics on a clean dataset, this project designs and validates a reusable diagnostic infrastructure—the DomainShiftAudit framework—on simulated shifts inside the Indiana University Chest X-ray (IU CXR) dataset.</p>
-<p>This protocol acts as a diagnostic suite. It measures the robustness of models before they go live:</p>
-<ol type="1">
-<li><strong>Acquisition Shift</strong>: Simulates older equipment or different scanner manufacturers by applying synthetic noise, contrast adjustments, and compression.</li>
-<li><strong>Language Shift</strong>: Assesses how a model trained in English performs when prompting and generating in Spanish.</li>
-<li><strong>Prevalence Shift</strong>: Simulates different disease rates using importance sampling to evaluate how the model handles a LATAM patient distribution.</li>
-</ol>
+<hr>
+<section id="what-was-built" class="level2">
+<h2 class="anchored" data-anchor-id="what-was-built">What Was Built</h2>
+<p><strong>Model:</strong> <code>google/medgemma-4b-it</code> (frozen SigLIP vision encoder + Gemma 3 4B decoder) fine-tuned with QLoRA (rank 16, NF4 4-bit, target: <code>{q,k,v,o}_proj</code>) on the Indiana University Chest X-Ray dataset (3,337 usable studies: 2,403 train / 334 val / 600 test, after filtering 514 studies with empty findings). An ESS-based <code>WeightedRandomSampler</code> oversamples rare-label studies to counteract severe class imbalance (38.7% “No Finding”, 9 of 14 labels below 5% prevalence).</p>
+<p><strong>Evaluation:</strong> Primary metric is CheXbert macro-F1 over 14 pathology labels (captures rare-label performance). Secondary: BERTScore-F1 with <code>microsoft/deberta-xlarge-mnli</code> (captures report fluency). All configurations are compared against matched <strong>fair baselines</strong> that use the identical prompt format but without the conditioning signal, isolating the causal effect of each strategy.</p>
+<p><strong>Training compute:</strong> Both QLoRA runs (<code>uniform_v3</code> and <code>weighted_v4</code>) were trained on <strong>Kaggle free GPU tier (2× NVIDIA T4, 16 GB VRAM total)</strong> — no paid cloud resources. 4-bit NF4 quantization via bitsandbytes made the 4B-parameter model fit within this budget.</p>
+<p><strong>Infrastructure:</strong> DVC pipeline for data versioning, Weights &amp; Biases for experiment tracking, and a <code>DomainShiftAudit</code> class for systematic robustness evaluation under simulated distribution shifts.</p>
+<hr>
+</section>
+<section id="experimental-results" class="level2">
+<h2 class="anchored" data-anchor-id="experimental-results">Experimental Results</h2>
+<section id="performance-landscape" class="level3">
+<h3 class="anchored" data-anchor-id="performance-landscape">Performance Landscape</h3>
+<p>Ten configurations were evaluated end-to-end on the holdout test set. The results reveal a <strong>Pareto frontier</strong> rather than a single dominant method: RAG maximises report fluency at the cost of clinical label precision; association rule conditioning achieves the inverse.</p>
+<div class="quarto-layout-panel" data-layout="[1, 1]">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div id="fig-pareto" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-pareto-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<a href="reports/figures/eval_scatter_fluency_vs_coverage.png" class="lightbox" data-gallery="quarto-lightbox-gallery-1" title="Figure&nbsp;1: Pareto frontier across all 10 configurations. Each dot is one inference strategy. The upper-right would be optimal. RAG occupies the high-fluency/low-precision region; assoc_rules_weighted_v4 the high-precision/low-fluency region."><img src="reports/figures/eval_scatter_fluency_vs_coverage.png" class="img-fluid figure-img"></a>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-pareto-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1: <strong>Pareto frontier across all 10 configurations.</strong> Each dot is one inference strategy. The upper-right would be optimal. RAG occupies the high-fluency/low-precision region; <code>assoc_rules_weighted_v4</code> the high-precision/low-fluency region.
+</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div id="fig-heatmap" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-heatmap-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<a href="reports/figures/eval_per_label_heatmap.png" class="lightbox" data-gallery="quarto-lightbox-gallery-2" title="Figure&nbsp;2: Per-label F1 heatmap. Rows = inference strategy, columns = CheXbert pathology. Gray = F1 zero. The assoc. rules + weighted sampler combination (bottom row) activates the widest set of rare labels."><img src="reports/figures/eval_per_label_heatmap.png" class="img-fluid figure-img"></a>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-heatmap-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2: <strong>Per-label F1 heatmap.</strong> Rows = inference strategy, columns = CheXbert pathology. Gray = F1 zero. The assoc. rules + weighted sampler combination (bottom row) activates the widest set of rare labels.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="summary-table" class="level3">
+<h3 class="anchored" data-anchor-id="summary-table">Summary Table</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Configuration</th>
+<th>BERTScore-F1</th>
+<th>micro-F1</th>
+<th>macro-F1</th>
+<th>BLEU-4</th>
+<th>ROUGE-L</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Zero-shot MedGemma</td>
+<td>0.6938</td>
+<td>0.3967</td>
+<td>0.1416</td>
+<td>0.0957</td>
+<td>0.2631</td>
+</tr>
+<tr class="even">
+<td>Fine-tuned fair baseline (<code>nohint_weighted_v4</code>)</td>
+<td>0.6876</td>
+<td>0.4526</td>
+<td>0.1578</td>
+<td>0.1076</td>
+<td>0.2720</td>
+</tr>
+<tr class="odd">
+<td>RAG k=3 (<code>rag_k3_uniform_v3</code>)</td>
+<td><strong>0.7076</strong></td>
+<td>0.3432</td>
+<td>0.1160</td>
+<td><strong>0.1391</strong></td>
+<td><strong>0.3051</strong></td>
+</tr>
+<tr class="even">
+<td><strong>Assoc. rules + ESS (<code>assoc_rules_weighted_v4</code>)</strong></td>
+<td>0.6862</td>
+<td><strong>0.4559</strong></td>
+<td><strong>0.1841</strong></td>
+<td>0.1073</td>
+<td>0.2713</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="key-findings" class="level3">
+<h3 class="anchored" data-anchor-id="key-findings">Key Findings</h3>
+<ul>
+<li><strong>Zero-shot collapse</strong>: MedGemma zero-shot predicts “No Finding” for 92.8% of studies; 7 of 14 pathology labels score F1 = 0.</li>
+<li><strong>QLoRA gains</strong>: Fine-tuning with ESS weighting raises macro-F1 from 0.1416 → 0.1578 over the fair baseline (+11.4%).</li>
+<li><strong>RAG label noise</strong>: 57.5% of retrieved reference reports share zero active labels with the target study (Jaccard = 0). The model copies incorrect findings verbatim, boosting fluency metrics while degrading clinical recall (macro-F1 −0.029 vs.&nbsp;baseline).</li>
+<li><strong>Assoc. rules unlock rare labels</strong>: <code>Edema</code>—F1 = 0 in all runs without conditioning—rises to <strong>0.200</strong> with association rule hints on <code>weighted_v4</code>. ESS training and inference-time conditioning are additive because they operate at different pipeline stages (backprop vs.&nbsp;attention).</li>
+<li><strong>Destructive interference</strong>: Combining RAG + association rules collapses macro-F1 to 0.095 (worse than zero-shot). The RAG concrete template overrides the statistical hint in the model’s attention.</li>
+</ul>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><strong>Known limitation</strong>: A prompt format inversion exists between training (<code>Indication: {text}\nSYSTEM_PROMPT</code>) and inference (<code>SYSTEM_PROMPT\nIndication: {text}</code>). All ten test-set comparisons use the same inverted format, so relative rankings are valid, but absolute BERTScore may sit 1–2% below the achievable ceiling.</p>
+</div>
+</div>
 <hr>
 </section>
 </section>
-<section id="website-structure" class="level2">
-<h2 class="anchored" data-anchor-id="website-structure">Website Structure</h2>
-<p>Use the navigation menu at the top to explore the work:</p>
-<ul>
-<li><strong>Technical Report</strong>: A modular, multi-part deep dive into the strategic thesis, data distribution, model training, evaluation metrics, domain shift experiments, and production scaling.</li>
-<li><strong>Code Documentation</strong>: Detailed module-by-module documentation of every component in the codebase (data loading, label extraction, QLoRA training, metric evaluation, and synthetic shifts).</li>
-<li><strong>Notebooks</strong>: Step-by-step interactive implementations of our entire pipeline (EDA, baseline zero-shot, training, and evaluation).</li>
-</ul>
+<section id="domain-shift-audit" class="level2">
+<h2 class="anchored" data-anchor-id="domain-shift-audit">Domain Shift Audit</h2>
+<p>The <code>DomainShiftAudit</code> framework evaluates model robustness under two simulated distribution axes.</p>
+<section id="axis-a-acquisition-equipment-shift-executed" class="level3">
+<h3 class="anchored" data-anchor-id="axis-a-acquisition-equipment-shift-executed">Axis A: Acquisition &amp; Equipment Shift <em>(Executed)</em></h3>
+<p>Five synthetic image perturbations simulate scanner hardware variation: Gaussian noise, contrast scaling, gamma correction, JPEG compression, and brightness. All perturbations produce less than <strong>1.3% BERTScore-F1 degradation</strong> across the full tested range—including extreme conditions.</p>
+<div id="fig-acq-shift" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-acq-shift-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<a href="reports/figures/eval_acquisition_shift.png" class="lightbox" data-gallery="quarto-lightbox-gallery-3" title="Figure&nbsp;3: Acquisition shift results. BERTScore-F1 vs.&nbsp;perturbation magnitude for five perturbation types. Apparent robustness masks a safety failure: under severe corruption the decoder defaults to fluent “normal” reports, missing all pathology."><img src="reports/figures/eval_acquisition_shift.png" class="img-fluid figure-img"></a>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-acq-shift-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;3: <strong>Acquisition shift results.</strong> BERTScore-F1 vs.&nbsp;perturbation magnitude for five perturbation types. Apparent robustness masks a safety failure: under severe corruption the decoder defaults to fluent “normal” reports, missing all pathology.
+</figcaption>
+</figure>
+</div>
+<p>This apparent robustness is a <strong>metric artefact</strong>: under severe corruption the SigLIP encoder loses the visual signal and the decoder defaults to its language prior, producing fluent but clinically blind “everything is normal” reports. Because the test set is 83% “No Finding”, these hallucinated normal reports score well on BERTScore.</p>
+</section>
+<section id="axis-c-prevalence-shift-executed" class="level3">
+<h3 class="anchored" data-anchor-id="axis-c-prevalence-shift-executed">Axis C: Prevalence Shift <em>(Executed)</em></h3>
+<p>Test-set metrics are re-weighted via importance sampling to simulate a LATAM epidemiological distribution with higher pathology prevalence. The ESS (<code>weighted_v4</code>) model shows significantly more stable macro-F1 than the uniform model as pathology prevalence increases, directly validating the training-time weighting strategy.</p>
 <hr>
 </section>
-<section id="mlops-setup-and-reproducibility" class="level2">
-<h2 class="anchored" data-anchor-id="mlops-setup-and-reproducibility">MLOps Setup and Reproducibility</h2>
-<p>This project is built for complete mathematical reproducibility. Data, parameters, and pipelines are versioned.</p>
-<section id="versioned-parameters-params.yaml" class="level3">
-<h3 class="anchored" data-anchor-id="versioned-parameters-params.yaml">1. Versioned Parameters (params.yaml)</h3>
-<p>Every parameter (from QLoRA rank to target sampler disease prevalences) is declared in a single source of truth: <a href="file:///Users/diegovillaba/Code/ReportCXR/params.yaml">params.yaml</a>. No thresholds or weights are hardcoded inside the code in <code>src/</code>.</p>
 </section>
-<section id="dvc-pipeline-dvc.yaml" class="level3">
-<h3 class="anchored" data-anchor-id="dvc-pipeline-dvc.yaml">2. DVC Pipeline (dvc.yaml)</h3>
-<p>The data pipeline is managed via DVC (Data Version Control). To reproduce the pipeline stages, run:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Verify status of data and steps</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">dvc</span> status</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Reproduce the entire pipeline (loading -&gt; labeling -&gt; splitting -&gt; training -&gt; evaluation)</span></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="ex">dvc</span> repro</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>The pipeline contains the following stages defined in <a href="file:///Users/diegovillaba/Code/ReportCXR/dvc.yaml">dvc.yaml</a>:</p>
-<ul>
-<li><code>load</code>: Joins reports and projections CSVs and links images.</li>
-<li><code>labels</code>: Processes free-text findings with a CheXbert labeler to build a 14-dimensional pathology matrix.</li>
-<li><code>split</code>: Employs iterative multi-label stratification to split studies cleanly without patient leakage.</li>
-<li><code>eda</code>: Computes prevalences and class statistics, outputting training distribution plots.</li>
-<li><code>train_uniform</code>: Trains QLoRA on a uniform distribution.</li>
-<li><code>train_weighted</code>: Trains QLoRA with active sampling weights.</li>
-<li><code>eval</code>: Computes test metrics on the best saved models.</li>
-</ul>
+<section id="live-interactive-demo" class="level2">
+<h2 class="anchored" data-anchor-id="live-interactive-demo">Live Interactive Demo</h2>
+<p>The fine-tuned adapter is publicly available and deployed on HuggingFace Spaces:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Resource</th>
+<th>Link</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Adapter weights (~48 MB)</td>
+<td><a href="https://huggingface.co/diegoi-io-0306/reportcxr-medgemma-weighted-v4"><code>diegoi-io-0306/reportcxr-medgemma-weighted-v4</code></a></td>
+</tr>
+<tr class="even">
+<td>Interactive Space</td>
+<td><a href="https://huggingface.co/spaces/diegoi-io-0306/ReportCXR-Demo"><code>diegoi-io-0306/ReportCXR-Demo</code></a></td>
+</tr>
+<tr class="odd">
+<td>Source code</td>
+<td><a href="https://github.com/DiegoViillalba/ReportCXR"><code>DiegoViillalba/ReportCXR</code></a></td>
+</tr>
+</tbody>
+</table>
+<p>Upload a chest X-ray image to generate a structured Findings section or ask free-form questions in natural language. The model runs in 4-bit NF4 quantization on ZeroGPU (A10G).</p>
+<blockquote class="blockquote">
+<p>⚠️ MedGemma requires accepting <a href="https://huggingface.co/google/medgemma-4b-it">Google’s Health AI Developer Foundations license</a>. Research demo only — not for clinical use.</p>
+</blockquote>
+<hr>
 </section>
-<section id="experiment-tracking-weights-and-biases" class="level3">
-<h3 class="anchored" data-anchor-id="experiment-tracking-weights-and-biases">3. Experiment Tracking (Weights and Biases)</h3>
-<p>All training runs, validation curves, and sampler weight distributions are synced to Weights and Biases under the project <code>reportcxr</code>.</p>
+<section id="navigate-this-report" class="level2">
+<h2 class="anchored" data-anchor-id="navigate-this-report">Navigate This Report</h2>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Section</th>
+<th>What it covers</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="./report/01_introduction.html">1. Introduction</a></td>
+<td>Clinical motivation and strategic thesis</td>
+</tr>
+<tr class="even">
+<td><a href="./report/02_data.html">2. Data &amp; Sampler</a></td>
+<td>IU CXR dataset, label extraction, ESS weighting</td>
+</tr>
+<tr class="odd">
+<td><a href="./report/03_model_training.html">3. Model &amp; QLoRA</a></td>
+<td>MedGemma architecture, training configuration</td>
+</tr>
+<tr class="even">
+<td><a href="./report/04_evaluation.html">4. Evaluation</a></td>
+<td>Metric design, BERTScore monkey-patch, CheXbert pipeline</td>
+</tr>
+<tr class="odd">
+<td><a href="./report/05_inference_conditioning.html">5. Inference Conditioning</a></td>
+<td>RAG, association rules, ablation results</td>
+</tr>
+<tr class="even">
+<td><a href="./report/06_domain_shift.html">6. Domain Shift Audit</a></td>
+<td>Acquisition and prevalence shift experiments</td>
+</tr>
+<tr class="odd">
+<td><a href="./report/07_production_scaling.html">7. Production Scaling</a></td>
+<td>HF Spaces deployment, quantization, ZeroGPU</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="reproducibility" class="level2">
+<h2 class="anchored" data-anchor-id="reproducibility">Reproducibility</h2>
+<p>Every parameter is declared in <code>params.yaml</code>. The full pipeline is managed by DVC:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">dvc</span> status   <span class="co"># check artifact state</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">dvc</span> repro    <span class="co"># reproduce all stages: load → labels → split → eda → train → eval</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>DVC Stage</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>load</code></td>
+<td>Join reports/projections CSVs, link image paths</td>
+</tr>
+<tr class="even">
+<td><code>labels</code></td>
+<td>CheXbert labeling → 14-dim binary matrix</td>
+</tr>
+<tr class="odd">
+<td><code>split</code></td>
+<td>Multi-label stratified split, no patient leakage</td>
+</tr>
+<tr class="even">
+<td><code>train_uniform</code></td>
+<td>QLoRA on uniform distribution</td>
+</tr>
+<tr class="odd">
+<td><code>train_weighted</code></td>
+<td>QLoRA with ESS WeightedRandomSampler</td>
+</tr>
+<tr class="even">
+<td><code>eval</code></td>
+<td>Test-set metrics on best checkpoints</td>
+</tr>
+</tbody>
+</table>
+<p>Training runs, validation curves, and sampler weight distributions are tracked in Weights &amp; Biases under project <code>reportcxr</code>.</p>
 
 
 <!-- -->
 
-
-</section>
 </section>
 
-<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography" id="quarto-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list">
-<div id="ref-chen2024chexagent" class="csl-entry" role="listitem">
-Chen, Zhihong, Maya Varma, Justin Xu, Magdalini Paschali, Dave Van Veen, Andrew Johnston, Alaa Youssef, et al. 2024. <span>“A Vision-Language Foundation Model to Enhance Efficiency of Chest x-Ray Interpretation.”</span> <em>arXiv Preprint arXiv:2401.12208</em>, January. <a href="https://arxiv.org/abs/2401.12208">https://arxiv.org/abs/2401.12208</a>.
-</div>
-<div id="ref-kang2025structuredradiology" class="csl-entry" role="listitem">
-Kang, Seongjae, Dong Bok Lee, Juho Jung, Dongseop Kim, Won Hwa Kim, and Sunghoon Joo. 2025. <span>“Automated Structured Radiology Report Generation with Rich Clinical Context.”</span> <em>arXiv Preprint arXiv:2510.00428</em>, October. <a href="https://arxiv.org/abs/2510.00428">https://arxiv.org/abs/2510.00428</a>.
-</div>
-<div id="ref-sellergren2025medgemma" class="csl-entry" role="listitem">
-Sellergren, Andrew, Sahar Kazemzadeh, Tiam Jaroensri, Atilla Kiraly, Madeleine Traverse, Timo Kohlberger, Shawn Xu, et al. 2025. <span>“MedGemma Technical Report.”</span> <em>arXiv Preprint arXiv:2507.05201</em>, July. <a href="https://arxiv.org/abs/2507.05201">https://arxiv.org/abs/2507.05201</a>.
-</div>
-<div id="ref-singh2026clinicalreasoningvlm" class="csl-entry" role="listitem">
-Singh, Vikash, Debargha Ganguly, Haotian Yu, Chengwei Zhou, Prerna Singh, Brandon Lee, Vipin Chaudhary, and Gourav Datta. 2026. <span>“Toward Guarantees for Clinical Reasoning in Vision Language Models via Formal Verification.”</span> <em>arXiv Preprint arXiv:2602.24111</em>, February. <a href="https://arxiv.org/abs/2602.24111">https://arxiv.org/abs/2602.24111</a>.
-</div>
-</div></section></div></main> <!-- /main -->
+</main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
     const icon = "";
@@ -850,76 +1033,133 @@ Singh, Vikash, Debargha Ganguly, Haotian Yu, Chengwei Zhou, Prerna Singh, Brando
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "ReportCXR"</span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="an">subtitle:</span><span class="co"> "Automated Radiological Report Generation via Vision-Language Models"</span></span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="an">author:</span><span class="co"> "Diego Villalba (Applied Research Candidate)"</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="an">date:</span><span class="co"> "2026-06-25"</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="an">date:</span><span class="co"> "2026-06-26"</span></span>
 <span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="an">bibliography:</span><span class="co"> references.bib</span></span>
 <span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
 <span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>::: {.non-technical-summary}</span>
 <span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="fu">##### Executive Summary (Non-Technical)</span></span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>This project is an AI system built for automated chest X-ray interpretation. Instead of simply fine-tuning a general-purpose model, this work addresses a critical, real-world challenge in healthcare AI: domain shift. Medical AI models trained on United States clinical datasets (which are predominantly English and heavily biased towards normal findings) often fail when deployed out of distribution domains, like hospitals in other regions due to differences in scanner equipment, local patient populations (prevalences of disease), and local reporting languages <span class="co">[</span><span class="ot">@sellergren2025medgemma</span><span class="co">]</span>, <span class="co">[</span><span class="ot">@chen2024chexagent</span><span class="co">]</span>.</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>This project builds an AI system that reads chest X-rays and writes the Findings section of a radiology report—automatically. Rather than optimizing for a single benchmark, the work frames deployment across geographies as a **distributional shift problem**: medical AI trained on US hospital data regularly fails when moved to clinics in other regions due to differences in scanner hardware, patient populations, and reporting conventions.</span>
 <span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>Here, we build a robust and reproducible clinical vision-language pipeline based on Google’s MedGemma 4B-it. The system is implemented end-to-end, from data preparation and model adaptation to evaluation and experiment tracking. To ensure reproducibility and auditability, the pipeline integrates DVC for dataset and artifact versioning, together with Weights &amp; Biases for experiment tracking, metric logging, and model comparison. In addition, we introduce a Domain Shift Audit Protocol designed to systematically quantify model degradation under simulated shifts in imaging equipment, reporting language, and disease prevalence.</span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>Beyond this baseline pipeline, we implement and evaluate two research-driven extensions inspired by recent work. First, we incorporate a retrieval-augmented generation strategy that conditions the model on clinically similar prior reports <span class="co">[</span><span class="ot">@kang2025structuredradiology</span><span class="co">]</span>, allowing the system to use case-based context at inference time. Second, we introduce soft label priors derived from association rules between radiological findings and diagnoses, which are injected into the prompting or decoding process to guide the model toward clinically plausible outputs without requiring additional supervised fine-tuning data <span class="co">[</span><span class="ot">@singh2026clinicalreasoningvlm</span><span class="co">]</span>.</span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>:::</span>
-<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="fu">## Project Overview</span></span>
-<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>The ReportCXR project is developed as part of the Eden AI technical challenge for the Applied Research role. The system fine-tunes a medical vision-language model, google/medgemma-4b-it (which combines a frozen medical SigLIP image encoder and a Gemma 3 4B-it language decoder), to generate radiological reports (specifically the Findings section) conditioned on Clinical Indications.</span>
-<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="fu">### The Strategic Thesis: Domain Shift Auditing</span></span>
-<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>Our central premise is that deploying medical models across geographies is a distributional shift problem. Rather than reporting static accuracy metrics on a clean dataset, this project designs and validates a reusable diagnostic infrastructure—the DomainShiftAudit framework—on simulated shifts inside the Indiana University Chest X-ray (IU CXR) dataset.</span>
-<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>This protocol acts as a diagnostic suite. It measures the robustness of models before they go live:</span>
-<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>**Acquisition Shift**: Simulates older equipment or different scanner manufacturers by applying synthetic noise, contrast adjustments, and compression.</span>
-<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>**Language Shift**: Assesses how a model trained in English performs when prompting and generating in Spanish.</span>
-<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>**Prevalence Shift**: Simulates different disease rates using importance sampling to evaluate how the model handles a LATAM patient distribution.</span>
-<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>---</span>
-<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a><span class="fu">## Website Structure</span></span>
-<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>Use the navigation menu at the top to explore the work:</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>The system fine-tunes Google's MedGemma 4B-it via QLoRA, then experiments with two inference-time strategies—case-based retrieval (RAG) and statistical label priors from association rules—to improve rare-pathology detection without additional training. The best configuration achieves a **+30% improvement in rare-label recall** over the zero-shot baseline. A publicly available interactive demo allows uploading a chest X-ray and generating reports or asking free-form questions.</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="fu">## What Was Built</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>**Model:** <span class="in">`google/medgemma-4b-it`</span> (frozen SigLIP vision encoder + Gemma 3 4B decoder) fine-tuned with QLoRA (rank 16, NF4 4-bit, target: <span class="in">`{q,k,v,o}_proj`</span>) on the Indiana University Chest X-Ray dataset (3,337 usable studies: 2,403 train / 334 val / 600 test, after filtering 514 studies with empty findings). An ESS-based <span class="in">`WeightedRandomSampler`</span> oversamples rare-label studies to counteract severe class imbalance (38.7% "No Finding", 9 of 14 labels below 5% prevalence).</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>**Evaluation:** Primary metric is CheXbert macro-F1 over 14 pathology labels (captures rare-label performance). Secondary: BERTScore-F1 with `microsoft/deberta-xlarge-mnli` (captures report fluency). All configurations are compared against matched **fair baselines** that use the identical prompt format but without the conditioning signal, isolating the causal effect of each strategy.</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>**Training compute:** Both QLoRA runs (`uniform_v3` and `weighted_v4`) were trained on **Kaggle free GPU tier (2× NVIDIA T4, 16 GB VRAM total)** — no paid cloud resources. 4-bit NF4 quantization via bitsandbytes made the 4B-parameter model fit within this budget.</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>**Infrastructure:** DVC pipeline for data versioning, Weights &amp; Biases for experiment tracking, and a <span class="in">`DomainShiftAudit`</span> class for systematic robustness evaluation under simulated distribution shifts.</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="fu">## Experimental Results</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a><span class="fu">### Performance Landscape</span></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>Ten configurations were evaluated end-to-end on the holdout test set. The results reveal a **Pareto frontier** rather than a single dominant method: RAG maximises report fluency at the cost of clinical label precision; association rule conditioning achieves the inverse.</span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>::: {layout="<span class="co">[</span><span class="ot">1, 1</span><span class="co">]</span>"}</span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a><span class="al">![**Pareto frontier across all 10 configurations.** Each dot is one inference strategy. The upper-right would be optimal. RAG occupies the high-fluency/low-precision region; `assoc_rules_weighted_v4` the high-precision/low-fluency region.](reports/figures/eval_scatter_fluency_vs_coverage.png)</span>{#fig-pareto}</span>
 <span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**Technical Report**: A modular, multi-part deep dive into the strategic thesis, data distribution, model training, evaluation metrics, domain shift experiments, and production scaling.</span>
-<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**Code Documentation**: Detailed module-by-module documentation of every component in the codebase (data loading, label extraction, QLoRA training, metric evaluation, and synthetic shifts).</span>
-<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**Notebooks**: Step-by-step interactive implementations of our entire pipeline (EDA, baseline zero-shot, training, and evaluation).</span>
-<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a>---</span>
-<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a><span class="fu">## MLOps Setup and Reproducibility</span></span>
-<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a>This project is built for complete mathematical reproducibility. Data, parameters, and pipelines are versioned.</span>
-<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a><span class="fu">### 1. Versioned Parameters (params.yaml)</span></span>
-<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a>Every parameter (from QLoRA rank to target sampler disease prevalences) is declared in a single source of truth: <span class="co">[</span><span class="ot">params.yaml</span><span class="co">](file:///Users/diegovillaba/Code/ReportCXR/params.yaml)</span>. No thresholds or weights are hardcoded inside the code in <span class="in">`src/`</span>.</span>
-<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a><span class="fu">### 2. DVC Pipeline (dvc.yaml)</span></span>
-<span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a>The data pipeline is managed via DVC (Data Version Control). To reproduce the pipeline stages, run:</span>
-<span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-55"><a href="#cb2-55" aria-hidden="true" tabindex="-1"></a><span class="in">```bash</span></span>
-<span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a><span class="co"># Verify status of data and steps</span></span>
-<span id="cb2-57"><a href="#cb2-57" aria-hidden="true" tabindex="-1"></a><span class="ex">dvc</span> status</span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a><span class="al">![**Per-label F1 heatmap.** Rows = inference strategy, columns = CheXbert pathology. Gray = F1 zero. The assoc. rules + weighted sampler combination (bottom row) activates the widest set of rare labels.](reports/figures/eval_per_label_heatmap.png)</span>{#fig-heatmap}</span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a><span class="fu">### Summary Table</span></span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Configuration <span class="pp">|</span> BERTScore-F1 <span class="pp">|</span> micro-F1 <span class="pp">|</span> macro-F1 <span class="pp">|</span> BLEU-4 <span class="pp">|</span> ROUGE-L <span class="pp">|</span></span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|---|---|---|</span></span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Zero-shot MedGemma <span class="pp">|</span> 0.6938 <span class="pp">|</span> 0.3967 <span class="pp">|</span> 0.1416 <span class="pp">|</span> 0.0957 <span class="pp">|</span> 0.2631 <span class="pp">|</span></span>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Fine-tuned fair baseline (<span class="in">`nohint_weighted_v4`</span>) <span class="pp">|</span> 0.6876 <span class="pp">|</span> 0.4526 <span class="pp">|</span> 0.1578 <span class="pp">|</span> 0.1076 <span class="pp">|</span> 0.2720 <span class="pp">|</span></span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> RAG k=3 (<span class="in">`rag_k3_uniform_v3`</span>) <span class="pp">|</span> **0.7076** | 0.3432 | 0.1160 | **0.1391** | **0.3051** <span class="pp">|</span></span>
+<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Assoc. rules + ESS (`assoc_rules_weighted_v4`)** | 0.6862 | **0.4559** | **0.1841** <span class="pp">|</span> 0.1073 <span class="pp">|</span> 0.2713 <span class="pp">|</span></span>
+<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a><span class="fu">### Key Findings</span></span>
+<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Zero-shot collapse**: MedGemma zero-shot predicts "No Finding" for 92.8% of studies; 7 of 14 pathology labels score F1 = 0.</span>
+<span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**QLoRA gains**: Fine-tuning with ESS weighting raises macro-F1 from 0.1416 → 0.1578 over the fair baseline (+11.4%).</span>
+<span id="cb2-55"><a href="#cb2-55" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**RAG label noise**: 57.5% of retrieved reference reports share zero active labels with the target study (Jaccard = 0). The model copies incorrect findings verbatim, boosting fluency metrics while degrading clinical recall (macro-F1 −0.029 vs. baseline).</span>
+<span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Assoc. rules unlock rare labels**: `Edema`—F1 = 0 in all runs without conditioning—rises to **0.200** with association rule hints on <span class="in">`weighted_v4`</span>. ESS training and inference-time conditioning are additive because they operate at different pipeline stages (backprop vs. attention).</span>
+<span id="cb2-57"><a href="#cb2-57" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Destructive interference**: Combining RAG + association rules collapses macro-F1 to 0.095 (worse than zero-shot). The RAG concrete template overrides the statistical hint in the model's attention.</span>
 <span id="cb2-58"><a href="#cb2-58" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a><span class="co"># Reproduce the entire pipeline (loading -&gt; labeling -&gt; splitting -&gt; training -&gt; evaluation)</span></span>
-<span id="cb2-60"><a href="#cb2-60" aria-hidden="true" tabindex="-1"></a><span class="ex">dvc</span> repro</span>
-<span id="cb2-61"><a href="#cb2-61" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a>::: {.callout-note}</span>
+<span id="cb2-60"><a href="#cb2-60" aria-hidden="true" tabindex="-1"></a>**Known limitation**: A prompt format inversion exists between training (<span class="in">`Indication: {text}\nSYSTEM_PROMPT`</span>) and inference (<span class="in">`SYSTEM_PROMPT\nIndication: {text}`</span>). All ten test-set comparisons use the same inverted format, so relative rankings are valid, but absolute BERTScore may sit 1–2% below the achievable ceiling.</span>
+<span id="cb2-61"><a href="#cb2-61" aria-hidden="true" tabindex="-1"></a>:::</span>
 <span id="cb2-62"><a href="#cb2-62" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a>The pipeline contains the following stages defined in <span class="co">[</span><span class="ot">dvc.yaml</span><span class="co">](file:///Users/diegovillaba/Code/ReportCXR/dvc.yaml)</span>:</span>
+<span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a>---</span>
 <span id="cb2-64"><a href="#cb2-64" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span><span class="in">`load`</span>: Joins reports and projections CSVs and links images.</span>
-<span id="cb2-66"><a href="#cb2-66" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span><span class="in">`labels`</span>: Processes free-text findings with a CheXbert labeler to build a 14-dimensional pathology matrix.</span>
-<span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span><span class="in">`split`</span>: Employs iterative multi-label stratification to split studies cleanly without patient leakage.</span>
-<span id="cb2-68"><a href="#cb2-68" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span><span class="in">`eda`</span>: Computes prevalences and class statistics, outputting training distribution plots.</span>
-<span id="cb2-69"><a href="#cb2-69" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span><span class="in">`train_uniform`</span>: Trains QLoRA on a uniform distribution.</span>
-<span id="cb2-70"><a href="#cb2-70" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span><span class="in">`train_weighted`</span>: Trains QLoRA with active sampling weights.</span>
-<span id="cb2-71"><a href="#cb2-71" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span><span class="in">`eval`</span>: Computes test metrics on the best saved models.</span>
+<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a><span class="fu">## Domain Shift Audit</span></span>
+<span id="cb2-66"><a href="#cb2-66" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a>The <span class="in">`DomainShiftAudit`</span> framework evaluates model robustness under two simulated distribution axes.</span>
+<span id="cb2-68"><a href="#cb2-68" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-69"><a href="#cb2-69" aria-hidden="true" tabindex="-1"></a><span class="fu">### Axis A: Acquisition &amp; Equipment Shift *(Executed)*</span></span>
+<span id="cb2-70"><a href="#cb2-70" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-71"><a href="#cb2-71" aria-hidden="true" tabindex="-1"></a>Five synthetic image perturbations simulate scanner hardware variation: Gaussian noise, contrast scaling, gamma correction, JPEG compression, and brightness. All perturbations produce less than **1.3% BERTScore-F1 degradation** across the full tested range—including extreme conditions.</span>
 <span id="cb2-72"><a href="#cb2-72" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-73"><a href="#cb2-73" aria-hidden="true" tabindex="-1"></a><span class="fu">### 3. Experiment Tracking (Weights and Biases)</span></span>
-<span id="cb2-74"><a href="#cb2-74" aria-hidden="true" tabindex="-1"></a>All training runs, validation curves, and sampler weight distributions are synced to Weights and Biases under the project <span class="in">`reportcxr`</span>.</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
+<span id="cb2-73"><a href="#cb2-73" aria-hidden="true" tabindex="-1"></a><span class="al">![**Acquisition shift results.** BERTScore-F1 vs. perturbation magnitude for five perturbation types. Apparent robustness masks a safety failure: under severe corruption the decoder defaults to fluent "normal" reports, missing all pathology.](reports/figures/eval_acquisition_shift.png)</span>{#fig-acq-shift}</span>
+<span id="cb2-74"><a href="#cb2-74" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-75"><a href="#cb2-75" aria-hidden="true" tabindex="-1"></a>This apparent robustness is a **metric artefact**: under severe corruption the SigLIP encoder loses the visual signal and the decoder defaults to its language prior, producing fluent but clinically blind "everything is normal" reports. Because the test set is 83% "No Finding", these hallucinated normal reports score well on BERTScore.</span>
+<span id="cb2-76"><a href="#cb2-76" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-77"><a href="#cb2-77" aria-hidden="true" tabindex="-1"></a><span class="fu">### Axis C: Prevalence Shift *(Executed)*</span></span>
+<span id="cb2-78"><a href="#cb2-78" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-79"><a href="#cb2-79" aria-hidden="true" tabindex="-1"></a>Test-set metrics are re-weighted via importance sampling to simulate a LATAM epidemiological distribution with higher pathology prevalence. The ESS (<span class="in">`weighted_v4`</span>) model shows significantly more stable macro-F1 than the uniform model as pathology prevalence increases, directly validating the training-time weighting strategy.</span>
+<span id="cb2-80"><a href="#cb2-80" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-81"><a href="#cb2-81" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb2-82"><a href="#cb2-82" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-83"><a href="#cb2-83" aria-hidden="true" tabindex="-1"></a><span class="fu">## Live Interactive Demo</span></span>
+<span id="cb2-84"><a href="#cb2-84" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-85"><a href="#cb2-85" aria-hidden="true" tabindex="-1"></a>The fine-tuned adapter is publicly available and deployed on HuggingFace Spaces:</span>
+<span id="cb2-86"><a href="#cb2-86" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-87"><a href="#cb2-87" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Resource <span class="pp">|</span> Link <span class="pp">|</span></span>
+<span id="cb2-88"><a href="#cb2-88" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|</span></span>
+<span id="cb2-89"><a href="#cb2-89" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Adapter weights (~48 MB) <span class="pp">|</span> <span class="co">[</span><span class="ot">`diegoi-io-0306/reportcxr-medgemma-weighted-v4`</span><span class="co">](https://huggingface.co/diegoi-io-0306/reportcxr-medgemma-weighted-v4)</span> <span class="pp">|</span></span>
+<span id="cb2-90"><a href="#cb2-90" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Interactive Space <span class="pp">|</span> <span class="co">[</span><span class="ot">`diegoi-io-0306/ReportCXR-Demo`</span><span class="co">](https://huggingface.co/spaces/diegoi-io-0306/ReportCXR-Demo)</span> <span class="pp">|</span></span>
+<span id="cb2-91"><a href="#cb2-91" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Source code <span class="pp">|</span> <span class="co">[</span><span class="ot">`DiegoViillalba/ReportCXR`</span><span class="co">](https://github.com/DiegoViillalba/ReportCXR)</span> <span class="pp">|</span></span>
+<span id="cb2-92"><a href="#cb2-92" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-93"><a href="#cb2-93" aria-hidden="true" tabindex="-1"></a>Upload a chest X-ray image to generate a structured Findings section or ask free-form questions in natural language. The model runs in 4-bit NF4 quantization on ZeroGPU (A10G).</span>
+<span id="cb2-94"><a href="#cb2-94" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-95"><a href="#cb2-95" aria-hidden="true" tabindex="-1"></a><span class="at">&gt; ⚠️ MedGemma requires accepting </span><span class="co">[</span><span class="ot">Google's Health AI Developer Foundations license</span><span class="co">](https://huggingface.co/google/medgemma-4b-it)</span><span class="at">. Research demo only — not for clinical use.</span></span>
+<span id="cb2-96"><a href="#cb2-96" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-97"><a href="#cb2-97" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb2-98"><a href="#cb2-98" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-99"><a href="#cb2-99" aria-hidden="true" tabindex="-1"></a><span class="fu">## Navigate This Report</span></span>
+<span id="cb2-100"><a href="#cb2-100" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-101"><a href="#cb2-101" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Section <span class="pp">|</span> What it covers <span class="pp">|</span></span>
+<span id="cb2-102"><a href="#cb2-102" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|</span></span>
+<span id="cb2-103"><a href="#cb2-103" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="co">[</span><span class="ot">1. Introduction</span><span class="co">](report/01_introduction.qmd)</span> <span class="pp">|</span> Clinical motivation and strategic thesis <span class="pp">|</span></span>
+<span id="cb2-104"><a href="#cb2-104" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="co">[</span><span class="ot">2. Data &amp; Sampler</span><span class="co">](report/02_data.qmd)</span> <span class="pp">|</span> IU CXR dataset, label extraction, ESS weighting <span class="pp">|</span></span>
+<span id="cb2-105"><a href="#cb2-105" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="co">[</span><span class="ot">3. Model &amp; QLoRA</span><span class="co">](report/03_model_training.qmd)</span> <span class="pp">|</span> MedGemma architecture, training configuration <span class="pp">|</span></span>
+<span id="cb2-106"><a href="#cb2-106" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="co">[</span><span class="ot">4. Evaluation</span><span class="co">](report/04_evaluation.qmd)</span> <span class="pp">|</span> Metric design, BERTScore monkey-patch, CheXbert pipeline <span class="pp">|</span></span>
+<span id="cb2-107"><a href="#cb2-107" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="co">[</span><span class="ot">5. Inference Conditioning</span><span class="co">](report/05_inference_conditioning.qmd)</span> <span class="pp">|</span> RAG, association rules, ablation results <span class="pp">|</span></span>
+<span id="cb2-108"><a href="#cb2-108" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="co">[</span><span class="ot">6. Domain Shift Audit</span><span class="co">](report/06_domain_shift.qmd)</span> <span class="pp">|</span> Acquisition and prevalence shift experiments <span class="pp">|</span></span>
+<span id="cb2-109"><a href="#cb2-109" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="co">[</span><span class="ot">7. Production Scaling</span><span class="co">](report/07_production_scaling.qmd)</span> <span class="pp">|</span> HF Spaces deployment, quantization, ZeroGPU <span class="pp">|</span></span>
+<span id="cb2-110"><a href="#cb2-110" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-111"><a href="#cb2-111" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb2-112"><a href="#cb2-112" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-113"><a href="#cb2-113" aria-hidden="true" tabindex="-1"></a><span class="fu">## Reproducibility</span></span>
+<span id="cb2-114"><a href="#cb2-114" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-115"><a href="#cb2-115" aria-hidden="true" tabindex="-1"></a>Every parameter is declared in <span class="in">`params.yaml`</span>. The full pipeline is managed by DVC:</span>
+<span id="cb2-116"><a href="#cb2-116" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-117"><a href="#cb2-117" aria-hidden="true" tabindex="-1"></a><span class="in">```bash</span></span>
+<span id="cb2-118"><a href="#cb2-118" aria-hidden="true" tabindex="-1"></a><span class="ex">dvc</span> status   <span class="co"># check artifact state</span></span>
+<span id="cb2-119"><a href="#cb2-119" aria-hidden="true" tabindex="-1"></a><span class="ex">dvc</span> repro    <span class="co"># reproduce all stages: load → labels → split → eda → train → eval</span></span>
+<span id="cb2-120"><a href="#cb2-120" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb2-121"><a href="#cb2-121" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-122"><a href="#cb2-122" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> DVC Stage <span class="pp">|</span> Description <span class="pp">|</span></span>
+<span id="cb2-123"><a href="#cb2-123" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|</span></span>
+<span id="cb2-124"><a href="#cb2-124" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`load`</span> <span class="pp">|</span> Join reports/projections CSVs, link image paths <span class="pp">|</span></span>
+<span id="cb2-125"><a href="#cb2-125" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`labels`</span> <span class="pp">|</span> CheXbert labeling → 14-dim binary matrix <span class="pp">|</span></span>
+<span id="cb2-126"><a href="#cb2-126" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`split`</span> <span class="pp">|</span> Multi-label stratified split, no patient leakage <span class="pp">|</span></span>
+<span id="cb2-127"><a href="#cb2-127" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`train_uniform`</span> <span class="pp">|</span> QLoRA on uniform distribution <span class="pp">|</span></span>
+<span id="cb2-128"><a href="#cb2-128" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`train_weighted`</span> <span class="pp">|</span> QLoRA with ESS WeightedRandomSampler <span class="pp">|</span></span>
+<span id="cb2-129"><a href="#cb2-129" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`eval`</span> <span class="pp">|</span> Test-set metrics on best checkpoints <span class="pp">|</span></span>
+<span id="cb2-130"><a href="#cb2-130" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-131"><a href="#cb2-131" aria-hidden="true" tabindex="-1"></a>Training runs, validation curves, and sampler weight distributions are tracked in Weights &amp; Biases under project <span class="in">`reportcxr`</span>.</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
 </div></div></div></div></div>
 </div> <!-- /content -->
 <footer class="footer">
@@ -935,6 +1175,38 @@ Singh, Vikash, Debargha Ganguly, Haotian Yu, Chengwei Zhou, Prerna Singh, Brando
 </div>
   </div>
 </footer>
+<script>var lightboxQuarto = GLightbox({"closeEffect":"zoom","descPosition":"bottom","loop":false,"openEffect":"zoom","selector":".lightbox"});
+(function() {
+  let previousOnload = window.onload;
+  window.onload = () => {
+    if (previousOnload) {
+      previousOnload();
+    }
+    lightboxQuarto.on('slide_before_load', (data) => {
+      const { slideIndex, slideNode, slideConfig, player, trigger } = data;
+      const href = trigger.getAttribute('href');
+      if (href !== null) {
+        const imgEl = window.document.querySelector(`a[href="${href}"] img`);
+        if (imgEl !== null) {
+          const srcAttr = imgEl.getAttribute("src");
+          if (srcAttr && srcAttr.startsWith("data:")) {
+            slideConfig.href = srcAttr;
+          }
+        }
+      } 
+    });
+  
+    lightboxQuarto.on('slide_after_load', (data) => {
+      const { slideIndex, slideNode, slideConfig, player, trigger } = data;
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(slideNode);
+      }
+    });
+  
+  };
+  
+})();
+          </script>
 
 
 

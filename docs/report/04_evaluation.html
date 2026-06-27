@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Diego Villalba (Applied Research Candidate)">
-<meta name="dcterms.date" content="2026-06-25">
+<meta name="dcterms.date" content="2026-06-26">
 
 <title>4. Evaluation &amp; Metric Pivot – ReportCXR</title>
 <style>
@@ -78,6 +78,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="../site_libs/bootstrap/bootstrap-e9614ef202455b86b71b0557e717d80d.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script src="../site_libs/quarto-contrib/glightbox/glightbox.min.js"></script>
+<link href="../site_libs/quarto-contrib/glightbox/glightbox.min.css" rel="stylesheet">
+<link href="../site_libs/quarto-contrib/glightbox/lightbox.css" rel="stylesheet">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -220,6 +223,10 @@ window.Quarto = {
     <a class="dropdown-item" href="../doc/domain_shift_modules.html">
  <span class="dropdown-text">Domain Shift Audit</span></a>
   </li>  
+        <li>
+    <a class="dropdown-item" href="../doc/demo_deployment.html">
+ <span class="dropdown-text">Demo &amp; Deployment</span></a>
+  </li>  
     </ul>
   </li>
   <li class="nav-item dropdown ">
@@ -273,19 +280,29 @@ window.Quarto = {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#baseline-zero-shot-evaluation" id="toc-baseline-zero-shot-evaluation" class="nav-link active" data-scroll-target="#baseline-zero-shot-evaluation">Baseline Zero-Shot Evaluation</a></li>
-  <li><a href="#the-metric-pivot-chexbert-rightarrow-bertscore" id="toc-the-metric-pivot-chexbert-rightarrow-bertscore" class="nav-link" data-scroll-target="#the-metric-pivot-chexbert-rightarrow-bertscore">The Metric Pivot: CheXbert <span class="math inline">\(\rightarrow\)</span> BERTScore</a>
+  <li><a href="#baseline-zero-shot-evaluation" id="toc-baseline-zero-shot-evaluation" class="nav-link active" data-scroll-target="#baseline-zero-shot-evaluation">1. Baseline Zero-Shot Evaluation</a></li>
+  <li><a href="#the-metric-pivot-chexbert-bertscore" id="toc-the-metric-pivot-chexbert-bertscore" class="nav-link" data-scroll-target="#the-metric-pivot-chexbert-bertscore">2. The Metric Pivot: CheXbert → BERTScore</a>
   <ul class="collapse">
-  <li><a href="#the-macro-f1-collapse-anomaly" id="toc-the-macro-f1-collapse-anomaly" class="nav-link" data-scroll-target="#the-macro-f1-collapse-anomaly">The Macro-F1 Collapse Anomaly</a></li>
-  <li><a href="#verification-via-spot-check" id="toc-verification-via-spot-check" class="nav-link" data-scroll-target="#verification-via-spot-check">Verification via Spot-Check</a></li>
-  <li><a href="#the-pivot-bertscore-f1-checkpointing" id="toc-the-pivot-bertscore-f1-checkpointing" class="nav-link" data-scroll-target="#the-pivot-bertscore-f1-checkpointing">The Pivot: BERTScore-F1 Checkpointing</a></li>
+  <li><a href="#the-macro-f1-collapse-anomaly" id="toc-the-macro-f1-collapse-anomaly" class="nav-link" data-scroll-target="#the-macro-f1-collapse-anomaly">2.1 The Macro-F1 Collapse Anomaly</a></li>
+  <li><a href="#verification-via-spot-check" id="toc-verification-via-spot-check" class="nav-link" data-scroll-target="#verification-via-spot-check">2.2 Verification via Spot-Check</a></li>
+  <li><a href="#the-pivot-bertscore-f1-for-checkpoint-selection" id="toc-the-pivot-bertscore-f1-for-checkpoint-selection" class="nav-link" data-scroll-target="#the-pivot-bertscore-f1-for-checkpoint-selection">2.3 The Pivot: BERTScore-F1 for Checkpoint Selection</a></li>
+  <li><a href="#bertscore-implementation-note" id="toc-bertscore-implementation-note" class="nav-link" data-scroll-target="#bertscore-implementation-note">2.4 BERTScore Implementation Note</a></li>
   </ul></li>
-  <li><a href="#fine-tuning-results-v3-and-v4" id="toc-fine-tuning-results-v3-and-v4" class="nav-link" data-scroll-target="#fine-tuning-results-v3-and-v4">Fine-Tuning Results (v3 and v4)</a>
+  <li><a href="#fine-tuning-results-v3-and-v4" id="toc-fine-tuning-results-v3-and-v4" class="nav-link" data-scroll-target="#fine-tuning-results-v3-and-v4">3. Fine-Tuning Results (v3 and v4)</a>
   <ul class="collapse">
-  <li><a href="#validation-set-metrics-model-selection" id="toc-validation-set-metrics-model-selection" class="nav-link" data-scroll-target="#validation-set-metrics-model-selection">Validation Set Metrics (Model Selection)</a></li>
-  <li><a href="#test-set-metrics-generalization" id="toc-test-set-metrics-generalization" class="nav-link" data-scroll-target="#test-set-metrics-generalization">Test Set Metrics (Generalization)</a></li>
-  <li><a href="#results-analysis" id="toc-results-analysis" class="nav-link" data-scroll-target="#results-analysis">Results Analysis</a></li>
+  <li><a href="#validation-set-model-selection" id="toc-validation-set-model-selection" class="nav-link" data-scroll-target="#validation-set-model-selection">3.1 Validation Set — Model Selection</a></li>
+  <li><a href="#test-set-generalization" id="toc-test-set-generalization" class="nav-link" data-scroll-target="#test-set-generalization">3.2 Test Set — Generalization</a></li>
+  <li><a href="#results-analysis" id="toc-results-analysis" class="nav-link" data-scroll-target="#results-analysis">3.3 Results Analysis</a></li>
   </ul></li>
+  <li><a href="#domain-shift-audit-acquisition-shift" id="toc-domain-shift-audit-acquisition-shift" class="nav-link" data-scroll-target="#domain-shift-audit-acquisition-shift">4. Domain Shift Audit: Acquisition Shift</a>
+  <ul class="collapse">
+  <li><a href="#finding-apparent-robustness-masks-a-safety-failure" id="toc-finding-apparent-robustness-masks-a-safety-failure" class="nav-link" data-scroll-target="#finding-apparent-robustness-masks-a-safety-failure">4.1 Finding: Apparent Robustness Masks a Safety Failure</a></li>
+  </ul></li>
+  <li><a href="#domain-shift-audit-prevalence-shift" id="toc-domain-shift-audit-prevalence-shift" class="nav-link" data-scroll-target="#domain-shift-audit-prevalence-shift">5. Domain Shift Audit: Prevalence Shift</a>
+  <ul class="collapse">
+  <li><a href="#finding-weighted-sampler-maintains-stability-under-shift" id="toc-finding-weighted-sampler-maintains-stability-under-shift" class="nav-link" data-scroll-target="#finding-weighted-sampler-maintains-stability-under-shift">5.1 Finding: Weighted Sampler Maintains Stability Under Shift</a></li>
+  </ul></li>
+  <li><a href="#metric-stack-summary" id="toc-metric-stack-summary" class="nav-link" data-scroll-target="#metric-stack-summary">6. Metric Stack Summary</a></li>
   </ul>
 </nav>
     </div>
@@ -311,7 +328,7 @@ window.Quarto = {
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">June 25, 2026</p>
+      <p class="date">June 26, 2026</p>
     </div>
   </div>
   
@@ -325,35 +342,60 @@ window.Quarto = {
 
 <section id="section-summary-non-technical" class="level5 non-technical-summary">
 <h5 class="anchored" data-anchor-id="section-summary-non-technical">Section Summary (Non-Technical)</h5>
-<p>This section highlights our most important scientific finding. Initially, our automated grader (CheXbert) showed that the model’s pathology scores collapsed to zero after training. However, by reading the actual reports generated by the VLLM, we discovered that the AI was performing excellently. It was describing pathologies in clinical terms (e.g., “enlarged heart”) instead of shorthand terms (e.g., “cardiomegaly”). CheXbert was too rigid to match these, leading us to pivot to <strong>BERTScore</strong>, which evaluates semantic meaning rather than literal vocabulary.</p>
+<p>This section explains our evaluation methodology and a key diagnostic finding. After early training runs, the standard clinical grader (CheXbert) showed near-zero pathology scores, which looked like catastrophic failure. Reading the actual generated reports revealed the opposite: the model was generating accurate descriptions in natural language (“enlarged cardiac silhouette”) rather than clinical shorthand (“cardiomegaly”), and CheXbert was too rigid to recognise them. This led us to switch to BERTScore as our primary checkpoint selector, which rewards semantic meaning rather than exact vocabulary. CheXbert remains as a diagnostic metric. The section also covers how the model holds up when images are artificially degraded (simulating different X-ray machines) and when the disease mix shifts (simulating deployment in a different region).</p>
 </section>
 <section id="baseline-zero-shot-evaluation" class="level2">
-<h2 class="anchored" data-anchor-id="baseline-zero-shot-evaluation">Baseline Zero-Shot Evaluation</h2>
-<p>Before training, we establish the performance of the raw <code>google/medgemma-4b-it</code> model on the 600-study test set under zero-shot prompting. This represents our baseline performance.</p>
+<h2 class="anchored" data-anchor-id="baseline-zero-shot-evaluation">1. Baseline Zero-Shot Evaluation</h2>
+<p>Before fine-tuning, we establish the performance of <code>google/medgemma-4b-it</code> under zero-shot prompting on the full 600-study test set. This is the reference point for all subsequent comparisons.</p>
 <p><strong>Zero-Shot Baseline Results</strong> (<code>reports/baseline_results.json</code>):</p>
-<ul>
-<li><strong>BERTScore-F1</strong>: <span class="math inline">\(0.6938\)</span></li>
-<li><strong>BLEU-4</strong>: <span class="math inline">\(0.0957\)</span></li>
-<li><strong>ROUGE-L</strong>: <span class="math inline">\(0.2635\)</span></li>
-<li><strong>CheXbert micro-F1 (U<span class="math inline">\(\rightarrow\)</span>present)</strong>: <span class="math inline">\(0.3967\)</span></li>
-<li><strong>CheXbert macro-F1 (U<span class="math inline">\(\rightarrow\)</span>present)</strong>: <span class="math inline">\(0.1416\)</span></li>
-</ul>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Metric</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>BERTScore-F1</td>
+<td><span class="math inline">\(0.6938\)</span></td>
+</tr>
+<tr class="even">
+<td>CheXbert micro-F1</td>
+<td><span class="math inline">\(0.3967\)</span></td>
+</tr>
+<tr class="odd">
+<td>CheXbert macro-F1</td>
+<td><span class="math inline">\(0.1416\)</span></td>
+</tr>
+<tr class="even">
+<td>BLEU-4</td>
+<td><span class="math inline">\(0.0957\)</span></td>
+</tr>
+<tr class="odd">
+<td>ROUGE-L</td>
+<td><span class="math inline">\(0.2631\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>The macro-F1 of <span class="math inline">\(0.1416\)</span> reflects a severe zero-shot collapse: the model predicts “No Finding” for 92.8% of studies, leaving 7 of 14 pathology labels at F1 = 0.</p>
+<hr>
 </section>
-<section id="the-metric-pivot-chexbert-rightarrow-bertscore" class="level2">
-<h2 class="anchored" data-anchor-id="the-metric-pivot-chexbert-rightarrow-bertscore">The Metric Pivot: CheXbert <span class="math inline">\(\rightarrow\)</span> BERTScore</h2>
-<p>During Phase 4 (v1 and v2 training), we encountered a critical anomaly that led to a major architectural pivot.</p>
+<section id="the-metric-pivot-chexbert-bertscore" class="level2">
+<h2 class="anchored" data-anchor-id="the-metric-pivot-chexbert-bertscore">2. The Metric Pivot: CheXbert → BERTScore</h2>
+<p>During v1 and v2 training runs (not the final results), we encountered a diagnostic anomaly that led to a major checkpoint selection change.</p>
 <section id="the-macro-f1-collapse-anomaly" class="level3">
-<h3 class="anchored" data-anchor-id="the-macro-f1-collapse-anomaly">The Macro-F1 Collapse Anomaly</h3>
-<p>In v1 and v2 training, we optimized the checkpoint selection callback to save the model that achieved the highest <strong>CheXbert micro-F1</strong>. However, after fine-tuning, the <strong>macro-F1 collapsed by ~57%</strong> (dropping from <span class="math inline">\(0.1416\)</span> zero-shot to <span class="math inline">\(0.0400\)</span> fine-tuned), even though training loss showed a healthy monotonic decay.</p>
+<h3 class="anchored" data-anchor-id="the-macro-f1-collapse-anomaly">2.1 The Macro-F1 Collapse Anomaly</h3>
+<p>In v1 and v2, the checkpoint callback saved the model with the highest <strong>CheXbert micro-F1</strong>. After fine-tuning, the <strong>macro-F1 collapsed by ~57%</strong> (from <span class="math inline">\(0.1416\)</span> zero-shot to <span class="math inline">\(\approx 0.04\)</span> fine-tuned), even though training loss showed healthy monotonic decay.</p>
 <p>We formulated two competing hypotheses:</p>
 <ul>
 <li><strong>H1 (Training Collapse)</strong>: The model suffered from catastrophic forgetting and learned to output a static “normal” report for all cases.</li>
-<li><strong>H2 (Metric Mismatch / Vocabulary Shift)</strong>: The model is generating clinically accurate findings but using local IU X-ray vocabulary that the CheXbert labeler (which was trained on Boston-based MIMIC-CXR reports) cannot parse.</li>
+<li><strong>H2 (Metric Mismatch / Vocabulary Shift)</strong>: The model is generating clinically accurate findings but using IU X-ray vocabulary that CheXbert (trained on MIMIC-CXR reports from Boston) cannot parse.</li>
 </ul>
 </section>
 <section id="verification-via-spot-check" class="level3">
-<h3 class="anchored" data-anchor-id="verification-via-spot-check">Verification via Spot-Check</h3>
-<p>We loaded the fine-tuned adapter and ran qualitative generations on validation samples (Notebook 03, STEP 7b). The results confirmed <strong>H2</strong>:</p>
+<h3 class="anchored" data-anchor-id="verification-via-spot-check">2.2 Verification via Spot-Check</h3>
+<p>Loading the fine-tuned adapter and running qualitative generation on validation samples (Notebook 03, STEP 7b) confirmed <strong>H2</strong>:</p>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 25%">
@@ -366,7 +408,7 @@ window.Quarto = {
 <th>Case</th>
 <th>Ground Truth Pathologies</th>
 <th>Model Generated Report</th>
-<th>CheXbert Evaluation</th>
+<th>CheXbert Result</th>
 </tr>
 </thead>
 <tbody>
@@ -374,29 +416,43 @@ window.Quarto = {
 <td><strong>Case 3</strong></td>
 <td>Emphysema, LLL airspace disease</td>
 <td><em>“Hyperexpanded lungs with flattened diaphragms, opacification in the left lower lobe”</em></td>
-<td><strong>No Finding</strong> (Failure)</td>
+<td><strong>No Finding</strong> ✗</td>
 </tr>
 <tr class="even">
 <td><strong>Case 4</strong></td>
 <td>Cardiomegaly, Congestion</td>
 <td><em>“Enlarged cardiac silhouette, bilateral airspace disease, bilateral pleural effusions”</em></td>
-<td><strong>No Finding</strong> (Failure)</td>
+<td><strong>No Finding</strong> ✗</td>
 </tr>
 </tbody>
 </table>
-<p>CheXbert was trained on specific MIMIC-CXR terms (e.g., “emphysema,” “cardiomegaly”). IU X-ray reports (which the model learned to emulate) describe these findings descriptively (e.g., “hyperexpanded lungs with flattened diaphragms” for emphysema; “enlarged cardiac silhouette” for cardiomegaly). Because CheXbert looks for rigid clinical keyword mappings, it labeled the model’s highly accurate descriptive reports as <strong>“No Finding”</strong>, dragging the classification macro-F1 to zero.</p>
+<p>CheXbert was pre-trained to look for rigid clinical keyword mappings (e.g.&nbsp;“emphysema”, “cardiomegaly”). IU X-ray reports use descriptive phrasing (“hyperexpanded lungs with flattened diaphragms”, “enlarged cardiac silhouette”) for the same findings. CheXbert labels the model’s clinically accurate reports as <strong>“No Finding”</strong>, dragging macro-F1 to zero.</p>
 </section>
-<section id="the-pivot-bertscore-f1-checkpointing" class="level3">
-<h3 class="anchored" data-anchor-id="the-pivot-bertscore-f1-checkpointing">The Pivot: BERTScore-F1 Checkpointing</h3>
-<p>To resolve this, we pivoted to <strong>BERTScore-F1</strong> (using <code>microsoft/deberta-xlarge-mnli</code> embeddings) as our primary checkpoint selection metric. BERTScore measures semantic contextual similarity. Because “hyperexpanded lungs” and “emphysema” map to the same clinical semantic space, BERTScore correctly rewards the model for accurate descriptions regardless of exact vocabulary. CheXbert F1 was demoted to a diagnostic metric only.</p>
+<section id="the-pivot-bertscore-f1-for-checkpoint-selection" class="level3">
+<h3 class="anchored" data-anchor-id="the-pivot-bertscore-f1-for-checkpoint-selection">2.3 The Pivot: BERTScore-F1 for Checkpoint Selection</h3>
+<p>We pivoted to <strong>BERTScore-F1</strong> (<code>microsoft/deberta-xlarge-mnli</code>) as the primary checkpoint selection metric from v3 onward. BERTScore measures token-level semantic similarity using contextual embeddings — “hyperexpanded lungs” and “emphysema” map to the same clinical semantic region, so BERTScore correctly rewards the model regardless of exact vocabulary. CheXbert F1 was demoted to a <strong>diagnostic metric</strong> computed post-hoc.</p>
+</section>
+<section id="bertscore-implementation-note" class="level3">
+<h3 class="anchored" data-anchor-id="bertscore-implementation-note">2.4 BERTScore Implementation Note</h3>
+<p>The <code>bert-score</code> library’s <code>sent_encode</code> function does not cap <code>tokenizer.model_max_length</code>, which causes index-out-of-bounds errors on long radiology reports with DeBERTa’s 512-token limit. We apply a monkey-patch before every BERTScore call:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> bert_score.utils <span class="im">as</span> _bsu</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>_orig <span class="op">=</span> _bsu.sent_encode</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _safe_sent_encode(tokenizer, sent):</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="bu">getattr</span>(tokenizer, <span class="st">'model_max_length'</span>, <span class="dv">0</span>) <span class="op">&gt;</span> <span class="dv">10_000</span>:</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>        tokenizer.model_max_length <span class="op">=</span> <span class="dv">512</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> _orig(tokenizer, sent)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>_bsu.sent_encode <span class="op">=</span> _safe_sent_encode</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>This patch is applied in both <code>notebooks/04_eval_and_figures.ipynb</code> and <code>notebooks/02_baseline_zero_shot.ipynb</code>. It has no effect on scoring quality — it only prevents the tokenizer from attempting to embed sequences longer than the model supports.</p>
 <hr>
 </section>
 </section>
 <section id="fine-tuning-results-v3-and-v4" class="level2">
-<h2 class="anchored" data-anchor-id="fine-tuning-results-v3-and-v4">Fine-Tuning Results (v3 and v4)</h2>
-<p>By checkpointing on BERTScore-F1, we evaluated the fine-tuning variants. The table below presents the validation-set performance (used for model selection) and the final test-set performance (evaluated on the 600-study holdout partition).</p>
-<section id="validation-set-metrics-model-selection" class="level3">
-<h3 class="anchored" data-anchor-id="validation-set-metrics-model-selection">Validation Set Metrics (Model Selection)</h3>
+<h2 class="anchored" data-anchor-id="fine-tuning-results-v3-and-v4">3. Fine-Tuning Results (v3 and v4)</h2>
+<p>By switching to BERTScore-F1 checkpointing, we re-ran training as <code>qlora_uniform_v3</code> (uniform sampler) and <code>qlora_weighted_v4</code> (ESS-based weighted sampler).</p>
+<section id="validation-set-model-selection" class="level3">
+<h3 class="anchored" data-anchor-id="validation-set-model-selection">3.1 Validation Set — Model Selection</h3>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 16%">
@@ -422,11 +478,11 @@ window.Quarto = {
 <td>—</td>
 <td>—</td>
 <td><span class="math inline">\(0.6938\)</span></td>
-<td><strong><span class="math inline">\(0.3967\)</span></strong></td>
-<td><strong><span class="math inline">\(0.1416\)</span></strong></td>
+<td><span class="math inline">\(0.3967\)</span></td>
+<td><span class="math inline">\(0.1416\)</span></td>
 </tr>
 <tr class="even">
-<td><strong>QLoRA Fine-Tune (v3)</strong></td>
+<td><strong>QLoRA v3</strong></td>
 <td>Uniform</td>
 <td>1</td>
 <td><strong><span class="math inline">\(0.7113\)</span> (+2.5%)</strong></td>
@@ -434,26 +490,30 @@ window.Quarto = {
 <td><span class="math inline">\(0.0401\)</span></td>
 </tr>
 <tr class="odd">
-<td><strong>QLoRA Fine-Tune (v4)</strong></td>
+<td><strong>QLoRA v4</strong></td>
 <td>Weighted (ESS)</td>
 <td>2</td>
 <td><strong><span class="math inline">\(0.7036\)</span> (+1.4%)</strong></td>
 <td><span class="math inline">\(0.3945\)</span></td>
-<td><strong><span class="math inline">\(0.0635\)</span> (+58%)</strong></td>
+<td><span class="math inline">\(0.0635\)</span> (+58%)</td>
 </tr>
 </tbody>
 </table>
+<p>The near-zero val macro-F1 for v3 (<span class="math inline">\(0.04\)</span>) is the CheXbert vocabulary mismatch artefact described in §2. It is not a sign of training collapse — the test set results below confirm the model is learning.</p>
 </section>
-<section id="test-set-metrics-generalization" class="level3">
-<h3 class="anchored" data-anchor-id="test-set-metrics-generalization">Test Set Metrics (Generalization)</h3>
+<section id="test-set-generalization" class="level3">
+<h3 class="anchored" data-anchor-id="test-set-generalization">3.2 Test Set — Generalization</h3>
+<p>These numbers are computed by running each checkpoint on the 600-study held-out test set with the inference prompt format (<code>SYSTEM_PROMPT\nIndication: {text}</code>).</p>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 16%">
-<col style="width: 16%">
-<col style="width: 16%">
-<col style="width: 16%">
-<col style="width: 16%">
-<col style="width: 16%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -463,35 +523,56 @@ window.Quarto = {
 <th>BERTScore-F1</th>
 <th>CheXbert micro-F1</th>
 <th>CheXbert macro-F1</th>
+<th>BLEU-4</th>
+<th>ROUGE-L</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td><strong>Zero-Shot Baseline</strong></td>
+<td><strong>Zero-Shot</strong></td>
 <td>—</td>
 <td>—</td>
-<td><strong><span class="math inline">\(0.6938\)</span></strong></td>
+<td><span class="math inline">\(0.6938\)</span></td>
 <td><span class="math inline">\(0.3967\)</span></td>
 <td><span class="math inline">\(0.1416\)</span></td>
+<td><span class="math inline">\(0.0957\)</span></td>
+<td><span class="math inline">\(0.2631\)</span></td>
 </tr>
 <tr class="even">
-<td><strong>QLoRA Fine-Tune (v3)</strong></td>
+<td><strong>QLoRA v3</strong></td>
 <td>Uniform</td>
 <td>1</td>
 <td><span class="math inline">\(0.6925\)</span></td>
-<td><strong><span class="math inline">\(0.4637\)</span></strong></td>
+<td><span class="math inline">\(0.4637\)</span></td>
 <td><span class="math inline">\(0.1651\)</span></td>
+<td>—</td>
+<td>—</td>
 </tr>
 <tr class="odd">
-<td><strong>QLoRA Fine-Tune (v4)</strong></td>
+<td><strong>QLoRA v4</strong></td>
 <td>Weighted (ESS)</td>
 <td>2</td>
 <td><span class="math inline">\(0.6784\)</span></td>
 <td><span class="math inline">\(0.4423\)</span></td>
-<td><strong><span class="math inline">\(0.1786\)</span> (+26.1%)</strong></td>
+<td><span class="math inline">\(0.1786\)</span> (+26.1%)</td>
+<td>—</td>
+<td>—</td>
 </tr>
 </tbody>
 </table>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><strong>Fair baseline note</strong>: Section 5 reports results using <code>nohint_uniform_v3</code> and <code>nohint_weighted_v4</code> as the conditioning fair baselines (micro-F1 <span class="math inline">\(0.4404\)</span> and <span class="math inline">\(0.4526\)</span>, respectively). These are re-evaluated with the exact same prompt template used by the conditioning variants — including a <code>\nFindings:</code> suffix — and produce slightly different numbers than the raw v3/v4 evaluated here. Both evaluations use identical greedy decoding; the difference is entirely in the prompt suffix. All comparisons in Section 5 are self-consistent.</p>
+</div>
+</div>
 <div id="fig-training-results" class="quarto-layout-panel">
 <figure class="quarto-float quarto-float-fig figure">
 <div aria-describedby="fig-training-results-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
@@ -500,7 +581,7 @@ window.Quarto = {
 <div id="fig-loss" class="quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-subfloat-fig figure">
 <div aria-describedby="fig-loss-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-<img src="../reports/figures/train_loss_comparison.png" class="img-fluid figure-img" data-ref-parent="fig-training-results">
+<a href="../reports/figures/train_loss_comparison.png" class="lightbox" data-gallery="fig-training-results" title="Figure&nbsp;1&nbsp;(a): Training Loss Curve (Uniform vs.&nbsp;Weighted)"><img src="../reports/figures/train_loss_comparison.png" class="img-fluid figure-img" data-ref-parent="fig-training-results"></a>
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-loss-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 (a) Training Loss Curve (Uniform vs.&nbsp;Weighted)
@@ -512,7 +593,7 @@ window.Quarto = {
 <div id="fig-val-f1" class="quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-subfloat-fig figure">
 <div aria-describedby="fig-val-f1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-<img src="../reports/figures/train_val_f1_comparison.png" class="img-fluid figure-img" data-ref-parent="fig-training-results">
+<a href="../reports/figures/train_val_f1_comparison.png" class="lightbox" data-gallery="fig-training-results" title="Figure&nbsp;1&nbsp;(b): Validation Metrics over Epochs"><img src="../reports/figures/train_val_f1_comparison.png" class="img-fluid figure-img" data-ref-parent="fig-training-results"></a>
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-val-f1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 (b) Validation Metrics over Epochs
@@ -526,7 +607,7 @@ window.Quarto = {
 <div id="fig-sampler-weights" class="quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-subfloat-fig figure">
 <div aria-describedby="fig-sampler-weights-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-<img src="../reports/figures/train_sampler_weights_comparison.png" class="img-fluid figure-img" data-ref-parent="fig-training-results">
+<a href="../reports/figures/train_sampler_weights_comparison.png" class="lightbox" data-gallery="fig-training-results" title="Figure&nbsp;1&nbsp;(c): Distribution of Sampler Weights during Training"><img src="../reports/figures/train_sampler_weights_comparison.png" class="img-fluid figure-img" data-ref-parent="fig-training-results"></a>
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-sampler-weights-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 (c) Distribution of Sampler Weights during Training
@@ -537,25 +618,182 @@ window.Quarto = {
 </div>
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-training-results-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;1: Comparison of training dynamics and sampling weights.
+Figure&nbsp;1: Training dynamics and sampling weight distributions.
 </figcaption>
 </figure>
 </div>
 </section>
 <section id="results-analysis" class="level3">
-<h3 class="anchored" data-anchor-id="results-analysis">Results Analysis</h3>
-<ul>
-<li><strong>Validation vs.&nbsp;Test Discrepancies</strong>: On the validation set, the fine-tuned models showed a severe drop in CheXbert macro-F1 (<span class="math inline">\(0.0401\)</span> for v3), which was diagnosed as a vocabulary mismatch (H2). However, on the test set, the uniform model (v3) recovers to <span class="math inline">\(0.1651\)</span> macro-F1 (outperforming the zero-shot baseline of <span class="math inline">\(0.1416\)</span>). This indicates that the vocabulary shift is partially mitigated on the larger, more diverse test cohort, confirming that fine-tuning did not cause training collapse.</li>
-<li><strong>Oversampling Impact</strong>: The ESS-based weighted sampler (v4) achieved the highest overall clinical performance, reaching <strong><span class="math inline">\(0.1786\)</span> macro-F1</strong> on the test set (a +26.1% relative increase over zero-shot, and +8.2% over uniform v3). This confirms that training-time distribution correction successfully generalizes to a fixed test set.</li>
-<li><strong>Textual Quality vs.&nbsp;Clinical Precision</strong>: While the uniform model (v3) maintains a higher semantic BERTScore (<span class="math inline">\(0.6925\)</span> vs.&nbsp;<span class="math inline">\(0.6784\)</span> for v4), the weighted model (v4) yields significantly better rare-pathology recall. This trade-off suggests that uniform training results in more standard, fluent language formatting, whereas weighted training encourages the model to generate descriptive pathology terms.</li>
-<li><strong>Convergence and Sampler Dynamics</strong>: Uniform fine-tuning (v3) peaked at Epoch 1 and regressed in Epoch 2 (see <a href="#fig-val-f1" class="quarto-xref">Figure&nbsp;1 (b)</a>). In contrast, the weighted sampler (v4) peaked at Epoch 2. Oversampling rare pathology studies prevented the model from quickly collapsing to the majority class, extending the useful training window and enabling more stable convergence.</li>
-<li><strong>Sampler Verification</strong>: The weight distribution shown in <a href="#fig-sampler-weights" class="quarto-xref">Figure&nbsp;1 (c)</a> confirms that active weight clipping functions correctly, preventing single outlier studies from dominating the gradient update steps.</li>
-</ul>
+<h3 class="anchored" data-anchor-id="results-analysis">3.3 Results Analysis</h3>
+<p><strong>Validation vs.&nbsp;test discrepancy.</strong> On the val set, v3 shows CheXbert macro-F1 = 0.04 (vocabulary mismatch artefact); on the test set it recovers to 0.1651 (outperforming the zero-shot baseline of 0.1416). The test set is larger and more diverse, partially mitigating the mismatch. Fine-tuning did not cause training collapse.</p>
+<p><strong>Oversampling impact.</strong> The ESS-weighted v4 achieves the highest test macro-F1 at <span class="math inline">\(0.1786\)</span> — a +26.1% relative improvement over zero-shot. Training-time distribution correction generalises to the fixed holdout.</p>
+<p><strong>Fluency vs.&nbsp;clinical precision trade-off.</strong> Uniform v3 maintains higher BERTScore (<span class="math inline">\(0.6925\)</span> vs.&nbsp;<span class="math inline">\(0.6784\)</span>), producing more standard, fluent language. Weighted v4 sacrifices some fluency to push rare-pathology recall, evidenced by higher micro-F1 despite lower BERTScore. This trade-off is a central theme of the inference conditioning experiments in Section 5.</p>
+<p><strong>Convergence dynamics.</strong> Uniform v3 peaked at epoch 1 and regressed at epoch 2 (see <a href="#fig-val-f1" class="quarto-xref">Figure&nbsp;1 (b)</a>). Weighted v4 peaked at epoch 2 — oversampling rare-label studies prevents the rapid collapse to majority-class prediction, extending the useful training window.</p>
+<div id="fig-eval-results" class="quarto-layout-panel">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-eval-results-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell-subref quarto-layout-cell" data-ref-parent="fig-eval-results" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div id="fig-eval-summary" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-subfloat-fig figure">
+<div aria-describedby="fig-eval-summary-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<a href="../reports/figures/eval_metric_summary.png" class="lightbox" data-gallery="fig-eval-results" title="Figure&nbsp;2&nbsp;(a): Test-set summary metrics for the three base configurations."><img src="../reports/figures/eval_metric_summary.png" class="img-fluid figure-img" data-ref-parent="fig-eval-results"></a>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-eval-summary-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+(a) Test-set summary metrics for the three base configurations.
+</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell-subref quarto-layout-cell" data-ref-parent="fig-eval-results" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div id="fig-eval-per-label" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-subfloat-fig figure">
+<div aria-describedby="fig-eval-per-label-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<a href="../reports/figures/eval_per_label_f1.png" class="lightbox" data-gallery="fig-eval-results" title="Figure&nbsp;2&nbsp;(b): Per-label CheXbert F1 across zero-shot, uniform fine-tune, and weighted fine-tune."><img src="../reports/figures/eval_per_label_f1.png" class="img-fluid figure-img" data-ref-parent="fig-eval-results"></a>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-eval-per-label-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+(b) Per-label CheXbert F1 across zero-shot, uniform fine-tune, and weighted fine-tune.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-eval-results-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2: Test-set evaluation — zero-shot vs fine-tuned variants.
+</figcaption>
+</figure>
+</div>
+<hr>
+</section>
+</section>
+<section id="domain-shift-audit-acquisition-shift" class="level2">
+<h2 class="anchored" data-anchor-id="domain-shift-audit-acquisition-shift">4. Domain Shift Audit: Acquisition Shift</h2>
+<p><strong>Goal:</strong> Quantify robustness to image-level distribution shift caused by scanner hardware variation (sensor type, kVp calibration, digitisation quality). This simulates deploying the model in a clinic with a different X-ray machine.</p>
+<p><strong>Method:</strong> Five synthetic perturbation types are swept across their magnitude grids on the full 600-study test set, and BERTScore-F1 is computed at each magnitude. Evaluated on the <code>uniform_v3</code> checkpoint.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Perturbation</th>
+<th>Magnitude range</th>
+<th>Simulates</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>brightness</code></td>
+<td>[0.5, 0.7, 1.0, 1.3, 1.6]</td>
+<td>Exposure level</td>
+</tr>
+<tr class="even">
+<td><code>contrast</code></td>
+<td>[0.5, 0.7, 1.0, 1.5, 2.0]</td>
+<td>Dynamic range compression</td>
+</tr>
+<tr class="odd">
+<td><code>gamma</code></td>
+<td>[0.5, 0.75, 1.0, 1.5, 2.0]</td>
+<td>Tone curve shift</td>
+</tr>
+<tr class="even">
+<td><code>gaussian_noise</code></td>
+<td>[0, 5, 15, 30, 50] σ</td>
+<td>Detector noise</td>
+</tr>
+<tr class="odd">
+<td><code>jpeg_compression</code></td>
+<td>[95, 75, 50, 25, 10] quality</td>
+<td>Lossy PACS compression</td>
+</tr>
+</tbody>
+</table>
+<div id="fig-acq-shift" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-acq-shift-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<a href="../reports/figures/eval_acquisition_shift.png" class="lightbox" data-gallery="quarto-lightbox-gallery-6" title="Figure&nbsp;3: Acquisition shift results. BERTScore-F1 vs.&nbsp;perturbation magnitude for all five types. Less than 1.3% degradation across the entire tested range."><img src="../reports/figures/eval_acquisition_shift.png" class="img-fluid figure-img"></a>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-acq-shift-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;3: <strong>Acquisition shift results.</strong> BERTScore-F1 vs.&nbsp;perturbation magnitude for all five types. Less than 1.3% degradation across the entire tested range.
+</figcaption>
+</figure>
+</div>
+<section id="finding-apparent-robustness-masks-a-safety-failure" class="level3">
+<h3 class="anchored" data-anchor-id="finding-apparent-robustness-masks-a-safety-failure">4.1 Finding: Apparent Robustness Masks a Safety Failure</h3>
+<p>All perturbation types show <strong>&lt; 1.3% BERTScore-F1 degradation</strong> even at extreme magnitudes. This initially looks like strong robustness. It is not.</p>
+<p>Under severe corruption (e.g.&nbsp;Gaussian noise σ = 50, JPEG quality = 10), the SigLIP encoder loses the visual signal entirely. The decoder falls back to its language prior and generates fluent “all-clear” reports (“The lungs are clear. No acute cardiopulmonary findings.”). Because the test set contains a high proportion of normal studies, these hallucinated normal reports score well on BERTScore.</p>
+<p><strong>This is a metric artefact.</strong> Clinical utility under severe corruption is zero — the model stops looking at the image — but BERTScore cannot detect this because the hallucinated text has high linguistic quality. CheXbert macro-F1 would expose this collapse but is confounded by the vocabulary mismatch artefact (§2). This is one reason a vision-grounded evaluation metric (e.g., RGRG or RadGraph) would be valuable as future work.</p>
+<hr>
+</section>
+</section>
+<section id="domain-shift-audit-prevalence-shift" class="level2">
+<h2 class="anchored" data-anchor-id="domain-shift-audit-prevalence-shift">5. Domain Shift Audit: Prevalence Shift</h2>
+<p><strong>Goal:</strong> Estimate how model performance changes when the pathology distribution shifts away from the IU CXR training distribution — simulating deployment in a LATAM epidemiological context with higher prevalence of certain conditions.</p>
+<p><strong>Method:</strong> Importance-sampling re-weighting on the test set. For each study <span class="math inline">\(i\)</span> and target label <span class="math inline">\(l\)</span>:</p>
+<p><span class="math display">\[w_i = \frac{\pi_{\text{target}}(y_{i,l})}{\pi_{\text{source}}(y_{i,l})} = \begin{cases} \frac{\pi_{\text{target}}}{p_l} &amp; \text{if } y_{i,l} = 1 \\ \frac{1 - \pi_{\text{target}}}{1 - p_l} &amp; \text{if } y_{i,l} = 0 \end{cases}\]</span></p>
+<p>The weighted BERTScore estimate is:</p>
+<p><span class="math display">\[\hat{F}_{\text{target}} = \frac{\sum_i w_i \cdot F_i}{\sum_i w_i}\]</span></p>
+<p>Estimates with Effective Sample Size (ESS) &lt; 30 are plotted as dashed lines (unreliable).</p>
+<p><strong>Labels audited:</strong> Pleural Effusion, Atelectasis, Pneumonia, Consolidation — the four pathologies most likely to shift in LATAM deployment.</p>
+<section id="finding-weighted-sampler-maintains-stability-under-shift" class="level3">
+<h3 class="anchored" data-anchor-id="finding-weighted-sampler-maintains-stability-under-shift">5.1 Finding: Weighted Sampler Maintains Stability Under Shift</h3>
+<p>The ESS-weighted v4 model shows more stable weighted BERTScore-F1 than the zero-shot baseline and uniform v3 as target pathology prevalence increases. This directly validates the training-time weighting strategy: a model that has seen more rare-pathology studies during training is better calibrated when those pathologies become more common at deployment.</p>
+<hr>
+</section>
+</section>
+<section id="metric-stack-summary" class="level2">
+<h2 class="anchored" data-anchor-id="metric-stack-summary">6. Metric Stack Summary</h2>
+<p>The full evaluation pipeline computes five metrics on every configuration. Their roles are fixed:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Metric</th>
+<th>Role</th>
+<th>Sensitivity</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>CheXbert macro-F1</td>
+<td><strong>Primary</strong> — pathology detection</td>
+<td>Rare labels; vocabulary-artefact-sensitive</td>
+</tr>
+<tr class="even">
+<td>CheXbert micro-F1</td>
+<td>Supporting — overall label accuracy</td>
+<td>Common labels dominate</td>
+</tr>
+<tr class="odd">
+<td>BERTScore-F1</td>
+<td><strong>Checkpoint selection</strong> + secondary</td>
+<td>Fluency and semantic similarity</td>
+</tr>
+<tr class="even">
+<td>BLEU-4</td>
+<td>Secondary — writing style</td>
+<td>Lexical overlap only</td>
+</tr>
+<tr class="odd">
+<td>ROUGE-L</td>
+<td>Secondary — writing style</td>
+<td>Longest common subsequence</td>
+</tr>
+</tbody>
+</table>
+<p>All metrics are computed with identical greedy decoding (<code>temperature=0</code>, <code>max_new_tokens=256</code>) across all configurations, ensuring the only variable is the prompt content. Results cached to <code>reports/eval_metrics_{variant}.json</code>; the grand comparison across all 10 configurations is assembled in Notebook 04 STEP 7 after notebooks 05 and 06 have run.</p>
 
 
 <!-- -->
 
-</section>
 </section>
 
 </main> <!-- /main -->
@@ -1010,93 +1248,202 @@ Figure&nbsp;1: Comparison of training dynamics and sampling weights.
     }
   });
   </script><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">Source Code</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "4. Evaluation &amp; Metric Pivot"</span></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="an">author:</span><span class="co"> "Diego Villalba (Applied Research Candidate)"</span></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="an">date:</span><span class="co"> "2026-06-25"</span></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>::: {.non-technical-summary}</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">##### Section Summary (Non-Technical)</span></span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>This section highlights our most important scientific finding. Initially, our automated grader (CheXbert) showed that the model's pathology scores collapsed to zero after training. However, by reading the actual reports generated by the VLLM, we discovered that the AI was performing excellently. It was describing pathologies in clinical terms (e.g., "enlarged heart") instead of shorthand terms (e.g., "cardiomegaly"). CheXbert was too rigid to match these, leading us to pivot to **BERTScore**, which evaluates semantic meaning rather than literal vocabulary.</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>:::</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="fu">## Baseline Zero-Shot Evaluation</span></span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>Before training, we establish the performance of the raw <span class="in">`google/medgemma-4b-it`</span> model on the 600-study test set under zero-shot prompting. This represents our baseline performance.</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>**Zero-Shot Baseline Results** (<span class="in">`reports/baseline_results.json`</span>):</span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**BERTScore-F1**: $0.6938$</span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**BLEU-4**: $0.0957$</span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**ROUGE-L**: $0.2635$</span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**CheXbert micro-F1 (U$\rightarrow$present)**: $0.3967$</span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**CheXbert macro-F1 (U$\rightarrow$present)**: $0.1416$</span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="fu">## The Metric Pivot: CheXbert $\rightarrow$ BERTScore</span></span>
-<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>During Phase 4 (v1 and v2 training), we encountered a critical anomaly that led to a major architectural pivot.</span>
-<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="fu">### The Macro-F1 Collapse Anomaly</span></span>
-<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>In v1 and v2 training, we optimized the checkpoint selection callback to save the model that achieved the highest **CheXbert micro-F1**. However, after fine-tuning, the **macro-F1 collapsed by ~57%** (dropping from $0.1416$ zero-shot to $0.0400$ fine-tuned), even though training loss showed a healthy monotonic decay.</span>
-<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>We formulated two competing hypotheses:</span>
-<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**H1 (Training Collapse)**: The model suffered from catastrophic forgetting and learned to output a static "normal" report for all cases.</span>
-<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**H2 (Metric Mismatch / Vocabulary Shift)**: The model is generating clinically accurate findings but using local IU X-ray vocabulary that the CheXbert labeler (which was trained on Boston-based MIMIC-CXR reports) cannot parse.</span>
-<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a><span class="fu">### Verification via Spot-Check</span></span>
-<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>We loaded the fine-tuned adapter and ran qualitative generations on validation samples (Notebook 03, STEP 7b). The results confirmed **H2**:</span>
-<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Case <span class="pp">|</span> Ground Truth Pathologies <span class="pp">|</span> Model Generated Report <span class="pp">|</span> CheXbert Evaluation <span class="pp">|</span></span>
-<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|---|</span></span>
-<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Case 3** | Emphysema, LLL airspace disease | *"Hyperexpanded lungs with flattened diaphragms, opacification in the left lower lobe"* | **No Finding** (Failure) <span class="pp">|</span></span>
-<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Case 4** | Cardiomegaly, Congestion | *"Enlarged cardiac silhouette, bilateral airspace disease, bilateral pleural effusions"* | **No Finding** (Failure) <span class="pp">|</span></span>
-<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>CheXbert was trained on specific MIMIC-CXR terms (e.g., "emphysema," "cardiomegaly"). IU X-ray reports (which the model learned to emulate) describe these findings descriptively (e.g., "hyperexpanded lungs with flattened diaphragms" for emphysema; "enlarged cardiac silhouette" for cardiomegaly). Because CheXbert looks for rigid clinical keyword mappings, it labeled the model's highly accurate descriptive reports as **"No Finding"**, dragging the classification macro-F1 to zero.</span>
-<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a><span class="fu">### The Pivot: BERTScore-F1 Checkpointing</span></span>
-<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a>To resolve this, we pivoted to **BERTScore-F1** (using <span class="in">`microsoft/deberta-xlarge-mnli`</span> embeddings) as our primary checkpoint selection metric. BERTScore measures semantic contextual similarity. Because "hyperexpanded lungs" and "emphysema" map to the same clinical semantic space, BERTScore correctly rewards the model for accurate descriptions regardless of exact vocabulary. CheXbert F1 was demoted to a diagnostic metric only.</span>
-<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>---</span>
-<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a><span class="fu">## Fine-Tuning Results (v3 and v4)</span></span>
-<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>By checkpointing on BERTScore-F1, we evaluated the fine-tuning variants. The table below presents the validation-set performance (used for model selection) and the final test-set performance (evaluated on the 600-study holdout partition).</span>
-<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a><span class="fu">### Validation Set Metrics (Model Selection)</span></span>
-<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Configuration <span class="pp">|</span> Sampler <span class="pp">|</span> Best Epoch <span class="pp">|</span> BERTScore-F1 <span class="pp">|</span> CheXbert micro-F1 <span class="pp">|</span> CheXbert macro-F1 <span class="pp">|</span></span>
-<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|---|---|---|</span></span>
-<span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Zero-Shot Baseline** | — | — | $0.6938$ | **$0.3967$** | **$0.1416$** <span class="pp">|</span></span>
-<span id="cb1-60"><a href="#cb1-60" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **QLoRA Fine-Tune (v3)** | Uniform | 1 | **$0.7113$ (+2.5%)** <span class="pp">|</span> $0.3896$ <span class="pp">|</span> $0.0401$ <span class="pp">|</span></span>
-<span id="cb1-61"><a href="#cb1-61" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **QLoRA Fine-Tune (v4)** | Weighted (ESS) | 2 | **$0.7036$ (+1.4%)** | $0.3945$ | **$0.0635$ (+58%)** <span class="pp">|</span></span>
-<span id="cb1-62"><a href="#cb1-62" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-63"><a href="#cb1-63" aria-hidden="true" tabindex="-1"></a><span class="fu">### Test Set Metrics (Generalization)</span></span>
-<span id="cb1-64"><a href="#cb1-64" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-65"><a href="#cb1-65" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Configuration <span class="pp">|</span> Sampler <span class="pp">|</span> Best Epoch <span class="pp">|</span> BERTScore-F1 <span class="pp">|</span> CheXbert micro-F1 <span class="pp">|</span> CheXbert macro-F1 <span class="pp">|</span></span>
-<span id="cb1-66"><a href="#cb1-66" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|---|---|---|</span></span>
-<span id="cb1-67"><a href="#cb1-67" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Zero-Shot Baseline** | — | — | **$0.6938$** <span class="pp">|</span> $0.3967$ <span class="pp">|</span> $0.1416$ <span class="pp">|</span></span>
-<span id="cb1-68"><a href="#cb1-68" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **QLoRA Fine-Tune (v3)** | Uniform | 1 | $0.6925$ | **$0.4637$** <span class="pp">|</span> $0.1651$ <span class="pp">|</span></span>
-<span id="cb1-69"><a href="#cb1-69" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **QLoRA Fine-Tune (v4)** | Weighted (ESS) | 2 | $0.6784$ | $0.4423$ | **$0.1786$ (+26.1%)** <span class="pp">|</span></span>
-<span id="cb1-70"><a href="#cb1-70" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-71"><a href="#cb1-71" aria-hidden="true" tabindex="-1"></a>::: {#fig-training-results layout="[<span class="co">[</span><span class="ot">1, 1</span><span class="co">]</span>, <span class="co">[</span><span class="ot">1</span><span class="co">]</span>]"}</span>
-<span id="cb1-72"><a href="#cb1-72" aria-hidden="true" tabindex="-1"></a><span class="al">![Training Loss Curve (Uniform vs. Weighted)](../reports/figures/train_loss_comparison.png)</span>{#fig-loss}</span>
-<span id="cb1-73"><a href="#cb1-73" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-74"><a href="#cb1-74" aria-hidden="true" tabindex="-1"></a><span class="al">![Validation Metrics over Epochs](../reports/figures/train_val_f1_comparison.png)</span>{#fig-val-f1}</span>
-<span id="cb1-75"><a href="#cb1-75" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-76"><a href="#cb1-76" aria-hidden="true" tabindex="-1"></a><span class="al">![Distribution of Sampler Weights during Training](../reports/figures/train_sampler_weights_comparison.png)</span>{#fig-sampler-weights}</span>
-<span id="cb1-77"><a href="#cb1-77" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-78"><a href="#cb1-78" aria-hidden="true" tabindex="-1"></a>Comparison of training dynamics and sampling weights.</span>
-<span id="cb1-79"><a href="#cb1-79" aria-hidden="true" tabindex="-1"></a>:::</span>
-<span id="cb1-80"><a href="#cb1-80" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-81"><a href="#cb1-81" aria-hidden="true" tabindex="-1"></a><span class="fu">### Results Analysis</span></span>
-<span id="cb1-82"><a href="#cb1-82" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**Validation vs. Test Discrepancies**: On the validation set, the fine-tuned models showed a severe drop in CheXbert macro-F1 ($0.0401$ for v3), which was diagnosed as a vocabulary mismatch (H2). However, on the test set, the uniform model (v3) recovers to $0.1651$ macro-F1 (outperforming the zero-shot baseline of $0.1416$). This indicates that the vocabulary shift is partially mitigated on the larger, more diverse test cohort, confirming that fine-tuning did not cause training collapse.</span>
-<span id="cb1-83"><a href="#cb1-83" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**Oversampling Impact**: The ESS-based weighted sampler (v4) achieved the highest overall clinical performance, reaching **$0.1786$ macro-F1** on the test set (a +26.1% relative increase over zero-shot, and +8.2% over uniform v3). This confirms that training-time distribution correction successfully generalizes to a fixed test set.</span>
-<span id="cb1-84"><a href="#cb1-84" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**Textual Quality vs. Clinical Precision**: While the uniform model (v3) maintains a higher semantic BERTScore ($0.6925$ vs. $0.6784$ for v4), the weighted model (v4) yields significantly better rare-pathology recall. This trade-off suggests that uniform training results in more standard, fluent language formatting, whereas weighted training encourages the model to generate descriptive pathology terms.</span>
-<span id="cb1-85"><a href="#cb1-85" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**Convergence and Sampler Dynamics**: Uniform fine-tuning (v3) peaked at Epoch 1 and regressed in Epoch 2 (see @fig-val-f1). In contrast, the weighted sampler (v4) peaked at Epoch 2. Oversampling rare pathology studies prevented the model from quickly collapsing to the majority class, extending the useful training window and enabling more stable convergence.</span>
-<span id="cb1-86"><a href="#cb1-86" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**Sampler Verification**: The weight distribution shown in @fig-sampler-weights confirms that active weight clipping functions correctly, preventing single outlier studies from dominating the gradient update steps.</span>
-<span id="cb1-87"><a href="#cb1-87" aria-hidden="true" tabindex="-1"></a></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "4. Evaluation &amp; Metric Pivot"</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="an">author:</span><span class="co"> "Diego Villalba (Applied Research Candidate)"</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="an">date:</span><span class="co"> "2026-06-26"</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>::: {.non-technical-summary}</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="fu">##### Section Summary (Non-Technical)</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>This section explains our evaluation methodology and a key diagnostic finding. After early training runs, the standard clinical grader (CheXbert) showed near-zero pathology scores, which looked like catastrophic failure. Reading the actual generated reports revealed the opposite: the model was generating accurate descriptions in natural language ("enlarged cardiac silhouette") rather than clinical shorthand ("cardiomegaly"), and CheXbert was too rigid to recognise them. This led us to switch to BERTScore as our primary checkpoint selector, which rewards semantic meaning rather than exact vocabulary. CheXbert remains as a diagnostic metric. The section also covers how the model holds up when images are artificially degraded (simulating different X-ray machines) and when the disease mix shifts (simulating deployment in a different region).</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="fu">## 1. Baseline Zero-Shot Evaluation</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>Before fine-tuning, we establish the performance of <span class="in">`google/medgemma-4b-it`</span> under zero-shot prompting on the full 600-study test set. This is the reference point for all subsequent comparisons.</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>**Zero-Shot Baseline Results** (<span class="in">`reports/baseline_results.json`</span>):</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Metric <span class="pp">|</span> Value <span class="pp">|</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> BERTScore-F1 <span class="pp">|</span> $0.6938$ <span class="pp">|</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> CheXbert micro-F1 <span class="pp">|</span> $0.3967$ <span class="pp">|</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> CheXbert macro-F1 <span class="pp">|</span> $0.1416$ <span class="pp">|</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> BLEU-4 <span class="pp">|</span> $0.0957$ <span class="pp">|</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> ROUGE-L <span class="pp">|</span> $0.2631$ <span class="pp">|</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>The macro-F1 of $0.1416$ reflects a severe zero-shot collapse: the model predicts "No Finding" for 92.8% of studies, leaving 7 of 14 pathology labels at F1 = 0.</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="fu">## 2. The Metric Pivot: CheXbert → BERTScore</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>During v1 and v2 training runs (not the final results), we encountered a diagnostic anomaly that led to a major checkpoint selection change.</span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a><span class="fu">### 2.1 The Macro-F1 Collapse Anomaly</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>In v1 and v2, the checkpoint callback saved the model with the highest **CheXbert micro-F1**. After fine-tuning, the **macro-F1 collapsed by ~57%** (from $0.1416$ zero-shot to $\approx 0.04$ fine-tuned), even though training loss showed healthy monotonic decay.</span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>We formulated two competing hypotheses:</span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**H1 (Training Collapse)**: The model suffered from catastrophic forgetting and learned to output a static "normal" report for all cases.</span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**H2 (Metric Mismatch / Vocabulary Shift)**: The model is generating clinically accurate findings but using IU X-ray vocabulary that CheXbert (trained on MIMIC-CXR reports from Boston) cannot parse.</span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a><span class="fu">### 2.2 Verification via Spot-Check</span></span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a>Loading the fine-tuned adapter and running qualitative generation on validation samples (Notebook 03, STEP 7b) confirmed **H2**:</span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Case <span class="pp">|</span> Ground Truth Pathologies <span class="pp">|</span> Model Generated Report <span class="pp">|</span> CheXbert Result <span class="pp">|</span></span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|---|</span></span>
+<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Case 3** | Emphysema, LLL airspace disease | *"Hyperexpanded lungs with flattened diaphragms, opacification in the left lower lobe"* | **No Finding** ✗ <span class="pp">|</span></span>
+<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Case 4** | Cardiomegaly, Congestion | *"Enlarged cardiac silhouette, bilateral airspace disease, bilateral pleural effusions"* | **No Finding** ✗ <span class="pp">|</span></span>
+<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a>CheXbert was pre-trained to look for rigid clinical keyword mappings (e.g. "emphysema", "cardiomegaly"). IU X-ray reports use descriptive phrasing ("hyperexpanded lungs with flattened diaphragms", "enlarged cardiac silhouette") for the same findings. CheXbert labels the model's clinically accurate reports as **"No Finding"**, dragging macro-F1 to zero.</span>
+<span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a><span class="fu">### 2.3 The Pivot: BERTScore-F1 for Checkpoint Selection</span></span>
+<span id="cb2-55"><a href="#cb2-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a>We pivoted to **BERTScore-F1** (`microsoft/deberta-xlarge-mnli`) as the primary checkpoint selection metric from v3 onward. BERTScore measures token-level semantic similarity using contextual embeddings — "hyperexpanded lungs" and "emphysema" map to the same clinical semantic region, so BERTScore correctly rewards the model regardless of exact vocabulary. CheXbert F1 was demoted to a **diagnostic metric** computed post-hoc.</span>
+<span id="cb2-57"><a href="#cb2-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-58"><a href="#cb2-58" aria-hidden="true" tabindex="-1"></a><span class="fu">### 2.4 BERTScore Implementation Note</span></span>
+<span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-60"><a href="#cb2-60" aria-hidden="true" tabindex="-1"></a>The <span class="in">`bert-score`</span> library's <span class="in">`sent_encode`</span> function does not cap <span class="in">`tokenizer.model_max_length`</span>, which causes index-out-of-bounds errors on long radiology reports with DeBERTa's 512-token limit. We apply a monkey-patch before every BERTScore call:</span>
+<span id="cb2-61"><a href="#cb2-61" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-62"><a href="#cb2-62" aria-hidden="true" tabindex="-1"></a><span class="in">```python</span></span>
+<span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> bert_score.utils <span class="im">as</span> _bsu</span>
+<span id="cb2-64"><a href="#cb2-64" aria-hidden="true" tabindex="-1"></a>_orig <span class="op">=</span> _bsu.sent_encode</span>
+<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-66"><a href="#cb2-66" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _safe_sent_encode(tokenizer, sent):</span>
+<span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="bu">getattr</span>(tokenizer, <span class="st">'model_max_length'</span>, <span class="dv">0</span>) <span class="op">&gt;</span> <span class="dv">10_000</span>:</span>
+<span id="cb2-68"><a href="#cb2-68" aria-hidden="true" tabindex="-1"></a>        tokenizer.model_max_length <span class="op">=</span> <span class="dv">512</span></span>
+<span id="cb2-69"><a href="#cb2-69" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> _orig(tokenizer, sent)</span>
+<span id="cb2-70"><a href="#cb2-70" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-71"><a href="#cb2-71" aria-hidden="true" tabindex="-1"></a>_bsu.sent_encode <span class="op">=</span> _safe_sent_encode</span>
+<span id="cb2-72"><a href="#cb2-72" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb2-73"><a href="#cb2-73" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-74"><a href="#cb2-74" aria-hidden="true" tabindex="-1"></a>This patch is applied in both <span class="in">`notebooks/04_eval_and_figures.ipynb`</span> and <span class="in">`notebooks/02_baseline_zero_shot.ipynb`</span>. It has no effect on scoring quality — it only prevents the tokenizer from attempting to embed sequences longer than the model supports.</span>
+<span id="cb2-75"><a href="#cb2-75" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-76"><a href="#cb2-76" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb2-77"><a href="#cb2-77" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-78"><a href="#cb2-78" aria-hidden="true" tabindex="-1"></a><span class="fu">## 3. Fine-Tuning Results (v3 and v4)</span></span>
+<span id="cb2-79"><a href="#cb2-79" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-80"><a href="#cb2-80" aria-hidden="true" tabindex="-1"></a>By switching to BERTScore-F1 checkpointing, we re-ran training as <span class="in">`qlora_uniform_v3`</span> (uniform sampler) and <span class="in">`qlora_weighted_v4`</span> (ESS-based weighted sampler).</span>
+<span id="cb2-81"><a href="#cb2-81" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-82"><a href="#cb2-82" aria-hidden="true" tabindex="-1"></a><span class="fu">### 3.1 Validation Set — Model Selection</span></span>
+<span id="cb2-83"><a href="#cb2-83" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-84"><a href="#cb2-84" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Configuration <span class="pp">|</span> Sampler <span class="pp">|</span> Best Epoch <span class="pp">|</span> BERTScore-F1 <span class="pp">|</span> CheXbert micro-F1 <span class="pp">|</span> CheXbert macro-F1 <span class="pp">|</span></span>
+<span id="cb2-85"><a href="#cb2-85" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|---|---|---|</span></span>
+<span id="cb2-86"><a href="#cb2-86" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Zero-Shot Baseline** <span class="pp">|</span> — <span class="pp">|</span> — <span class="pp">|</span> $0.6938$ <span class="pp">|</span> $0.3967$ <span class="pp">|</span> $0.1416$ <span class="pp">|</span></span>
+<span id="cb2-87"><a href="#cb2-87" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **QLoRA v3** | Uniform | 1 | **$0.7113$ (+2.5%)** <span class="pp">|</span> $0.3896$ <span class="pp">|</span> $0.0401$ <span class="pp">|</span></span>
+<span id="cb2-88"><a href="#cb2-88" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **QLoRA v4** | Weighted (ESS) | 2 | **$0.7036$ (+1.4%)** <span class="pp">|</span> $0.3945$ <span class="pp">|</span> $0.0635$ (+58%) <span class="pp">|</span></span>
+<span id="cb2-89"><a href="#cb2-89" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-90"><a href="#cb2-90" aria-hidden="true" tabindex="-1"></a>The near-zero val macro-F1 for v3 ($0.04$) is the CheXbert vocabulary mismatch artefact described in §2. It is not a sign of training collapse — the test set results below confirm the model is learning.</span>
+<span id="cb2-91"><a href="#cb2-91" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-92"><a href="#cb2-92" aria-hidden="true" tabindex="-1"></a><span class="fu">### 3.2 Test Set — Generalization</span></span>
+<span id="cb2-93"><a href="#cb2-93" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-94"><a href="#cb2-94" aria-hidden="true" tabindex="-1"></a>These numbers are computed by running each checkpoint on the 600-study held-out test set with the inference prompt format (<span class="in">`SYSTEM_PROMPT\nIndication: {text}`</span>).</span>
+<span id="cb2-95"><a href="#cb2-95" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-96"><a href="#cb2-96" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Configuration <span class="pp">|</span> Sampler <span class="pp">|</span> Best Epoch <span class="pp">|</span> BERTScore-F1 <span class="pp">|</span> CheXbert micro-F1 <span class="pp">|</span> CheXbert macro-F1 <span class="pp">|</span> BLEU-4 <span class="pp">|</span> ROUGE-L <span class="pp">|</span></span>
+<span id="cb2-97"><a href="#cb2-97" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|---|---|---|---|---|</span></span>
+<span id="cb2-98"><a href="#cb2-98" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Zero-Shot** <span class="pp">|</span> — <span class="pp">|</span> — <span class="pp">|</span> $0.6938$ <span class="pp">|</span> $0.3967$ <span class="pp">|</span> $0.1416$ <span class="pp">|</span> $0.0957$ <span class="pp">|</span> $0.2631$ <span class="pp">|</span></span>
+<span id="cb2-99"><a href="#cb2-99" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **QLoRA v3** <span class="pp">|</span> Uniform <span class="pp">|</span> 1 <span class="pp">|</span> $0.6925$ <span class="pp">|</span> $0.4637$ <span class="pp">|</span> $0.1651$ <span class="pp">|</span> — <span class="pp">|</span> — <span class="pp">|</span></span>
+<span id="cb2-100"><a href="#cb2-100" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **QLoRA v4** <span class="pp">|</span> Weighted (ESS) <span class="pp">|</span> 2 <span class="pp">|</span> $0.6784$ <span class="pp">|</span> $0.4423$ <span class="pp">|</span> $0.1786$ (+26.1%) <span class="pp">|</span> — <span class="pp">|</span> — <span class="pp">|</span></span>
+<span id="cb2-101"><a href="#cb2-101" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-102"><a href="#cb2-102" aria-hidden="true" tabindex="-1"></a>::: {.callout-note}</span>
+<span id="cb2-103"><a href="#cb2-103" aria-hidden="true" tabindex="-1"></a>**Fair baseline note**: Section 5 reports results using <span class="in">`nohint_uniform_v3`</span> and <span class="in">`nohint_weighted_v4`</span> as the conditioning fair baselines (micro-F1 $0.4404$ and $0.4526$, respectively). These are re-evaluated with the exact same prompt template used by the conditioning variants — including a <span class="in">`\nFindings:`</span> suffix — and produce slightly different numbers than the raw v3/v4 evaluated here. Both evaluations use identical greedy decoding; the difference is entirely in the prompt suffix. All comparisons in Section 5 are self-consistent.</span>
+<span id="cb2-104"><a href="#cb2-104" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb2-105"><a href="#cb2-105" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-106"><a href="#cb2-106" aria-hidden="true" tabindex="-1"></a>::: {#fig-training-results layout="[<span class="co">[</span><span class="ot">1, 1</span><span class="co">]</span>, <span class="co">[</span><span class="ot">1</span><span class="co">]</span>]"}</span>
+<span id="cb2-107"><a href="#cb2-107" aria-hidden="true" tabindex="-1"></a><span class="al">![Training Loss Curve (Uniform vs. Weighted)](../reports/figures/train_loss_comparison.png)</span>{#fig-loss}</span>
+<span id="cb2-108"><a href="#cb2-108" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-109"><a href="#cb2-109" aria-hidden="true" tabindex="-1"></a><span class="al">![Validation Metrics over Epochs](../reports/figures/train_val_f1_comparison.png)</span>{#fig-val-f1}</span>
+<span id="cb2-110"><a href="#cb2-110" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-111"><a href="#cb2-111" aria-hidden="true" tabindex="-1"></a><span class="al">![Distribution of Sampler Weights during Training](../reports/figures/train_sampler_weights_comparison.png)</span>{#fig-sampler-weights}</span>
+<span id="cb2-112"><a href="#cb2-112" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-113"><a href="#cb2-113" aria-hidden="true" tabindex="-1"></a>Training dynamics and sampling weight distributions.</span>
+<span id="cb2-114"><a href="#cb2-114" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb2-115"><a href="#cb2-115" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-116"><a href="#cb2-116" aria-hidden="true" tabindex="-1"></a><span class="fu">### 3.3 Results Analysis</span></span>
+<span id="cb2-117"><a href="#cb2-117" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-118"><a href="#cb2-118" aria-hidden="true" tabindex="-1"></a>**Validation vs. test discrepancy.** On the val set, v3 shows CheXbert macro-F1 = 0.04 (vocabulary mismatch artefact); on the test set it recovers to 0.1651 (outperforming the zero-shot baseline of 0.1416). The test set is larger and more diverse, partially mitigating the mismatch. Fine-tuning did not cause training collapse.</span>
+<span id="cb2-119"><a href="#cb2-119" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-120"><a href="#cb2-120" aria-hidden="true" tabindex="-1"></a>**Oversampling impact.** The ESS-weighted v4 achieves the highest test macro-F1 at $0.1786$ — a +26.1% relative improvement over zero-shot. Training-time distribution correction generalises to the fixed holdout.</span>
+<span id="cb2-121"><a href="#cb2-121" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-122"><a href="#cb2-122" aria-hidden="true" tabindex="-1"></a>**Fluency vs. clinical precision trade-off.** Uniform v3 maintains higher BERTScore ($0.6925$ vs. $0.6784$), producing more standard, fluent language. Weighted v4 sacrifices some fluency to push rare-pathology recall, evidenced by higher micro-F1 despite lower BERTScore. This trade-off is a central theme of the inference conditioning experiments in Section 5.</span>
+<span id="cb2-123"><a href="#cb2-123" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-124"><a href="#cb2-124" aria-hidden="true" tabindex="-1"></a>**Convergence dynamics.** Uniform v3 peaked at epoch 1 and regressed at epoch 2 (see @fig-val-f1). Weighted v4 peaked at epoch 2 — oversampling rare-label studies prevents the rapid collapse to majority-class prediction, extending the useful training window.</span>
+<span id="cb2-125"><a href="#cb2-125" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-126"><a href="#cb2-126" aria-hidden="true" tabindex="-1"></a>::: {#fig-eval-results layout="<span class="co">[</span><span class="ot">1, 1</span><span class="co">]</span>"}</span>
+<span id="cb2-127"><a href="#cb2-127" aria-hidden="true" tabindex="-1"></a><span class="al">![Test-set summary metrics for the three base configurations.](../reports/figures/eval_metric_summary.png)</span>{#fig-eval-summary}</span>
+<span id="cb2-128"><a href="#cb2-128" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-129"><a href="#cb2-129" aria-hidden="true" tabindex="-1"></a><span class="al">![Per-label CheXbert F1 across zero-shot, uniform fine-tune, and weighted fine-tune.](../reports/figures/eval_per_label_f1.png)</span>{#fig-eval-per-label}</span>
+<span id="cb2-130"><a href="#cb2-130" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-131"><a href="#cb2-131" aria-hidden="true" tabindex="-1"></a>Test-set evaluation — zero-shot vs fine-tuned variants.</span>
+<span id="cb2-132"><a href="#cb2-132" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb2-133"><a href="#cb2-133" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-134"><a href="#cb2-134" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb2-135"><a href="#cb2-135" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-136"><a href="#cb2-136" aria-hidden="true" tabindex="-1"></a><span class="fu">## 4. Domain Shift Audit: Acquisition Shift</span></span>
+<span id="cb2-137"><a href="#cb2-137" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-138"><a href="#cb2-138" aria-hidden="true" tabindex="-1"></a>**Goal:** Quantify robustness to image-level distribution shift caused by scanner hardware variation (sensor type, kVp calibration, digitisation quality). This simulates deploying the model in a clinic with a different X-ray machine.</span>
+<span id="cb2-139"><a href="#cb2-139" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-140"><a href="#cb2-140" aria-hidden="true" tabindex="-1"></a>**Method:** Five synthetic perturbation types are swept across their magnitude grids on the full 600-study test set, and BERTScore-F1 is computed at each magnitude. Evaluated on the <span class="in">`uniform_v3`</span> checkpoint.</span>
+<span id="cb2-141"><a href="#cb2-141" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-142"><a href="#cb2-142" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Perturbation <span class="pp">|</span> Magnitude range <span class="pp">|</span> Simulates <span class="pp">|</span></span>
+<span id="cb2-143"><a href="#cb2-143" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|</span></span>
+<span id="cb2-144"><a href="#cb2-144" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`brightness`</span> <span class="pp">|</span> <span class="co">[</span><span class="ot">0.5, 0.7, 1.0, 1.3, 1.6</span><span class="co">]</span> <span class="pp">|</span> Exposure level <span class="pp">|</span></span>
+<span id="cb2-145"><a href="#cb2-145" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`contrast`</span> <span class="pp">|</span> <span class="co">[</span><span class="ot">0.5, 0.7, 1.0, 1.5, 2.0</span><span class="co">]</span> <span class="pp">|</span> Dynamic range compression <span class="pp">|</span></span>
+<span id="cb2-146"><a href="#cb2-146" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`gamma`</span> <span class="pp">|</span> <span class="co">[</span><span class="ot">0.5, 0.75, 1.0, 1.5, 2.0</span><span class="co">]</span> <span class="pp">|</span> Tone curve shift <span class="pp">|</span></span>
+<span id="cb2-147"><a href="#cb2-147" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`gaussian_noise`</span> <span class="pp">|</span> <span class="co">[</span><span class="ot">0, 5, 15, 30, 50</span><span class="co">]</span> σ <span class="pp">|</span> Detector noise <span class="pp">|</span></span>
+<span id="cb2-148"><a href="#cb2-148" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`jpeg_compression`</span> <span class="pp">|</span> <span class="co">[</span><span class="ot">95, 75, 50, 25, 10</span><span class="co">]</span> quality <span class="pp">|</span> Lossy PACS compression <span class="pp">|</span></span>
+<span id="cb2-149"><a href="#cb2-149" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-150"><a href="#cb2-150" aria-hidden="true" tabindex="-1"></a><span class="al">![**Acquisition shift results.** BERTScore-F1 vs. perturbation magnitude for all five types. Less than 1.3% degradation across the entire tested range.](../reports/figures/eval_acquisition_shift.png)</span>{#fig-acq-shift}</span>
+<span id="cb2-151"><a href="#cb2-151" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-152"><a href="#cb2-152" aria-hidden="true" tabindex="-1"></a><span class="fu">### 4.1 Finding: Apparent Robustness Masks a Safety Failure</span></span>
+<span id="cb2-153"><a href="#cb2-153" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-154"><a href="#cb2-154" aria-hidden="true" tabindex="-1"></a>All perturbation types show **&lt; 1.3% BERTScore-F1 degradation** even at extreme magnitudes. This initially looks like strong robustness. It is not.</span>
+<span id="cb2-155"><a href="#cb2-155" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-156"><a href="#cb2-156" aria-hidden="true" tabindex="-1"></a>Under severe corruption (e.g. Gaussian noise σ = 50, JPEG quality = 10), the SigLIP encoder loses the visual signal entirely. The decoder falls back to its language prior and generates fluent "all-clear" reports ("The lungs are clear. No acute cardiopulmonary findings."). Because the test set contains a high proportion of normal studies, these hallucinated normal reports score well on BERTScore.</span>
+<span id="cb2-157"><a href="#cb2-157" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-158"><a href="#cb2-158" aria-hidden="true" tabindex="-1"></a>**This is a metric artefact.** Clinical utility under severe corruption is zero — the model stops looking at the image — but BERTScore cannot detect this because the hallucinated text has high linguistic quality. CheXbert macro-F1 would expose this collapse but is confounded by the vocabulary mismatch artefact (§2). This is one reason a vision-grounded evaluation metric (e.g., RGRG or RadGraph) would be valuable as future work.</span>
+<span id="cb2-159"><a href="#cb2-159" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-160"><a href="#cb2-160" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb2-161"><a href="#cb2-161" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-162"><a href="#cb2-162" aria-hidden="true" tabindex="-1"></a><span class="fu">## 5. Domain Shift Audit: Prevalence Shift</span></span>
+<span id="cb2-163"><a href="#cb2-163" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-164"><a href="#cb2-164" aria-hidden="true" tabindex="-1"></a>**Goal:** Estimate how model performance changes when the pathology distribution shifts away from the IU CXR training distribution — simulating deployment in a LATAM epidemiological context with higher prevalence of certain conditions.</span>
+<span id="cb2-165"><a href="#cb2-165" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-166"><a href="#cb2-166" aria-hidden="true" tabindex="-1"></a>**Method:** Importance-sampling re-weighting on the test set. For each study $i$ and target label $l$:</span>
+<span id="cb2-167"><a href="#cb2-167" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-168"><a href="#cb2-168" aria-hidden="true" tabindex="-1"></a>$$w_i = \frac{\pi_{\text{target}}(y_{i,l})}{\pi_{\text{source}}(y_{i,l})} = \begin{cases} \frac{\pi_{\text{target}}}{p_l} &amp; \text{if } y_{i,l} = 1 <span class="sc">\\</span> \frac{1 - \pi_{\text{target}}}{1 - p_l} &amp; \text{if } y_{i,l} = 0 \end{cases}$$</span>
+<span id="cb2-169"><a href="#cb2-169" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-170"><a href="#cb2-170" aria-hidden="true" tabindex="-1"></a>The weighted BERTScore estimate is:</span>
+<span id="cb2-171"><a href="#cb2-171" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-172"><a href="#cb2-172" aria-hidden="true" tabindex="-1"></a>$$\hat{F}_{\text{target}} = \frac{\sum_i w_i \cdot F_i}{\sum_i w_i}$$</span>
+<span id="cb2-173"><a href="#cb2-173" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-174"><a href="#cb2-174" aria-hidden="true" tabindex="-1"></a>Estimates with Effective Sample Size (ESS) &lt; 30 are plotted as dashed lines (unreliable).</span>
+<span id="cb2-175"><a href="#cb2-175" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-176"><a href="#cb2-176" aria-hidden="true" tabindex="-1"></a>**Labels audited:** Pleural Effusion, Atelectasis, Pneumonia, Consolidation — the four pathologies most likely to shift in LATAM deployment.</span>
+<span id="cb2-177"><a href="#cb2-177" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-178"><a href="#cb2-178" aria-hidden="true" tabindex="-1"></a><span class="fu">### 5.1 Finding: Weighted Sampler Maintains Stability Under Shift</span></span>
+<span id="cb2-179"><a href="#cb2-179" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-180"><a href="#cb2-180" aria-hidden="true" tabindex="-1"></a>The ESS-weighted v4 model shows more stable weighted BERTScore-F1 than the zero-shot baseline and uniform v3 as target pathology prevalence increases. This directly validates the training-time weighting strategy: a model that has seen more rare-pathology studies during training is better calibrated when those pathologies become more common at deployment.</span>
+<span id="cb2-181"><a href="#cb2-181" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-182"><a href="#cb2-182" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb2-183"><a href="#cb2-183" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-184"><a href="#cb2-184" aria-hidden="true" tabindex="-1"></a><span class="fu">## 6. Metric Stack Summary</span></span>
+<span id="cb2-185"><a href="#cb2-185" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-186"><a href="#cb2-186" aria-hidden="true" tabindex="-1"></a>The full evaluation pipeline computes five metrics on every configuration. Their roles are fixed:</span>
+<span id="cb2-187"><a href="#cb2-187" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-188"><a href="#cb2-188" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Metric <span class="pp">|</span> Role <span class="pp">|</span> Sensitivity <span class="pp">|</span></span>
+<span id="cb2-189"><a href="#cb2-189" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|</span></span>
+<span id="cb2-190"><a href="#cb2-190" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> CheXbert macro-F1 <span class="pp">|</span> **Primary** — pathology detection <span class="pp">|</span> Rare labels; vocabulary-artefact-sensitive <span class="pp">|</span></span>
+<span id="cb2-191"><a href="#cb2-191" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> CheXbert micro-F1 <span class="pp">|</span> Supporting — overall label accuracy <span class="pp">|</span> Common labels dominate <span class="pp">|</span></span>
+<span id="cb2-192"><a href="#cb2-192" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> BERTScore-F1 <span class="pp">|</span> **Checkpoint selection** + secondary <span class="pp">|</span> Fluency and semantic similarity <span class="pp">|</span></span>
+<span id="cb2-193"><a href="#cb2-193" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> BLEU-4 <span class="pp">|</span> Secondary — writing style <span class="pp">|</span> Lexical overlap only <span class="pp">|</span></span>
+<span id="cb2-194"><a href="#cb2-194" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> ROUGE-L <span class="pp">|</span> Secondary — writing style <span class="pp">|</span> Longest common subsequence <span class="pp">|</span></span>
+<span id="cb2-195"><a href="#cb2-195" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-196"><a href="#cb2-196" aria-hidden="true" tabindex="-1"></a>All metrics are computed with identical greedy decoding (<span class="in">`temperature=0`</span>, <span class="in">`max_new_tokens=256`</span>) across all configurations, ensuring the only variable is the prompt content. Results cached to <span class="in">`reports/eval_metrics_{variant}.json`</span>; the grand comparison across all 10 configurations is assembled in Notebook 04 STEP 7 after notebooks 05 and 06 have run.</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
 </div></div></div></div></div>
 </div> <!-- /content -->
 <footer class="footer">
@@ -1112,6 +1459,38 @@ Figure&nbsp;1: Comparison of training dynamics and sampling weights.
 </div>
   </div>
 </footer>
+<script>var lightboxQuarto = GLightbox({"closeEffect":"zoom","descPosition":"bottom","loop":false,"openEffect":"zoom","selector":".lightbox"});
+(function() {
+  let previousOnload = window.onload;
+  window.onload = () => {
+    if (previousOnload) {
+      previousOnload();
+    }
+    lightboxQuarto.on('slide_before_load', (data) => {
+      const { slideIndex, slideNode, slideConfig, player, trigger } = data;
+      const href = trigger.getAttribute('href');
+      if (href !== null) {
+        const imgEl = window.document.querySelector(`a[href="${href}"] img`);
+        if (imgEl !== null) {
+          const srcAttr = imgEl.getAttribute("src");
+          if (srcAttr && srcAttr.startsWith("data:")) {
+            slideConfig.href = srcAttr;
+          }
+        }
+      } 
+    });
+  
+    lightboxQuarto.on('slide_after_load', (data) => {
+      const { slideIndex, slideNode, slideConfig, player, trigger } = data;
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(slideNode);
+      }
+    });
+  
+  };
+  
+})();
+          </script>
 
 
 

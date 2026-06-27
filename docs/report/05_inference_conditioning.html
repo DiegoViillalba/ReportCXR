@@ -98,6 +98,9 @@ div.csl-indent {
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="../site_libs/bootstrap/bootstrap-e9614ef202455b86b71b0557e717d80d.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script src="../site_libs/quarto-contrib/glightbox/glightbox.min.js"></script>
+<link href="../site_libs/quarto-contrib/glightbox/glightbox.min.css" rel="stylesheet">
+<link href="../site_libs/quarto-contrib/glightbox/lightbox.css" rel="stylesheet">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -240,6 +243,10 @@ window.Quarto = {
     <a class="dropdown-item" href="../doc/domain_shift_modules.html">
  <span class="dropdown-text">Domain Shift Audit</span></a>
   </li>  
+        <li>
+    <a class="dropdown-item" href="../doc/demo_deployment.html">
+ <span class="dropdown-text">Demo &amp; Deployment</span></a>
+  </li>  
     </ul>
   </li>
   <li class="nav-item dropdown ">
@@ -298,11 +305,11 @@ window.Quarto = {
   <li><a href="#vector-indexing-similarity-matching" id="toc-vector-indexing-similarity-matching" class="nav-link" data-scroll-target="#vector-indexing-similarity-matching">1.1 Vector Indexing &amp; Similarity Matching</a></li>
   <li><a href="#few-shot-prompt-injection" id="toc-few-shot-prompt-injection" class="nav-link" data-scroll-target="#few-shot-prompt-injection">1.2 Few-Shot Prompt Injection</a></li>
   </ul></li>
-  <li><a href="#soft-label-priors-via-association-rules-singh2026clinicalreasoningvlm" id="toc-soft-label-priors-via-association-rules-singh2026clinicalreasoningvlm" class="nav-link" data-scroll-target="#soft-label-priors-via-association-rules-singh2026clinicalreasoningvlm">2. Soft Label Priors via Association Rules <span class="citation" data-cites="singh2026clinicalreasoningvlm">(Singh et al. 2026)</span></a>
+  <li><a href="#soft-label-priors-via-association-rules" id="toc-soft-label-priors-via-association-rules" class="nav-link" data-scroll-target="#soft-label-priors-via-association-rules">2. Soft Label Priors via Association Rules</a>
   <ul class="collapse">
   <li><a href="#mining-co-occurrence-statistics" id="toc-mining-co-occurrence-statistics" class="nav-link" data-scroll-target="#mining-co-occurrence-statistics">2.1 Mining Co-occurrence Statistics</a></li>
-  <li><a href="#keyword-triggering-and-prompt-conditioning" id="toc-keyword-triggering-and-prompt-conditioning" class="nav-link" data-scroll-target="#keyword-triggering-and-prompt-conditioning">2.2 Keyword Triggering and Prompt Conditioning</a></li>
-  <li><a href="#empirical-tf-idf-prior-overrides" id="toc-empirical-tf-idf-prior-overrides" class="nav-link" data-scroll-target="#empirical-tf-idf-prior-overrides">2.3 Empirical TF-IDF Prior Overrides</a></li>
+  <li><a href="#two-tier-hint-selection" id="toc-two-tier-hint-selection" class="nav-link" data-scroll-target="#two-tier-hint-selection">2.2 Two-Tier Hint Selection</a></li>
+  <li><a href="#hint-coverage-in-practice" id="toc-hint-coverage-in-practice" class="nav-link" data-scroll-target="#hint-coverage-in-practice">2.3 Hint Coverage in Practice</a></li>
   </ul></li>
   <li><a href="#experimental-results-prompt-engineering-trade-offs" id="toc-experimental-results-prompt-engineering-trade-offs" class="nav-link" data-scroll-target="#experimental-results-prompt-engineering-trade-offs">3. Experimental Results &amp; Prompt Engineering Trade-offs</a>
   <ul class="collapse">
@@ -362,7 +369,7 @@ window.Quarto = {
 <h3 class="anchored" data-anchor-id="vector-indexing-similarity-matching">1.1 Vector Indexing &amp; Similarity Matching</h3>
 <p>Because clinical indications are dense, structured text, we construct a CPU-efficient term frequency-inverse document frequency (TF-IDF) vectorizer over the training indications:</p>
 <p><span class="math display">\[TF\text{-}IDF(t, d) = TF(t, d) \times IDF(t)\]</span></p>
-<p>We extract unigrams and bigrams, capping features at 5,000. At inference time, the query indication <span class="math inline">\(q\)</span> is vectorized, and cosine similarity is computed against all training vectors:</p>
+<p>We extract unigrams and bigrams, capping features at 5,000 (actual vocabulary after fitting on 2,403 training indications: <strong>3,329 features</strong>). At inference time, the query indication <span class="math inline">\(q\)</span> is vectorized, and cosine similarity is computed against all training vectors:</p>
 <p><span class="math display">\[\text{similarity}(q, d_i) = \frac{q \cdot d_i}{\|q\| \|d_i\|}\]</span></p>
 <p>We set a similarity threshold of <span class="math inline">\(0.05\)</span>. If matches exist, we select the top-<span class="math inline">\(k\)</span> (typically <span class="math inline">\(k=3\)</span> or <span class="math inline">\(k=5\)</span>) corresponding training reports to act as few-shot clinical contexts.</p>
 </section>
@@ -381,9 +388,9 @@ Findings:</code></pre>
 <hr>
 </section>
 </section>
-<section id="soft-label-priors-via-association-rules-singh2026clinicalreasoningvlm" class="level2">
-<h2 class="anchored" data-anchor-id="soft-label-priors-via-association-rules-singh2026clinicalreasoningvlm">2. Soft Label Priors via Association Rules <span class="citation" data-cites="singh2026clinicalreasoningvlm">(<a href="#ref-singh2026clinicalreasoningvlm" role="doc-biblioref">Singh et al. 2026</a>)</span></h2>
-<p>Medical findings do not occur in isolation; they follow logical clinical associations. To steer the decoder toward plausible reports without modifying model weights or gathering more data, we introduce soft label priors derived from label association rules, as proposed in Singh et al. <span class="citation" data-cites="singh2026clinicalreasoningvlm">(<a href="#ref-singh2026clinicalreasoningvlm" role="doc-biblioref">Singh et al. 2026</a>)</span>.</p>
+<section id="soft-label-priors-via-association-rules" class="level2">
+<h2 class="anchored" data-anchor-id="soft-label-priors-via-association-rules">2. Soft Label Priors via Association Rules</h2>
+<p>Medical findings do not occur in isolation; they follow logical clinical associations. To steer the decoder toward plausible reports without modifying model weights or gathering more data, we introduce soft label priors derived from label co-occurrence statistics mined from the training set.</p>
 <section id="mining-co-occurrence-statistics" class="level3">
 <h3 class="anchored" data-anchor-id="mining-co-occurrence-statistics">2.1 Mining Co-occurrence Statistics</h3>
 <p>We compute a pairwise joint occurrence matrix from the binary CheXbert training labels (<span class="math inline">\(L \in \{0, 1\}^{N \times 14}\)</span>):</p>
@@ -393,16 +400,28 @@ Findings:</code></pre>
 <p><span class="math display">\[\text{Lift}(A \rightarrow B) = \frac{P(B \mid A)}{P(B)} = \frac{C_{A, B}}{\mu_A \mu_B}\]</span></p>
 <p>Where <span class="math inline">\(\mu_A\)</span> represents the empirical prevalence of label <span class="math inline">\(A\)</span> in the dataset. Rules are sorted by confidence and filtered using thresholds (confidence <span class="math inline">\(\ge 0.25\)</span>, lift <span class="math inline">\(\ge 1.2\)</span>). The resulting joint statistics are saved to a heatmap.</p>
 </section>
-<section id="keyword-triggering-and-prompt-conditioning" class="level3">
-<h3 class="anchored" data-anchor-id="keyword-triggering-and-prompt-conditioning">2.2 Keyword Triggering and Prompt Conditioning</h3>
-<p>During test inference, we scan the incoming indication text for keywords related to the 14 target pathologies, using negation filtering (e.g., ignoring mentions preceded by “no evidence of” or “rule out”).</p>
-<p>If a pathology <span class="math inline">\(A\)</span> is triggered, we fetch its highest-confidence associations and append them as a structured hint:</p>
+<section id="two-tier-hint-selection" class="level3">
+<h3 class="anchored" data-anchor-id="two-tier-hint-selection">2.2 Two-Tier Hint Selection</h3>
+<p>The <code>build_conditioned_prompt</code> function applies a strict priority hierarchy to decide which hint to inject:</p>
+<p><strong>Primary — Empirical TF-IDF Prior:</strong> We first retrieve the top-<span class="math inline">\(K\)</span> (<span class="math inline">\(K=20\)</span>) training indications most similar to the query (cosine similarity threshold <span class="math inline">\(\geq 0.05\)</span>) and compute the empirical label prevalence vector over that neighborhood:</p>
+<p><span class="math display">\[\hat{P}(B \mid q) = \frac{1}{K} \sum_{i \in \text{top-}K} \mathbf{1}[B_i = 1]\]</span></p>
+<p>Labels with <span class="math inline">\(\hat{P}(B \mid q) \geq 0.30\)</span> are injected as a structured prevalence hint. The <code>No Finding</code> label is explicitly excluded from the hint regardless of prevalence. If any label clears the threshold, this prior is used and the pipeline stops.</p>
+<p><strong>Fallback — Keyword Association Rules:</strong> Only when the TF-IDF neighborhood produces no label above the prevalence threshold, we fall back to keyword matching. We scan the indication text for 13 pathology keyword dictionaries with negation filtering (prefixes such as “rule out”, “no evidence of”, “r/o”, “no”, “without” suppress the match within a 25-character context window). Triggered antecedents <span class="math inline">\(A\)</span> are then expanded via the mined rules: all consequents <span class="math inline">\(B\)</span> with confidence <span class="math inline">\(\geq 0.25\)</span> and lift <span class="math inline">\(\geq 1.2\)</span> are included in the hint.</p>
+<p>The two paths produce distinct hint formats injected after the system prompt, before <code>Findings:</code>:</p>
+<p><strong>TF-IDF prior (primary path):</strong></p>
+<pre><code>Clinical context (based on similar studies in training set):
+  - Cardiomegaly: present in 30% of similar cases.</code></pre>
+<p><strong>Keyword association rules (fallback path):</strong></p>
 <pre><code>Clinical association context (training set statistics):
-  - Atelectasis co-occurs with Lung Opacity in 45% of similar studies (lift=1.82).</code></pre>
+  - Edema co-occurs with Cardiomegaly in 61% of similar studies (lift=4.93).
+  - Edema co-occurs with Lung Opacity in 39% of similar studies (lift=2.87).
+  - Edema co-occurs with Pleural Effusion in 32% of similar studies (lift=10.20).</code></pre>
+<p>The fallback example above is for the indication <em>“Chest pain, history of CHF and pulmonary edema”</em> — the keyword <code>edema</code>/<code>chf</code> triggers the Edema antecedent, which expands to its three strongest consequents.</p>
 </section>
-<section id="empirical-tf-idf-prior-overrides" class="level3">
-<h3 class="anchored" data-anchor-id="empirical-tf-idf-prior-overrides">2.3 Empirical TF-IDF Prior Overrides</h3>
-<p>To handle complex cases where keywords are insufficient, we implement an alternative prior estimator: we retrieve the top-<span class="math inline">\(K\)</span> (<span class="math inline">\(K=20\)</span>) similar training indications via TF-IDF and compute the empirical label prevalence vector directly over this neighborhood. If this retrieval succeeds, the empirical priors are formatted as a direct prompt context, overriding the rule-based hints.</p>
+<section id="hint-coverage-in-practice" class="level3">
+<h3 class="anchored" data-anchor-id="hint-coverage-in-practice">2.3 Hint Coverage in Practice</h3>
+<p>On the 600-study test set, the conditioner injects a hint into <strong>241 studies (40.2%)</strong>. The remaining 59.8% receive the standard prompt — either because the indication is empty/missing or because neither path produced a confident signal. Studies with no indication text always receive no hint.</p>
+<p>This two-tier design prioritises the richer statistical signal of the neighbourhood prior when retrieval quality is sufficient, while ensuring broad coverage via the deterministic keyword fallback. The selection is fully deterministic (no sampling) and adds no latency beyond a CPU-side TF-IDF lookup.</p>
 <hr>
 </section>
 </section>
@@ -411,7 +430,7 @@ Findings:</code></pre>
 <p>We evaluated ten different configurations end-to-end on our holdout test set (<span class="math inline">\(n=600\)</span> studies). The results reveal a clear performance-style trade-off frontier. Rather than one single method dominating all others, we find two Pareto-optimal paths: a <strong>fluency track</strong> driven by RAG, and a <strong>clinical precision track</strong> driven by label prior conditioning.</p>
 <section id="quantitative-metrics-comparison" class="level3">
 <h3 class="anchored" data-anchor-id="quantitative-metrics-comparison">3.1 Quantitative Metrics Comparison</h3>
-<p>To isolate the causal impact of the conditioning prompts from minor formatting shifts, we evaluated each strategy against its respective <strong>fair baseline</strong> (which uses the exact same template and <code>\nFindings:</code> suffix but without injecting hints or RAG examples).</p>
+<p>To isolate the causal impact of the conditioning prompts from minor formatting shifts, we evaluated each strategy against its respective <strong>fair baseline</strong> (which uses the exact same template and <code>\nFindings:</code> suffix but without injecting hints or RAG examples). The <code>nohint_uniform_v3</code> and <code>nohint_weighted_v4</code> fair baselines are generated in Notebook 06 STEP 7 — they re-run inference on the same checkpoints with the conditioning prompt format but omitting the hint block, so any metric difference is causally attributable to the hint content.</p>
 <section id="uniform-sampler-checkpoint-uniform_v3-comparison" class="level4">
 <h4 class="anchored" data-anchor-id="uniform-sampler-checkpoint-uniform_v3-comparison">Uniform Sampler Checkpoint (<code>uniform_v3</code>) Comparison</h4>
 <table class="caption-top table">
@@ -525,7 +544,7 @@ Findings:</code></pre>
 <div id="fig-rag-comp" class="quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-subfloat-fig figure">
 <div aria-describedby="fig-rag-comp-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-<img src="../reports/figures/eval_rag_comparison.png" class="img-fluid figure-img" data-ref-parent="fig-prompt-experiments">
+<a href="../reports/figures/eval_rag_comparison.png" class="lightbox" data-gallery="fig-prompt-experiments" title="Figure&nbsp;1&nbsp;(a): RAG Performance vs.&nbsp;Fair Baseline"><img src="../reports/figures/eval_rag_comparison.png" class="img-fluid figure-img" data-ref-parent="fig-prompt-experiments"></a>
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-rag-comp-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 (a) RAG Performance vs.&nbsp;Fair Baseline
@@ -537,7 +556,7 @@ Findings:</code></pre>
 <div id="fig-assoc-comp" class="quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-subfloat-fig figure">
 <div aria-describedby="fig-assoc-comp-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-<img src="../reports/figures/eval_assoc_rules_comparison.png" class="img-fluid figure-img" data-ref-parent="fig-prompt-experiments">
+<a href="../reports/figures/eval_assoc_rules_comparison.png" class="lightbox" data-gallery="fig-prompt-experiments" title="Figure&nbsp;1&nbsp;(b): Association Rules Performance vs.&nbsp;Fair Baseline"><img src="../reports/figures/eval_assoc_rules_comparison.png" class="img-fluid figure-img" data-ref-parent="fig-prompt-experiments"></a>
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-assoc-comp-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 (b) Association Rules Performance vs.&nbsp;Fair Baseline
@@ -551,7 +570,7 @@ Findings:</code></pre>
 <div id="fig-assoc-delta" class="quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-subfloat-fig figure">
 <div aria-describedby="fig-assoc-delta-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-<img src="../reports/figures/eval_assoc_rules_delta.png" class="img-fluid figure-img" data-ref-parent="fig-prompt-experiments">
+<a href="../reports/figures/eval_assoc_rules_delta.png" class="lightbox" data-gallery="fig-prompt-experiments" title="Figure&nbsp;1&nbsp;(c): F1-Score Delta from Fair Baseline"><img src="../reports/figures/eval_assoc_rules_delta.png" class="img-fluid figure-img" data-ref-parent="fig-prompt-experiments"></a>
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-assoc-delta-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 (c) F1-Score Delta from Fair Baseline
@@ -581,7 +600,7 @@ Figure&nbsp;1: Prompt engineering ablation results on the test set.
 <div id="fig-label-overlap" class="quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-subfloat-fig figure">
 <div aria-describedby="fig-label-overlap-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-<img src="../reports/figures/rag_label_overlap_diagnostic.png" class="img-fluid figure-img" data-ref-parent="fig-rag-diagnostics">
+<a href="../reports/figures/rag_label_overlap_diagnostic.png" class="lightbox" data-gallery="fig-rag-diagnostics" title="Figure&nbsp;2&nbsp;(a): TF-IDF Retrieval Label Overlap Diagnostic"><img src="../reports/figures/rag_label_overlap_diagnostic.png" class="img-fluid figure-img" data-ref-parent="fig-rag-diagnostics"></a>
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-label-overlap-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 (a) TF-IDF Retrieval Label Overlap Diagnostic
@@ -593,7 +612,7 @@ Figure&nbsp;1: Prompt engineering ablation results on the test set.
 <div id="fig-rag-fair" class="quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-subfloat-fig figure">
 <div aria-describedby="fig-rag-fair-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-<img src="../reports/figures/rag_fair_comparison.png" class="img-fluid figure-img" data-ref-parent="fig-rag-diagnostics">
+<a href="../reports/figures/rag_fair_comparison.png" class="lightbox" data-gallery="fig-rag-diagnostics" title="Figure&nbsp;2&nbsp;(b): RAG Retrieval Quality Comparison"><img src="../reports/figures/rag_fair_comparison.png" class="img-fluid figure-img" data-ref-parent="fig-rag-diagnostics"></a>
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-rag-fair-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 (b) RAG Retrieval Quality Comparison
@@ -636,7 +655,7 @@ Figure&nbsp;2: RAG retrieval quality and diagnostic statistics.
 <div id="fig-grand-comp" class="quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-subfloat-fig figure">
 <div aria-describedby="fig-grand-comp-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-<img src="../reports/figures/eval_grand_comparison.png" class="img-fluid figure-img" data-ref-parent="fig-grand-comparison-layout">
+<a href="../reports/figures/eval_grand_comparison.png" class="lightbox" data-gallery="fig-grand-comparison-layout" title="Figure&nbsp;3&nbsp;(a): Grand Metrics Comparison - All 10 Variants"><img src="../reports/figures/eval_grand_comparison.png" class="img-fluid figure-img" data-ref-parent="fig-grand-comparison-layout"></a>
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-grand-comp-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 (a) Grand Metrics Comparison - All 10 Variants
@@ -648,7 +667,7 @@ Figure&nbsp;2: RAG retrieval quality and diagnostic statistics.
 <div id="fig-scatter" class="quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-subfloat-fig figure">
 <div aria-describedby="fig-scatter-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-<img src="../reports/figures/eval_scatter_fluency_vs_coverage.png" class="img-fluid figure-img" data-ref-parent="fig-grand-comparison-layout">
+<a href="../reports/figures/eval_scatter_fluency_vs_coverage.png" class="lightbox" data-gallery="fig-grand-comparison-layout" title="Figure&nbsp;3&nbsp;(b): Trade-off Space: Fluency vs.&nbsp;Pathology Coverage"><img src="../reports/figures/eval_scatter_fluency_vs_coverage.png" class="img-fluid figure-img" data-ref-parent="fig-grand-comparison-layout"></a>
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-scatter-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 (b) Trade-off Space: Fluency vs.&nbsp;Pathology Coverage
@@ -662,7 +681,7 @@ Figure&nbsp;2: RAG retrieval quality and diagnostic statistics.
 <div id="fig-heatmap" class="quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-subfloat-fig figure">
 <div aria-describedby="fig-heatmap-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-<img src="../reports/figures/eval_per_label_heatmap.png" class="img-fluid figure-img" data-ref-parent="fig-grand-comparison-layout">
+<a href="../reports/figures/eval_per_label_heatmap.png" class="lightbox" data-gallery="fig-grand-comparison-layout" title="Figure&nbsp;3&nbsp;(c): Rare Pathology F1-Score Heatmap"><img src="../reports/figures/eval_per_label_heatmap.png" class="img-fluid figure-img" data-ref-parent="fig-grand-comparison-layout"></a>
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-heatmap-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 (c) Rare Pathology F1-Score Heatmap
@@ -689,9 +708,6 @@ Figure&nbsp;3: Grand comparison of all ten configurations.
 <div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography" id="quarto-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list">
 <div id="ref-kang2025structuredradiology" class="csl-entry" role="listitem">
 Kang, Seongjae, Dong Bok Lee, Juho Jung, Dongseop Kim, Won Hwa Kim, and Sunghoon Joo. 2025. <span>“Automated Structured Radiology Report Generation with Rich Clinical Context.”</span> <em>arXiv Preprint arXiv:2510.00428</em>, October. <a href="https://arxiv.org/abs/2510.00428">https://arxiv.org/abs/2510.00428</a>.
-</div>
-<div id="ref-singh2026clinicalreasoningvlm" class="csl-entry" role="listitem">
-Singh, Vikash, Debargha Ganguly, Haotian Yu, Chengwei Zhou, Prerna Singh, Brandon Lee, Vipin Chaudhary, and Gourav Datta. 2026. <span>“Toward Guarantees for Clinical Reasoning in Vision Language Models via Formal Verification.”</span> <em>arXiv Preprint arXiv:2602.24111</em>, February. <a href="https://arxiv.org/abs/2602.24111">https://arxiv.org/abs/2602.24111</a>.
 </div>
 </div></section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
@@ -1145,184 +1161,207 @@ Singh, Vikash, Debargha Ganguly, Haotian Yu, Chengwei Zhou, Prerna Singh, Brando
     }
   });
   </script><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">Source Code</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "5. Inference Conditioning"</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="an">author:</span><span class="co"> "Diego Villalba (Applied Research Candidate)"</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="an">date:</span><span class="co"> "2026-06-25"</span></span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>::: {.non-technical-summary}</span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="fu">##### Section Summary (Non-Technical)</span></span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>This section explains two advanced techniques we use to improve the model's reports without having to perform additional expensive training. </span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>First, we use **Retrieval-Augmented Generation (RAG)**, which searches the training database at inference time for chest X-ray reports with similar clinical indications and injects them as examples in the model prompt. This gives the AI local reference points. </span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>Second, we use **Soft Label Priors**, which analyze training statistics to find which diseases commonly occur together (for example, fluid overload and lung congestion). When the model generates a report, we feed it these statistical likelihoods as hints, guiding it toward writing clinically logical findings.</span>
-<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>:::</span>
-<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="fu">## 1. Case-Based Retrieval-Augmented Generation [@kang2025structuredradiology]</span></span>
-<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>When a radiologist interprets a chest radiograph, they often refer to historical cases with similar clinical presentations. To replicate this case-based reasoning, we implement an inference-time Retrieval-Augmented Generation (RAG) strategy based on the work of Kang et al. <span class="co">[</span><span class="ot">-@kang2025structuredradiology</span><span class="co">]</span>.</span>
-<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a><span class="fu">### 1.1 Vector Indexing &amp; Similarity Matching</span></span>
-<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>Because clinical indications are dense, structured text, we construct a CPU-efficient term frequency-inverse document frequency (TF-IDF) vectorizer over the training indications:</span>
-<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>$$TF\text{-}IDF(t, d) = TF(t, d) \times IDF(t)$$</span>
-<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>We extract unigrams and bigrams, capping features at 5,000. At inference time, the query indication $q$ is vectorized, and cosine similarity is computed against all training vectors:</span>
-<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>$$\text{similarity}(q, d_i) = \frac{q \cdot d_i}{<span class="sc">\|</span>q<span class="sc">\|</span> <span class="sc">\|</span>d_i<span class="sc">\|</span>}$$</span>
-<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>We set a similarity threshold of $0.05$. If matches exist, we select the top-$k$ (typically $k=3$ or $k=5$) corresponding training reports to act as few-shot clinical contexts.</span>
-<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a><span class="fu">### 1.2 Few-Shot Prompt Injection</span></span>
-<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>The retrieved reference indications and findings are formatted and appended to the system prompt, as shown in the following structure:</span>
-<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a><span class="in">You are an expert radiologist. Write only the Findings section...</span></span>
-<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a><span class="in">The following are findings from similar studies for reference:</span></span>
-<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a><span class="in">  Example 1 (similarity=0.72):</span></span>
-<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a><span class="in">    Indication: Shortness of breath, history of smoking.</span></span>
-<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a><span class="in">    Findings: Lungs are hyperexpanded with flattened diaphragms...</span></span>
-<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a><span class="in">Indication: Patient with shortness of breath and low oxygen.</span></span>
-<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a><span class="in">Findings:</span></span>
-<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a>This grounds the model in target-vocabulary phrasing before generation, helping to bridge the vocabulary mismatch gap.</span>
-<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-47"><a href="#cb3-47" aria-hidden="true" tabindex="-1"></a>---</span>
-<span id="cb3-48"><a href="#cb3-48" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-49"><a href="#cb3-49" aria-hidden="true" tabindex="-1"></a><span class="fu">## 2. Soft Label Priors via Association Rules [@singh2026clinicalreasoningvlm]</span></span>
-<span id="cb3-50"><a href="#cb3-50" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-51"><a href="#cb3-51" aria-hidden="true" tabindex="-1"></a>Medical findings do not occur in isolation; they follow logical clinical associations. To steer the decoder toward plausible reports without modifying model weights or gathering more data, we introduce soft label priors derived from label association rules, as proposed in Singh et al. <span class="co">[</span><span class="ot">@singh2026clinicalreasoningvlm</span><span class="co">]</span>.</span>
-<span id="cb3-52"><a href="#cb3-52" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-53"><a href="#cb3-53" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-54"><a href="#cb3-54" aria-hidden="true" tabindex="-1"></a><span class="fu">### 2.1 Mining Co-occurrence Statistics</span></span>
-<span id="cb3-55"><a href="#cb3-55" aria-hidden="true" tabindex="-1"></a>We compute a pairwise joint occurrence matrix from the binary CheXbert training labels ($L \in <span class="sc">\{</span>0, 1<span class="sc">\}</span>^{N \times 14}$):</span>
-<span id="cb3-56"><a href="#cb3-56" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-57"><a href="#cb3-57" aria-hidden="true" tabindex="-1"></a>$$C = \frac{L^T L}{N}$$</span>
-<span id="cb3-58"><a href="#cb3-58" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-59"><a href="#cb3-59" aria-hidden="true" tabindex="-1"></a>For each pair of labels $A$ and $B$, we compute the conditional probability (confidence) and lift:</span>
-<span id="cb3-60"><a href="#cb3-60" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-61"><a href="#cb3-61" aria-hidden="true" tabindex="-1"></a>$$P(B \mid A) = \frac{P(A \cap B)}{P(A)} = \frac{C_{A, B}}{\mu_A}$$</span>
-<span id="cb3-62"><a href="#cb3-62" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-63"><a href="#cb3-63" aria-hidden="true" tabindex="-1"></a>$$\text{Lift}(A \rightarrow B) = \frac{P(B \mid A)}{P(B)} = \frac{C_{A, B}}{\mu_A \mu_B}$$</span>
-<span id="cb3-64"><a href="#cb3-64" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-65"><a href="#cb3-65" aria-hidden="true" tabindex="-1"></a>Where $\mu_A$ represents the empirical prevalence of label $A$ in the dataset. Rules are sorted by confidence and filtered using thresholds (confidence $\ge 0.25$, lift $\ge 1.2$). The resulting joint statistics are saved to a heatmap.</span>
-<span id="cb3-66"><a href="#cb3-66" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-67"><a href="#cb3-67" aria-hidden="true" tabindex="-1"></a><span class="fu">### 2.2 Keyword Triggering and Prompt Conditioning</span></span>
-<span id="cb3-68"><a href="#cb3-68" aria-hidden="true" tabindex="-1"></a>During test inference, we scan the incoming indication text for keywords related to the 14 target pathologies, using negation filtering (e.g., ignoring mentions preceded by "no evidence of" or "rule out"). </span>
-<span id="cb3-69"><a href="#cb3-69" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-70"><a href="#cb3-70" aria-hidden="true" tabindex="-1"></a>If a pathology $A$ is triggered, we fetch its highest-confidence associations and append them as a structured hint:</span>
-<span id="cb3-71"><a href="#cb3-71" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-72"><a href="#cb3-72" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb3-73"><a href="#cb3-73" aria-hidden="true" tabindex="-1"></a><span class="in">Clinical association context (training set statistics):</span></span>
-<span id="cb3-74"><a href="#cb3-74" aria-hidden="true" tabindex="-1"></a><span class="in">  - Atelectasis co-occurs with Lung Opacity in 45% of similar studies (lift=1.82).</span></span>
-<span id="cb3-75"><a href="#cb3-75" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb3-76"><a href="#cb3-76" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-77"><a href="#cb3-77" aria-hidden="true" tabindex="-1"></a><span class="fu">### 2.3 Empirical TF-IDF Prior Overrides</span></span>
-<span id="cb3-78"><a href="#cb3-78" aria-hidden="true" tabindex="-1"></a>To handle complex cases where keywords are insufficient, we implement an alternative prior estimator: we retrieve the top-$K$ ($K=20$) similar training indications via TF-IDF and compute the empirical label prevalence vector directly over this neighborhood. If this retrieval succeeds, the empirical priors are formatted as a direct prompt context, overriding the rule-based hints.</span>
-<span id="cb3-79"><a href="#cb3-79" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-80"><a href="#cb3-80" aria-hidden="true" tabindex="-1"></a>---</span>
-<span id="cb3-81"><a href="#cb3-81" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-82"><a href="#cb3-82" aria-hidden="true" tabindex="-1"></a><span class="fu">## 3. Experimental Results &amp; Prompt Engineering Trade-offs</span></span>
-<span id="cb3-83"><a href="#cb3-83" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-84"><a href="#cb3-84" aria-hidden="true" tabindex="-1"></a>We evaluated ten different configurations end-to-end on our holdout test set ($n=600$ studies). The results reveal a clear performance-style trade-off frontier. Rather than one single method dominating all others, we find two Pareto-optimal paths: a **fluency track** driven by RAG, and a **clinical precision track** driven by label prior conditioning.</span>
-<span id="cb3-85"><a href="#cb3-85" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-86"><a href="#cb3-86" aria-hidden="true" tabindex="-1"></a><span class="fu">### 3.1 Quantitative Metrics Comparison</span></span>
-<span id="cb3-87"><a href="#cb3-87" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-88"><a href="#cb3-88" aria-hidden="true" tabindex="-1"></a>To isolate the causal impact of the conditioning prompts from minor formatting shifts, we evaluated each strategy against its respective **fair baseline** (which uses the exact same template and <span class="in">`\nFindings:`</span> suffix but without injecting hints or RAG examples).</span>
-<span id="cb3-89"><a href="#cb3-89" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-90"><a href="#cb3-90" aria-hidden="true" tabindex="-1"></a><span class="fu">#### Uniform Sampler Checkpoint (`uniform_v3`) Comparison</span></span>
-<span id="cb3-91"><a href="#cb3-91" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-92"><a href="#cb3-92" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Configuration <span class="pp">|</span> BERTScore-F1 <span class="pp">|</span> CheXbert micro-F1 <span class="pp">|</span> CheXbert macro-F1 <span class="pp">|</span> BLEU-4 <span class="pp">|</span> ROUGE-L <span class="pp">|</span></span>
-<span id="cb3-93"><a href="#cb3-93" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|---|---|---|</span></span>
-<span id="cb3-94"><a href="#cb3-94" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Fair Baseline (`nohint_uniform_v3`)** <span class="pp">|</span> $0.6879$ <span class="pp">|</span> $0.4404$ <span class="pp">|</span> $0.1445$ <span class="pp">|</span> $0.1128$ <span class="pp">|</span> $0.2852$ <span class="pp">|</span></span>
-<span id="cb3-95"><a href="#cb3-95" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **RAG $k=3$ (`rag_k3_uniform_v3`)** | **$0.7076$** | $0.3432$ | $0.1160$ | **$0.1391$** | **$0.3051$** <span class="pp">|</span></span>
-<span id="cb3-96"><a href="#cb3-96" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Assoc. Rules (`assoc_rules_uniform_v3`)** | $0.6844$ | **$0.4424$** | **$0.1745$** <span class="pp">|</span> $0.1100$ <span class="pp">|</span> $0.2812$ <span class="pp">|</span></span>
-<span id="cb3-97"><a href="#cb3-97" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Combined RAG + Rules** <span class="pp">|</span> $0.7033$ <span class="pp">|</span> $0.2567$ <span class="pp">|</span> $0.0954$ <span class="pp">|</span> $0.1337$ <span class="pp">|</span> $0.2870$ <span class="pp">|</span></span>
-<span id="cb3-98"><a href="#cb3-98" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-99"><a href="#cb3-99" aria-hidden="true" tabindex="-1"></a><span class="fu">#### Weighted Sampler Checkpoint (`weighted_v4`) Comparison</span></span>
-<span id="cb3-100"><a href="#cb3-100" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-101"><a href="#cb3-101" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Configuration <span class="pp">|</span> BERTScore-F1 <span class="pp">|</span> CheXbert micro-F1 <span class="pp">|</span> CheXbert macro-F1 <span class="pp">|</span> BLEU-4 <span class="pp">|</span> ROUGE-L <span class="pp">|</span></span>
-<span id="cb3-102"><a href="#cb3-102" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|---|---|---|</span></span>
-<span id="cb3-103"><a href="#cb3-103" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Fair Baseline (`nohint_weighted_v4`)** | **$0.6876$** | $0.4526$ | $0.1581$ | **$0.1076$** <span class="pp">|</span> $0.2720$ <span class="pp">|</span></span>
-<span id="cb3-104"><a href="#cb3-104" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Assoc. Rules (`assoc_rules_weighted_v4`)** | $0.6862$ | **$0.4559$** | **$0.1841$** <span class="pp">|</span> $0.1073$ <span class="pp">|</span> $0.2713$ <span class="pp">|</span></span>
-<span id="cb3-105"><a href="#cb3-105" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Combined RAG + Rules** | $0.7019$ | $0.2694$ | $0.1037$ | $0.1352$ | **$0.2842$** <span class="pp">|</span></span>
-<span id="cb3-106"><a href="#cb3-106" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-107"><a href="#cb3-107" aria-hidden="true" tabindex="-1"></a>::: {#fig-prompt-experiments layout="[<span class="co">[</span><span class="ot">1, 1</span><span class="co">]</span>, <span class="co">[</span><span class="ot">1</span><span class="co">]</span>]"}</span>
-<span id="cb3-108"><a href="#cb3-108" aria-hidden="true" tabindex="-1"></a><span class="al">![RAG Performance vs. Fair Baseline](../reports/figures/eval_rag_comparison.png)</span>{#fig-rag-comp}</span>
-<span id="cb3-109"><a href="#cb3-109" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-110"><a href="#cb3-110" aria-hidden="true" tabindex="-1"></a><span class="al">![Association Rules Performance vs. Fair Baseline](../reports/figures/eval_assoc_rules_comparison.png)</span>{#fig-assoc-comp}</span>
-<span id="cb3-111"><a href="#cb3-111" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-112"><a href="#cb3-112" aria-hidden="true" tabindex="-1"></a><span class="al">![F1-Score Delta from Fair Baseline](../reports/figures/eval_assoc_rules_delta.png)</span>{#fig-assoc-delta}</span>
-<span id="cb3-113"><a href="#cb3-113" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-114"><a href="#cb3-114" aria-hidden="true" tabindex="-1"></a>Prompt engineering ablation results on the test set.</span>
-<span id="cb3-115"><a href="#cb3-115" aria-hidden="true" tabindex="-1"></a>:::</span>
-<span id="cb3-116"><a href="#cb3-116" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-117"><a href="#cb3-117" aria-hidden="true" tabindex="-1"></a>---</span>
-<span id="cb3-118"><a href="#cb3-118" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-119"><a href="#cb3-119" aria-hidden="true" tabindex="-1"></a><span class="fu">### 3.2 Analysis of the RAG Label Noise Problem</span></span>
-<span id="cb3-120"><a href="#cb3-120" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-121"><a href="#cb3-121" aria-hidden="true" tabindex="-1"></a>Retrieval-augmented generation ($k=3$) shows a major split in outcomes (see @fig-rag-comp):</span>
-<span id="cb3-122"><a href="#cb3-122" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**Textual Quality Gains**: BERTScore-F1 improves by $+0.020$ over the fair baseline, BLEU-4 rises by $+23\%$ relative, and ROUGE-L rises by $+7\%$. </span>
-<span id="cb3-123"><a href="#cb3-123" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**Clinical Accuracy Degradation**: CheXbert micro-F1 drops by $-0.097$ ($-22\%$), and macro-F1 regresses by $-0.029$.</span>
-<span id="cb3-124"><a href="#cb3-124" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-125"><a href="#cb3-125" aria-hidden="true" tabindex="-1"></a>To diagnose this degradation, we performed a Jaccard similarity analysis between the true label vectors of the target studies and the retrieved training examples (see @fig-label-overlap).</span>
-<span id="cb3-126"><a href="#cb3-126" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-127"><a href="#cb3-127" aria-hidden="true" tabindex="-1"></a>::: {#fig-rag-diagnostics layout="<span class="co">[</span><span class="ot">1, 1</span><span class="co">]</span>"}</span>
-<span id="cb3-128"><a href="#cb3-128" aria-hidden="true" tabindex="-1"></a><span class="al">![TF-IDF Retrieval Label Overlap Diagnostic](../reports/figures/rag_label_overlap_diagnostic.png)</span>{#fig-label-overlap}</span>
-<span id="cb3-129"><a href="#cb3-129" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-130"><a href="#cb3-130" aria-hidden="true" tabindex="-1"></a><span class="al">![RAG Retrieval Quality Comparison](../reports/figures/rag_fair_comparison.png)</span>{#fig-rag-fair}</span>
-<span id="cb3-131"><a href="#cb3-131" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-132"><a href="#cb3-132" aria-hidden="true" tabindex="-1"></a>RAG retrieval quality and diagnostic statistics.</span>
-<span id="cb3-133"><a href="#cb3-133" aria-hidden="true" tabindex="-1"></a>:::</span>
-<span id="cb3-134"><a href="#cb3-134" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-135"><a href="#cb3-135" aria-hidden="true" tabindex="-1"></a>The analysis reveals that **$57.5\%$ of retrievals share zero active labels (Jaccard = 0.0) with the target study**. Because clinical indications are brief and unstandardized (e.g. "pain," "pre-op"), TF-IDF similarity over indication text is clinically blind. It frequently retrieves normal reports for pathological X-rays or vice versa. </span>
-<span id="cb3-136"><a href="#cb3-136" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-137"><a href="#cb3-137" aria-hidden="true" tabindex="-1"></a>Because the VLM anchors heavily to the retrieved examples, it copies their structured vocabulary verbatim. When retrieval is incorrect, the model copies incorrect clinical findings, introducing label noise. While this improves text fluency metrics (the copied text has excellent syntax), it severely harms diagnostic reliability. RAG is thus unsuitable for clinical triage where pathology recall is critical, unless paired with a label-aware retriever.</span>
-<span id="cb3-138"><a href="#cb3-138" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-139"><a href="#cb3-139" aria-hidden="true" tabindex="-1"></a>---</span>
-<span id="cb3-140"><a href="#cb3-140" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-141"><a href="#cb3-141" aria-hidden="true" tabindex="-1"></a><span class="fu">### 3.3 Analysis of Association Rules Conditioner</span></span>
-<span id="cb3-142"><a href="#cb3-142" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-143"><a href="#cb3-143" aria-hidden="true" tabindex="-1"></a>In contrast to RAG, the association rules conditioner achieves clinical precision gains with near-zero fluency penalty (see @fig-assoc-comp and @fig-assoc-delta):</span>
-<span id="cb3-144"><a href="#cb3-144" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**True Conditioner Effect**: Compared to the fair baseline, the conditioner yields **$+0.030$ CheXbert macro-F1** ($+20.8\%$) for `uniform_v3` and **$+0.026$** ($+16.5\%$) for <span class="in">`weighted_v4`</span>, while costing only $-0.0035$ BERTScore.</span>
-<span id="cb3-145"><a href="#cb3-145" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**Unlocking Rare Pathologies**: The conditioner successfully activates detection for classes that the base models completely missed. For example, **Edema** (which scored $0.0$ in zero-shot, baseline, and RAG runs) rises to **$0.222$** with `uniform_v3` and **$0.200$** with <span class="in">`weighted_v4`</span>. The conditioner uses co-occurrence rules to nudge the model to report edema when indications suggest congestive heart failure and cardiac enlargement is detected in the image.</span>
-<span id="cb3-146"><a href="#cb3-146" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-147"><a href="#cb3-147" aria-hidden="true" tabindex="-1"></a>---</span>
-<span id="cb3-148"><a href="#cb3-148" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-149"><a href="#cb3-149" aria-hidden="true" tabindex="-1"></a><span class="fu">### 3.4 Destructive Interference in Combined Prompts</span></span>
-<span id="cb3-150"><a href="#cb3-150" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-151"><a href="#cb3-151" aria-hidden="true" tabindex="-1"></a>When we naively combine both conditioning signals (RAG examples + label prior hints), the model suffers a **catastrophic clinical collapse**: CheXbert micro-F1 drops to $0.2567$ (the lowest observed across all runs), and macro-F1 collapses to $0.0954$ (worse than zero-shot).</span>
-<span id="cb3-152"><a href="#cb3-152" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-153"><a href="#cb3-153" aria-hidden="true" tabindex="-1"></a>This collapse occurs due to a format conflict:</span>
-<span id="cb3-154"><a href="#cb3-154" aria-hidden="true" tabindex="-1"></a><span class="ss">1.  </span>The retrieved findings text in the RAG block acts as a concrete generation template.</span>
-<span id="cb3-155"><a href="#cb3-155" aria-hidden="true" tabindex="-1"></a><span class="ss">2.  </span>The label prior hint provides abstract statistical guidance.</span>
-<span id="cb3-156"><a href="#cb3-156" aria-hidden="true" tabindex="-1"></a><span class="ss">3.  </span>The model's attention mechanism prioritizes the concrete template, completely overriding the statistical guidance.</span>
-<span id="cb3-157"><a href="#cb3-157" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-158"><a href="#cb3-158" aria-hidden="true" tabindex="-1"></a>As a result, the rare pathology detections unlocked by the sampler and rules are erased (Edema drops back to $0.0$, and Pleural Effusion drops from $0.345$ to $0.0$). Thus, combining RAG and statistical hints is counter-productive.</span>
-<span id="cb3-159"><a href="#cb3-159" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-160"><a href="#cb3-160" aria-hidden="true" tabindex="-1"></a>---</span>
-<span id="cb3-161"><a href="#cb3-161" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-162"><a href="#cb3-162" aria-hidden="true" tabindex="-1"></a><span class="fu">### 3.5 Additive Synergy: Weighted Sampler + Association Rules</span></span>
-<span id="cb3-163"><a href="#cb3-163" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-164"><a href="#cb3-164" aria-hidden="true" tabindex="-1"></a>The highest overall rare-label coverage is achieved by combining training-time weighting and inference-time association rules: **`assoc_rules_weighted_v4` reaches a test-set macro-F1 of $0.1841$** ($+30\%$ over zero-shot).</span>
-<span id="cb3-165"><a href="#cb3-165" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-166"><a href="#cb3-166" aria-hidden="true" tabindex="-1"></a>Unlike RAG + rules, training-time conditioning (the ESS-based <span class="in">`WeightedRandomSampler`</span>) and inference-time conditioning (the association rules conditioner) do not compete. The weighted sampler alters the model's internal representations during backpropagation, while the conditioner alters the attention distribution during decoding. Because they operate at different layers of the generation pipeline, their effects are additive. For example, <span class="in">`weighted_v4`</span> is the only model that learns to detect **Lung Lesion** ($0.154$ F1) without hints, and adding the conditioner preserves this capability while unlocking Edema ($0.200$ F1).</span>
-<span id="cb3-167"><a href="#cb3-167" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-168"><a href="#cb3-168" aria-hidden="true" tabindex="-1"></a>::: {#fig-grand-comparison-layout layout="[<span class="co">[</span><span class="ot">1, 1</span><span class="co">]</span>, <span class="co">[</span><span class="ot">1</span><span class="co">]</span>]"}</span>
-<span id="cb3-169"><a href="#cb3-169" aria-hidden="true" tabindex="-1"></a><span class="al">![Grand Metrics Comparison - All 10 Variants](../reports/figures/eval_grand_comparison.png)</span>{#fig-grand-comp}</span>
-<span id="cb3-170"><a href="#cb3-170" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-171"><a href="#cb3-171" aria-hidden="true" tabindex="-1"></a><span class="al">![Trade-off Space: Fluency vs. Pathology Coverage](../reports/figures/eval_scatter_fluency_vs_coverage.png)</span>{#fig-scatter}</span>
-<span id="cb3-172"><a href="#cb3-172" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-173"><a href="#cb3-173" aria-hidden="true" tabindex="-1"></a><span class="al">![Rare Pathology F1-Score Heatmap](../reports/figures/eval_per_label_heatmap.png)</span>{#fig-heatmap}</span>
-<span id="cb3-174"><a href="#cb3-174" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-175"><a href="#cb3-175" aria-hidden="true" tabindex="-1"></a>Grand comparison of all ten configurations.</span>
-<span id="cb3-176"><a href="#cb3-176" aria-hidden="true" tabindex="-1"></a>:::</span>
-<span id="cb3-177"><a href="#cb3-177" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-178"><a href="#cb3-178" aria-hidden="true" tabindex="-1"></a>The overall trade-off space is visualized in @fig-scatter and @fig-heatmap. The scatter plot maps the Pareto frontier: RAG occupies the high-fluency/low-precision region, while <span class="in">`assoc_rules_weighted_v4`</span> occupies the high-precision/low-fluency region. The heatmap (@fig-heatmap) illustrates how the weighted sampler and association rules conditioner stack together to achieve the most balanced and comprehensive clinical detection profiles.</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "5. Inference Conditioning"</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="an">author:</span><span class="co"> "Diego Villalba (Applied Research Candidate)"</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="an">date:</span><span class="co"> "2026-06-25"</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>::: {.non-technical-summary}</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="fu">##### Section Summary (Non-Technical)</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>This section explains two advanced techniques we use to improve the model's reports without having to perform additional expensive training. </span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>First, we use **Retrieval-Augmented Generation (RAG)**, which searches the training database at inference time for chest X-ray reports with similar clinical indications and injects them as examples in the model prompt. This gives the AI local reference points. </span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>Second, we use **Soft Label Priors**, which analyze training statistics to find which diseases commonly occur together (for example, fluid overload and lung congestion). When the model generates a report, we feed it these statistical likelihoods as hints, guiding it toward writing clinically logical findings.</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="fu">## 1. Case-Based Retrieval-Augmented Generation [@kang2025structuredradiology]</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>When a radiologist interprets a chest radiograph, they often refer to historical cases with similar clinical presentations. To replicate this case-based reasoning, we implement an inference-time Retrieval-Augmented Generation (RAG) strategy based on the work of Kang et al. <span class="co">[</span><span class="ot">-@kang2025structuredradiology</span><span class="co">]</span>.</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="fu">### 1.1 Vector Indexing &amp; Similarity Matching</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>Because clinical indications are dense, structured text, we construct a CPU-efficient term frequency-inverse document frequency (TF-IDF) vectorizer over the training indications:</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>$$TF\text{-}IDF(t, d) = TF(t, d) \times IDF(t)$$</span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>We extract unigrams and bigrams, capping features at 5,000 (actual vocabulary after fitting on 2,403 training indications: **3,329 features**). At inference time, the query indication $q$ is vectorized, and cosine similarity is computed against all training vectors:</span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>$$\text{similarity}(q, d_i) = \frac{q \cdot d_i}{<span class="sc">\|</span>q<span class="sc">\|</span> <span class="sc">\|</span>d_i<span class="sc">\|</span>}$$</span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>We set a similarity threshold of $0.05$. If matches exist, we select the top-$k$ (typically $k=3$ or $k=5$) corresponding training reports to act as few-shot clinical contexts.</span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a><span class="fu">### 1.2 Few-Shot Prompt Injection</span></span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>The retrieved reference indications and findings are formatted and appended to the system prompt, as shown in the following structure:</span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a><span class="in">You are an expert radiologist. Write only the Findings section...</span></span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a><span class="in">The following are findings from similar studies for reference:</span></span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a><span class="in">  Example 1 (similarity=0.72):</span></span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a><span class="in">    Indication: Shortness of breath, history of smoking.</span></span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a><span class="in">    Findings: Lungs are hyperexpanded with flattened diaphragms...</span></span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a><span class="in">Indication: Patient with shortness of breath and low oxygen.</span></span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a><span class="in">Findings:</span></span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a>This grounds the model in target-vocabulary phrasing before generation, helping to bridge the vocabulary mismatch gap.</span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a><span class="fu">## 2. Soft Label Priors via Association Rules</span></span>
+<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a>Medical findings do not occur in isolation; they follow logical clinical associations. To steer the decoder toward plausible reports without modifying model weights or gathering more data, we introduce soft label priors derived from label co-occurrence statistics mined from the training set.</span>
+<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-53"><a href="#cb4-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-54"><a href="#cb4-54" aria-hidden="true" tabindex="-1"></a><span class="fu">### 2.1 Mining Co-occurrence Statistics</span></span>
+<span id="cb4-55"><a href="#cb4-55" aria-hidden="true" tabindex="-1"></a>We compute a pairwise joint occurrence matrix from the binary CheXbert training labels ($L \in <span class="sc">\{</span>0, 1<span class="sc">\}</span>^{N \times 14}$):</span>
+<span id="cb4-56"><a href="#cb4-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-57"><a href="#cb4-57" aria-hidden="true" tabindex="-1"></a>$$C = \frac{L^T L}{N}$$</span>
+<span id="cb4-58"><a href="#cb4-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-59"><a href="#cb4-59" aria-hidden="true" tabindex="-1"></a>For each pair of labels $A$ and $B$, we compute the conditional probability (confidence) and lift:</span>
+<span id="cb4-60"><a href="#cb4-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-61"><a href="#cb4-61" aria-hidden="true" tabindex="-1"></a>$$P(B \mid A) = \frac{P(A \cap B)}{P(A)} = \frac{C_{A, B}}{\mu_A}$$</span>
+<span id="cb4-62"><a href="#cb4-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-63"><a href="#cb4-63" aria-hidden="true" tabindex="-1"></a>$$\text{Lift}(A \rightarrow B) = \frac{P(B \mid A)}{P(B)} = \frac{C_{A, B}}{\mu_A \mu_B}$$</span>
+<span id="cb4-64"><a href="#cb4-64" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-65"><a href="#cb4-65" aria-hidden="true" tabindex="-1"></a>Where $\mu_A$ represents the empirical prevalence of label $A$ in the dataset. Rules are sorted by confidence and filtered using thresholds (confidence $\ge 0.25$, lift $\ge 1.2$). The resulting joint statistics are saved to a heatmap.</span>
+<span id="cb4-66"><a href="#cb4-66" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-67"><a href="#cb4-67" aria-hidden="true" tabindex="-1"></a><span class="fu">### 2.2 Two-Tier Hint Selection</span></span>
+<span id="cb4-68"><a href="#cb4-68" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-69"><a href="#cb4-69" aria-hidden="true" tabindex="-1"></a>The <span class="in">`build_conditioned_prompt`</span> function applies a strict priority hierarchy to decide which hint to inject:</span>
+<span id="cb4-70"><a href="#cb4-70" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-71"><a href="#cb4-71" aria-hidden="true" tabindex="-1"></a>**Primary — Empirical TF-IDF Prior:** We first retrieve the top-$K$ ($K=20$) training indications most similar to the query (cosine similarity threshold $\geq 0.05$) and compute the empirical label prevalence vector over that neighborhood:</span>
+<span id="cb4-72"><a href="#cb4-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-73"><a href="#cb4-73" aria-hidden="true" tabindex="-1"></a>$$\hat{P}(B \mid q) = \frac{1}{K} \sum_{i \in \text{top-}K} \mathbf{1}<span class="co">[</span><span class="ot">B_i = 1</span><span class="co">]</span>$$</span>
+<span id="cb4-74"><a href="#cb4-74" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-75"><a href="#cb4-75" aria-hidden="true" tabindex="-1"></a>Labels with $\hat{P}(B \mid q) \geq 0.30$ are injected as a structured prevalence hint. The <span class="in">`No Finding`</span> label is explicitly excluded from the hint regardless of prevalence. If any label clears the threshold, this prior is used and the pipeline stops.</span>
+<span id="cb4-76"><a href="#cb4-76" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-77"><a href="#cb4-77" aria-hidden="true" tabindex="-1"></a>**Fallback — Keyword Association Rules:** Only when the TF-IDF neighborhood produces no label above the prevalence threshold, we fall back to keyword matching. We scan the indication text for 13 pathology keyword dictionaries with negation filtering (prefixes such as "rule out", "no evidence of", "r/o", "no ", "without " suppress the match within a 25-character context window). Triggered antecedents $A$ are then expanded via the mined rules: all consequents $B$ with confidence $\geq 0.25$ and lift $\geq 1.2$ are included in the hint.</span>
+<span id="cb4-78"><a href="#cb4-78" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-79"><a href="#cb4-79" aria-hidden="true" tabindex="-1"></a>The two paths produce distinct hint formats injected after the system prompt, before <span class="in">`Findings:`</span>:</span>
+<span id="cb4-80"><a href="#cb4-80" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-81"><a href="#cb4-81" aria-hidden="true" tabindex="-1"></a>**TF-IDF prior (primary path):**</span>
+<span id="cb4-82"><a href="#cb4-82" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb4-83"><a href="#cb4-83" aria-hidden="true" tabindex="-1"></a><span class="in">Clinical context (based on similar studies in training set):</span></span>
+<span id="cb4-84"><a href="#cb4-84" aria-hidden="true" tabindex="-1"></a><span class="in">  - Cardiomegaly: present in 30% of similar cases.</span></span>
+<span id="cb4-85"><a href="#cb4-85" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb4-86"><a href="#cb4-86" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-87"><a href="#cb4-87" aria-hidden="true" tabindex="-1"></a>**Keyword association rules (fallback path):**</span>
+<span id="cb4-88"><a href="#cb4-88" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb4-89"><a href="#cb4-89" aria-hidden="true" tabindex="-1"></a><span class="in">Clinical association context (training set statistics):</span></span>
+<span id="cb4-90"><a href="#cb4-90" aria-hidden="true" tabindex="-1"></a><span class="in">  - Edema co-occurs with Cardiomegaly in 61% of similar studies (lift=4.93).</span></span>
+<span id="cb4-91"><a href="#cb4-91" aria-hidden="true" tabindex="-1"></a><span class="in">  - Edema co-occurs with Lung Opacity in 39% of similar studies (lift=2.87).</span></span>
+<span id="cb4-92"><a href="#cb4-92" aria-hidden="true" tabindex="-1"></a><span class="in">  - Edema co-occurs with Pleural Effusion in 32% of similar studies (lift=10.20).</span></span>
+<span id="cb4-93"><a href="#cb4-93" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb4-94"><a href="#cb4-94" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-95"><a href="#cb4-95" aria-hidden="true" tabindex="-1"></a>The fallback example above is for the indication *"Chest pain, history of CHF and pulmonary edema"* — the keyword <span class="in">`edema`</span>/<span class="in">`chf`</span> triggers the Edema antecedent, which expands to its three strongest consequents.</span>
+<span id="cb4-96"><a href="#cb4-96" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-97"><a href="#cb4-97" aria-hidden="true" tabindex="-1"></a><span class="fu">### 2.3 Hint Coverage in Practice</span></span>
+<span id="cb4-98"><a href="#cb4-98" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-99"><a href="#cb4-99" aria-hidden="true" tabindex="-1"></a>On the 600-study test set, the conditioner injects a hint into **241 studies (40.2%)**. The remaining 59.8% receive the standard prompt — either because the indication is empty/missing or because neither path produced a confident signal. Studies with no indication text always receive no hint.</span>
+<span id="cb4-100"><a href="#cb4-100" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-101"><a href="#cb4-101" aria-hidden="true" tabindex="-1"></a>This two-tier design prioritises the richer statistical signal of the neighbourhood prior when retrieval quality is sufficient, while ensuring broad coverage via the deterministic keyword fallback. The selection is fully deterministic (no sampling) and adds no latency beyond a CPU-side TF-IDF lookup.</span>
+<span id="cb4-102"><a href="#cb4-102" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-103"><a href="#cb4-103" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb4-104"><a href="#cb4-104" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-105"><a href="#cb4-105" aria-hidden="true" tabindex="-1"></a><span class="fu">## 3. Experimental Results &amp; Prompt Engineering Trade-offs</span></span>
+<span id="cb4-106"><a href="#cb4-106" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-107"><a href="#cb4-107" aria-hidden="true" tabindex="-1"></a>We evaluated ten different configurations end-to-end on our holdout test set ($n=600$ studies). The results reveal a clear performance-style trade-off frontier. Rather than one single method dominating all others, we find two Pareto-optimal paths: a **fluency track** driven by RAG, and a **clinical precision track** driven by label prior conditioning.</span>
+<span id="cb4-108"><a href="#cb4-108" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-109"><a href="#cb4-109" aria-hidden="true" tabindex="-1"></a><span class="fu">### 3.1 Quantitative Metrics Comparison</span></span>
+<span id="cb4-110"><a href="#cb4-110" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-111"><a href="#cb4-111" aria-hidden="true" tabindex="-1"></a>To isolate the causal impact of the conditioning prompts from minor formatting shifts, we evaluated each strategy against its respective **fair baseline** (which uses the exact same template and <span class="in">`\nFindings:`</span> suffix but without injecting hints or RAG examples). The <span class="in">`nohint_uniform_v3`</span> and <span class="in">`nohint_weighted_v4`</span> fair baselines are generated in Notebook 06 STEP 7 — they re-run inference on the same checkpoints with the conditioning prompt format but omitting the hint block, so any metric difference is causally attributable to the hint content.</span>
+<span id="cb4-112"><a href="#cb4-112" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-113"><a href="#cb4-113" aria-hidden="true" tabindex="-1"></a><span class="fu">#### Uniform Sampler Checkpoint (`uniform_v3`) Comparison</span></span>
+<span id="cb4-114"><a href="#cb4-114" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-115"><a href="#cb4-115" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Configuration <span class="pp">|</span> BERTScore-F1 <span class="pp">|</span> CheXbert micro-F1 <span class="pp">|</span> CheXbert macro-F1 <span class="pp">|</span> BLEU-4 <span class="pp">|</span> ROUGE-L <span class="pp">|</span></span>
+<span id="cb4-116"><a href="#cb4-116" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|---|---|---|</span></span>
+<span id="cb4-117"><a href="#cb4-117" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Fair Baseline (`nohint_uniform_v3`)** <span class="pp">|</span> $0.6879$ <span class="pp">|</span> $0.4404$ <span class="pp">|</span> $0.1445$ <span class="pp">|</span> $0.1128$ <span class="pp">|</span> $0.2852$ <span class="pp">|</span></span>
+<span id="cb4-118"><a href="#cb4-118" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **RAG $k=3$ (`rag_k3_uniform_v3`)** | **$0.7076$** | $0.3432$ | $0.1160$ | **$0.1391$** | **$0.3051$** <span class="pp">|</span></span>
+<span id="cb4-119"><a href="#cb4-119" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Assoc. Rules (`assoc_rules_uniform_v3`)** | $0.6844$ | **$0.4424$** | **$0.1745$** <span class="pp">|</span> $0.1100$ <span class="pp">|</span> $0.2812$ <span class="pp">|</span></span>
+<span id="cb4-120"><a href="#cb4-120" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Combined RAG + Rules** <span class="pp">|</span> $0.7033$ <span class="pp">|</span> $0.2567$ <span class="pp">|</span> $0.0954$ <span class="pp">|</span> $0.1337$ <span class="pp">|</span> $0.2870$ <span class="pp">|</span></span>
+<span id="cb4-121"><a href="#cb4-121" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-122"><a href="#cb4-122" aria-hidden="true" tabindex="-1"></a><span class="fu">#### Weighted Sampler Checkpoint (`weighted_v4`) Comparison</span></span>
+<span id="cb4-123"><a href="#cb4-123" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-124"><a href="#cb4-124" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Configuration <span class="pp">|</span> BERTScore-F1 <span class="pp">|</span> CheXbert micro-F1 <span class="pp">|</span> CheXbert macro-F1 <span class="pp">|</span> BLEU-4 <span class="pp">|</span> ROUGE-L <span class="pp">|</span></span>
+<span id="cb4-125"><a href="#cb4-125" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|---|---|---|</span></span>
+<span id="cb4-126"><a href="#cb4-126" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Fair Baseline (`nohint_weighted_v4`)** | **$0.6876$** | $0.4526$ | $0.1581$ | **$0.1076$** <span class="pp">|</span> $0.2720$ <span class="pp">|</span></span>
+<span id="cb4-127"><a href="#cb4-127" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Assoc. Rules (`assoc_rules_weighted_v4`)** | $0.6862$ | **$0.4559$** | **$0.1841$** <span class="pp">|</span> $0.1073$ <span class="pp">|</span> $0.2713$ <span class="pp">|</span></span>
+<span id="cb4-128"><a href="#cb4-128" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **Combined RAG + Rules** | $0.7019$ | $0.2694$ | $0.1037$ | $0.1352$ | **$0.2842$** <span class="pp">|</span></span>
+<span id="cb4-129"><a href="#cb4-129" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-130"><a href="#cb4-130" aria-hidden="true" tabindex="-1"></a>::: {#fig-prompt-experiments layout="[<span class="co">[</span><span class="ot">1, 1</span><span class="co">]</span>, <span class="co">[</span><span class="ot">1</span><span class="co">]</span>]"}</span>
+<span id="cb4-131"><a href="#cb4-131" aria-hidden="true" tabindex="-1"></a><span class="al">![RAG Performance vs. Fair Baseline](../reports/figures/eval_rag_comparison.png)</span>{#fig-rag-comp}</span>
+<span id="cb4-132"><a href="#cb4-132" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-133"><a href="#cb4-133" aria-hidden="true" tabindex="-1"></a><span class="al">![Association Rules Performance vs. Fair Baseline](../reports/figures/eval_assoc_rules_comparison.png)</span>{#fig-assoc-comp}</span>
+<span id="cb4-134"><a href="#cb4-134" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-135"><a href="#cb4-135" aria-hidden="true" tabindex="-1"></a><span class="al">![F1-Score Delta from Fair Baseline](../reports/figures/eval_assoc_rules_delta.png)</span>{#fig-assoc-delta}</span>
+<span id="cb4-136"><a href="#cb4-136" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-137"><a href="#cb4-137" aria-hidden="true" tabindex="-1"></a>Prompt engineering ablation results on the test set.</span>
+<span id="cb4-138"><a href="#cb4-138" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb4-139"><a href="#cb4-139" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-140"><a href="#cb4-140" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb4-141"><a href="#cb4-141" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-142"><a href="#cb4-142" aria-hidden="true" tabindex="-1"></a><span class="fu">### 3.2 Analysis of the RAG Label Noise Problem</span></span>
+<span id="cb4-143"><a href="#cb4-143" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-144"><a href="#cb4-144" aria-hidden="true" tabindex="-1"></a>Retrieval-augmented generation ($k=3$) shows a major split in outcomes (see @fig-rag-comp):</span>
+<span id="cb4-145"><a href="#cb4-145" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**Textual Quality Gains**: BERTScore-F1 improves by $+0.020$ over the fair baseline, BLEU-4 rises by $+23\%$ relative, and ROUGE-L rises by $+7\%$. </span>
+<span id="cb4-146"><a href="#cb4-146" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**Clinical Accuracy Degradation**: CheXbert micro-F1 drops by $-0.097$ ($-22\%$), and macro-F1 regresses by $-0.029$.</span>
+<span id="cb4-147"><a href="#cb4-147" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-148"><a href="#cb4-148" aria-hidden="true" tabindex="-1"></a>To diagnose this degradation, we performed a Jaccard similarity analysis between the true label vectors of the target studies and the retrieved training examples (see @fig-label-overlap).</span>
+<span id="cb4-149"><a href="#cb4-149" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-150"><a href="#cb4-150" aria-hidden="true" tabindex="-1"></a>::: {#fig-rag-diagnostics layout="<span class="co">[</span><span class="ot">1, 1</span><span class="co">]</span>"}</span>
+<span id="cb4-151"><a href="#cb4-151" aria-hidden="true" tabindex="-1"></a><span class="al">![TF-IDF Retrieval Label Overlap Diagnostic](../reports/figures/rag_label_overlap_diagnostic.png)</span>{#fig-label-overlap}</span>
+<span id="cb4-152"><a href="#cb4-152" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-153"><a href="#cb4-153" aria-hidden="true" tabindex="-1"></a><span class="al">![RAG Retrieval Quality Comparison](../reports/figures/rag_fair_comparison.png)</span>{#fig-rag-fair}</span>
+<span id="cb4-154"><a href="#cb4-154" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-155"><a href="#cb4-155" aria-hidden="true" tabindex="-1"></a>RAG retrieval quality and diagnostic statistics.</span>
+<span id="cb4-156"><a href="#cb4-156" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb4-157"><a href="#cb4-157" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-158"><a href="#cb4-158" aria-hidden="true" tabindex="-1"></a>The analysis reveals that **$57.5\%$ of retrievals share zero active labels (Jaccard = 0.0) with the target study**. Because clinical indications are brief and unstandardized (e.g. "pain," "pre-op"), TF-IDF similarity over indication text is clinically blind. It frequently retrieves normal reports for pathological X-rays or vice versa. </span>
+<span id="cb4-159"><a href="#cb4-159" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-160"><a href="#cb4-160" aria-hidden="true" tabindex="-1"></a>Because the VLM anchors heavily to the retrieved examples, it copies their structured vocabulary verbatim. When retrieval is incorrect, the model copies incorrect clinical findings, introducing label noise. While this improves text fluency metrics (the copied text has excellent syntax), it severely harms diagnostic reliability. RAG is thus unsuitable for clinical triage where pathology recall is critical, unless paired with a label-aware retriever.</span>
+<span id="cb4-161"><a href="#cb4-161" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-162"><a href="#cb4-162" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb4-163"><a href="#cb4-163" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-164"><a href="#cb4-164" aria-hidden="true" tabindex="-1"></a><span class="fu">### 3.3 Analysis of Association Rules Conditioner</span></span>
+<span id="cb4-165"><a href="#cb4-165" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-166"><a href="#cb4-166" aria-hidden="true" tabindex="-1"></a>In contrast to RAG, the association rules conditioner achieves clinical precision gains with near-zero fluency penalty (see @fig-assoc-comp and @fig-assoc-delta):</span>
+<span id="cb4-167"><a href="#cb4-167" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**True Conditioner Effect**: Compared to the fair baseline, the conditioner yields **$+0.030$ CheXbert macro-F1** ($+20.8\%$) for `uniform_v3` and **$+0.026$** ($+16.5\%$) for <span class="in">`weighted_v4`</span>, while costing only $-0.0035$ BERTScore.</span>
+<span id="cb4-168"><a href="#cb4-168" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**Unlocking Rare Pathologies**: The conditioner successfully activates detection for classes that the base models completely missed. For example, **Edema** (which scored $0.0$ in zero-shot, baseline, and RAG runs) rises to **$0.222$** with `uniform_v3` and **$0.200$** with <span class="in">`weighted_v4`</span>. The conditioner uses co-occurrence rules to nudge the model to report edema when indications suggest congestive heart failure and cardiac enlargement is detected in the image.</span>
+<span id="cb4-169"><a href="#cb4-169" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-170"><a href="#cb4-170" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb4-171"><a href="#cb4-171" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-172"><a href="#cb4-172" aria-hidden="true" tabindex="-1"></a><span class="fu">### 3.4 Destructive Interference in Combined Prompts</span></span>
+<span id="cb4-173"><a href="#cb4-173" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-174"><a href="#cb4-174" aria-hidden="true" tabindex="-1"></a>When we naively combine both conditioning signals (RAG examples + label prior hints), the model suffers a **catastrophic clinical collapse**: CheXbert micro-F1 drops to $0.2567$ (the lowest observed across all runs), and macro-F1 collapses to $0.0954$ (worse than zero-shot).</span>
+<span id="cb4-175"><a href="#cb4-175" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-176"><a href="#cb4-176" aria-hidden="true" tabindex="-1"></a>This collapse occurs due to a format conflict:</span>
+<span id="cb4-177"><a href="#cb4-177" aria-hidden="true" tabindex="-1"></a><span class="ss">1.  </span>The retrieved findings text in the RAG block acts as a concrete generation template.</span>
+<span id="cb4-178"><a href="#cb4-178" aria-hidden="true" tabindex="-1"></a><span class="ss">2.  </span>The label prior hint provides abstract statistical guidance.</span>
+<span id="cb4-179"><a href="#cb4-179" aria-hidden="true" tabindex="-1"></a><span class="ss">3.  </span>The model's attention mechanism prioritizes the concrete template, completely overriding the statistical guidance.</span>
+<span id="cb4-180"><a href="#cb4-180" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-181"><a href="#cb4-181" aria-hidden="true" tabindex="-1"></a>As a result, the rare pathology detections unlocked by the sampler and rules are erased (Edema drops back to $0.0$, and Pleural Effusion drops from $0.345$ to $0.0$). Thus, combining RAG and statistical hints is counter-productive.</span>
+<span id="cb4-182"><a href="#cb4-182" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-183"><a href="#cb4-183" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb4-184"><a href="#cb4-184" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-185"><a href="#cb4-185" aria-hidden="true" tabindex="-1"></a><span class="fu">### 3.5 Additive Synergy: Weighted Sampler + Association Rules</span></span>
+<span id="cb4-186"><a href="#cb4-186" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-187"><a href="#cb4-187" aria-hidden="true" tabindex="-1"></a>The highest overall rare-label coverage is achieved by combining training-time weighting and inference-time association rules: **`assoc_rules_weighted_v4` reaches a test-set macro-F1 of $0.1841$** ($+30\%$ over zero-shot).</span>
+<span id="cb4-188"><a href="#cb4-188" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-189"><a href="#cb4-189" aria-hidden="true" tabindex="-1"></a>Unlike RAG + rules, training-time conditioning (the ESS-based <span class="in">`WeightedRandomSampler`</span>) and inference-time conditioning (the association rules conditioner) do not compete. The weighted sampler alters the model's internal representations during backpropagation, while the conditioner alters the attention distribution during decoding. Because they operate at different layers of the generation pipeline, their effects are additive. For example, <span class="in">`weighted_v4`</span> is the only model that learns to detect **Lung Lesion** ($0.154$ F1) without hints, and adding the conditioner preserves this capability while unlocking Edema ($0.200$ F1).</span>
+<span id="cb4-190"><a href="#cb4-190" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-191"><a href="#cb4-191" aria-hidden="true" tabindex="-1"></a>::: {#fig-grand-comparison-layout layout="[<span class="co">[</span><span class="ot">1, 1</span><span class="co">]</span>, <span class="co">[</span><span class="ot">1</span><span class="co">]</span>]"}</span>
+<span id="cb4-192"><a href="#cb4-192" aria-hidden="true" tabindex="-1"></a><span class="al">![Grand Metrics Comparison - All 10 Variants](../reports/figures/eval_grand_comparison.png)</span>{#fig-grand-comp}</span>
+<span id="cb4-193"><a href="#cb4-193" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-194"><a href="#cb4-194" aria-hidden="true" tabindex="-1"></a><span class="al">![Trade-off Space: Fluency vs. Pathology Coverage](../reports/figures/eval_scatter_fluency_vs_coverage.png)</span>{#fig-scatter}</span>
+<span id="cb4-195"><a href="#cb4-195" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-196"><a href="#cb4-196" aria-hidden="true" tabindex="-1"></a><span class="al">![Rare Pathology F1-Score Heatmap](../reports/figures/eval_per_label_heatmap.png)</span>{#fig-heatmap}</span>
+<span id="cb4-197"><a href="#cb4-197" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-198"><a href="#cb4-198" aria-hidden="true" tabindex="-1"></a>Grand comparison of all ten configurations.</span>
+<span id="cb4-199"><a href="#cb4-199" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb4-200"><a href="#cb4-200" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-201"><a href="#cb4-201" aria-hidden="true" tabindex="-1"></a>The overall trade-off space is visualized in @fig-scatter and @fig-heatmap. The scatter plot maps the Pareto frontier: RAG occupies the high-fluency/low-precision region, while <span class="in">`assoc_rules_weighted_v4`</span> occupies the high-precision/low-fluency region. The heatmap (@fig-heatmap) illustrates how the weighted sampler and association rules conditioner stack together to achieve the most balanced and comprehensive clinical detection profiles.</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
 </div></div></div></div></div>
 </div> <!-- /content -->
 <footer class="footer">
@@ -1338,6 +1377,38 @@ Singh, Vikash, Debargha Ganguly, Haotian Yu, Chengwei Zhou, Prerna Singh, Brando
 </div>
   </div>
 </footer>
+<script>var lightboxQuarto = GLightbox({"closeEffect":"zoom","descPosition":"bottom","loop":false,"openEffect":"zoom","selector":".lightbox"});
+(function() {
+  let previousOnload = window.onload;
+  window.onload = () => {
+    if (previousOnload) {
+      previousOnload();
+    }
+    lightboxQuarto.on('slide_before_load', (data) => {
+      const { slideIndex, slideNode, slideConfig, player, trigger } = data;
+      const href = trigger.getAttribute('href');
+      if (href !== null) {
+        const imgEl = window.document.querySelector(`a[href="${href}"] img`);
+        if (imgEl !== null) {
+          const srcAttr = imgEl.getAttribute("src");
+          if (srcAttr && srcAttr.startsWith("data:")) {
+            slideConfig.href = srcAttr;
+          }
+        }
+      } 
+    });
+  
+    lightboxQuarto.on('slide_after_load', (data) => {
+      const { slideIndex, slideNode, slideConfig, player, trigger } = data;
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(slideNode);
+      }
+    });
+  
+  };
+  
+})();
+          </script>
 
 
 

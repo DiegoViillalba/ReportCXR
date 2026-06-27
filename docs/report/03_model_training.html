@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Diego Villalba (Applied Research Candidate)">
-<meta name="dcterms.date" content="2026-06-25">
+<meta name="dcterms.date" content="2026-06-26">
 
 <title>3. Model &amp; QLoRA Config – ReportCXR</title>
 <style>
@@ -78,6 +78,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="../site_libs/bootstrap/bootstrap-e9614ef202455b86b71b0557e717d80d.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script src="../site_libs/quarto-contrib/glightbox/glightbox.min.js"></script>
+<link href="../site_libs/quarto-contrib/glightbox/glightbox.min.css" rel="stylesheet">
+<link href="../site_libs/quarto-contrib/glightbox/lightbox.css" rel="stylesheet">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -223,6 +226,10 @@ window.Quarto = {
     <a class="dropdown-item" href="../doc/domain_shift_modules.html">
  <span class="dropdown-text">Domain Shift Audit</span></a>
   </li>  
+        <li>
+    <a class="dropdown-item" href="../doc/demo_deployment.html">
+ <span class="dropdown-text">Demo &amp; Deployment</span></a>
+  </li>  
     </ul>
   </li>
   <li class="nav-item dropdown ">
@@ -276,10 +283,20 @@ window.Quarto = {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#medgemma-foundation-architecture" id="toc-medgemma-foundation-architecture" class="nav-link active" data-scroll-target="#medgemma-foundation-architecture">MedGemma Foundation Architecture</a></li>
-  <li><a href="#low-rank-adaptation-qlora" id="toc-low-rank-adaptation-qlora" class="nav-link" data-scroll-target="#low-rank-adaptation-qlora">Low-Rank Adaptation (QLoRA)</a></li>
-  <li><a href="#label-masking-loss-formulation" id="toc-label-masking-loss-formulation" class="nav-link" data-scroll-target="#label-masking-loss-formulation">Label Masking &amp; Loss Formulation</a></li>
-  <li><a href="#training-arguments" id="toc-training-arguments" class="nav-link" data-scroll-target="#training-arguments">Training Arguments</a></li>
+  <li><a href="#train-val-test-split" id="toc-train-val-test-split" class="nav-link active" data-scroll-target="#train-val-test-split">1. Train / Val / Test Split</a></li>
+  <li><a href="#medgemma-foundation-architecture" id="toc-medgemma-foundation-architecture" class="nav-link" data-scroll-target="#medgemma-foundation-architecture">2. MedGemma Foundation Architecture</a></li>
+  <li><a href="#low-rank-adaptation-qlora" id="toc-low-rank-adaptation-qlora" class="nav-link" data-scroll-target="#low-rank-adaptation-qlora">3. Low-Rank Adaptation (QLoRA)</a>
+  <ul class="collapse">
+  <li><a href="#lora-configuration-params.yaml-lora" id="toc-lora-configuration-params.yaml-lora" class="nav-link" data-scroll-target="#lora-configuration-params.yaml-lora">LoRA Configuration (<code>params.yaml → lora</code>)</a></li>
+  </ul></li>
+  <li><a href="#training-prompt-format-label-masking" id="toc-training-prompt-format-label-masking" class="nav-link" data-scroll-target="#training-prompt-format-label-masking">4. Training Prompt Format &amp; Label Masking</a></li>
+  <li><a href="#training-configuration" id="toc-training-configuration" class="nav-link" data-scroll-target="#training-configuration">5. Training Configuration</a>
+  <ul class="collapse">
+  <li><a href="#hyperparameters-params.yaml-training" id="toc-hyperparameters-params.yaml-training" class="nav-link" data-scroll-target="#hyperparameters-params.yaml-training">5.1 Hyperparameters (<code>params.yaml → training</code>)</a></li>
+  <li><a href="#hardware" id="toc-hardware" class="nav-link" data-scroll-target="#hardware">5.2 Hardware</a></li>
+  </ul></li>
+  <li><a href="#two-training-runs" id="toc-two-training-runs" class="nav-link" data-scroll-target="#two-training-runs">6. Two Training Runs</a></li>
+  <li><a href="#training-figures" id="toc-training-figures" class="nav-link" data-scroll-target="#training-figures">7. Training Figures</a></li>
   </ul>
 </nav>
     </div>
@@ -305,7 +322,7 @@ window.Quarto = {
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">June 25, 2026</p>
+      <p class="date">June 26, 2026</p>
     </div>
   </div>
   
@@ -319,11 +336,48 @@ window.Quarto = {
 
 <section id="section-summary-non-technical" class="level5 non-technical-summary">
 <h5 class="anchored" data-anchor-id="section-summary-non-technical">Section Summary (Non-Technical)</h5>
-<p>This section describes the AI model itself and how we train it. We use Google’s MedGemma, which consists of a frozen medical eye (image encoder) and a text generator (language decoder). We train only the text generator using a method called QLoRA, which inserts tiny adjustable elements into the model while keeping the main text book frozen in memory. We also use a masking technique to ensure the model is only graded on the clinical findings it generates, not on the inputs it was given.</p>
+<p>This section describes the AI model itself and how we train it. We use Google’s MedGemma, which consists of a frozen medical eye (image encoder) and a text generator (language decoder). We train only the text generator using a method called QLoRA, which inserts tiny adjustable elements into the model while keeping the main weights frozen in memory. We also use a masking technique to ensure the model is only graded on the clinical findings it generates, not on the inputs it was given.</p>
+</section>
+<section id="train-val-test-split" class="level2">
+<h2 class="anchored" data-anchor-id="train-val-test-split">1. Train / Val / Test Split</h2>
+<p>The 3,337 usable studies (see <a href="../report/02_data.html">Section 2</a>) are partitioned via multi-label stratified sampling (<code>scikit-multilearn</code>) to preserve label frequency ratios across splits:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Split</th>
+<th>Studies</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Train</td>
+<td><strong>2,403</strong></td>
+<td>QLoRA fine-tuning with <code>WeightedRandomSampler</code></td>
+</tr>
+<tr class="even">
+<td>Val</td>
+<td><strong>334</strong></td>
+<td>Epoch-level model selection (BERTScore-F1 primary)</td>
+</tr>
+<tr class="odd">
+<td>Test</td>
+<td><strong>600</strong></td>
+<td>Final held-out evaluation; never seen during training</td>
+</tr>
+</tbody>
+</table>
+<p>Split parameters (<code>params.yaml → split</code>): <code>test_size=0.15</code>, <code>val_size=0.10</code>, <code>min_test_count=600</code>, <code>random_state=42</code>.</p>
+<hr>
 </section>
 <section id="medgemma-foundation-architecture" class="level2">
-<h2 class="anchored" data-anchor-id="medgemma-foundation-architecture">MedGemma Foundation Architecture</h2>
-<p>We utilize <code>google/medgemma-4b-it</code> as our base model. This foundation architecture is composed of:</p>
+<h2 class="anchored" data-anchor-id="medgemma-foundation-architecture">2. MedGemma Foundation Architecture</h2>
+<p>We utilise <code>google/medgemma-4b-it</code> as our base model. This foundation architecture is composed of:</p>
 <ol type="1">
 <li><strong>Vision Encoder</strong>: A frozen medical SigLIP model that extracts visual representation vectors directly from chest radiograph projections.</li>
 <li><strong>Language Decoder</strong>: A Gemma 3 4B instruction-tuned causal language model, which receives concatenated vision tokens and clinical text prompts.</li>
@@ -346,42 +400,252 @@ window.Quarto = {
 </div>
 </div>
 </div>
+<p>The SigLIP encoder is kept <strong>fully frozen</strong> (<code>requires_grad=False</code>) throughout training. Only the LoRA adapter matrices injected into the Gemma decoder are trained.</p>
+<hr>
 </section>
 <section id="low-rank-adaptation-qlora" class="level2">
-<h2 class="anchored" data-anchor-id="low-rank-adaptation-qlora">Low-Rank Adaptation (QLoRA)</h2>
-<p>To train the model on a consumer GPU provided by Kaggle with limited VRAM (2 x Tesla T4 16GB), we employ <strong>QLoRA (Quantized Low-Rank Adaptation)</strong>. The base model weights are loaded in 4-bit NormalFloat (NF4) double quantization, while low-rank trainable adapter matrices are injected into the attention projection layers.</p>
+<h2 class="anchored" data-anchor-id="low-rank-adaptation-qlora">3. Low-Rank Adaptation (QLoRA)</h2>
+<p>To train the model on Kaggle’s free GPU tier (2× Tesla T4, 16 GB VRAM each), we employ <strong>QLoRA (Quantized Low-Rank Adaptation)</strong>. The base model weights are loaded in 4-bit NormalFloat (NF4) double quantization, while low-rank trainable adapter matrices are injected into the attention projection layers.</p>
 <p>Mathematically, the forward pass for a projection layer with input <span class="math inline">\(x \in \mathbb{R}^d\)</span> is given by:</p>
-<p><span class="math display">\[h = W_0 x + \Delta W x = W_0 x + \frac{s}{r} B A x\]</span></p>
+<p><span class="math display">\[h = W_0 x + \Delta W x = W_0 x + \frac{\alpha}{r} B A x\]</span></p>
 <p>Where:</p>
 <ul>
 <li><span class="math inline">\(W_0 \in \mathbb{R}^{d \times k}\)</span> represents the frozen base model weights in NF4 representation.</li>
-<li><span class="math inline">\(A \in \mathbb{R}^{r \times d}\)</span> and <span class="math inline">\(B \in \mathbb{R}^{k \times r}\)</span> are the trainable LoRA adapter matrices.</li>
+<li><span class="math inline">\(A \in \mathbb{R}^{r \times d}\)</span> and <span class="math inline">\(B \in \mathbb{R}^{k \times r}\)</span> are the trainable LoRA adapter matrices (<span class="math inline">\(B\)</span> initialised to zero).</li>
 <li><span class="math inline">\(r\)</span> is the LoRA rank (<span class="math inline">\(r = 16\)</span>).</li>
-<li><span class="math inline">\(s\)</span> is the scaling factor (<span class="math inline">\(\alpha = 32\)</span>, yielding <span class="math inline">\(\frac{s}{r} = 2.0\)</span>).</li>
+<li><span class="math inline">\(\alpha = 32\)</span> is the scaling constant, yielding <span class="math inline">\(\frac{\alpha}{r} = 2.0\)</span>.</li>
+<li>Dropout <span class="math inline">\(= 0.05\)</span> is applied to the adapter input for regularisation.</li>
 </ul>
-<p>The adapters are applied to the attention modules: <span class="math inline">\(q\_proj\)</span>, <span class="math inline">\(k\_proj\)</span>, <span class="math inline">\(v\_proj\)</span>, and <span class="math inline">\(o\_proj\)</span>. This reduces the trainable parameters to just <strong>~17M (~0.4%)</strong> of the 4B parameter model. The vision encoder is kept fully frozen (<span class="math inline">\(requires\_grad=False\)</span>) to prevent overfitting on the relatively small dataset.</p>
+<p>The adapters are applied to the four attention modules: <code>q_proj</code>, <code>k_proj</code>, <code>v_proj</code>, and <code>o_proj</code>. This reduces the trainable parameter count to just <strong>~17M (~0.4%)</strong> of the 4B parameter base model.</p>
+<section id="lora-configuration-params.yaml-lora" class="level3">
+<h3 class="anchored" data-anchor-id="lora-configuration-params.yaml-lora">LoRA Configuration (<code>params.yaml → lora</code>)</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Parameter</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>rank</code></td>
+<td>16</td>
+</tr>
+<tr class="even">
+<td><code>alpha</code></td>
+<td>32</td>
+</tr>
+<tr class="odd">
+<td><code>dropout</code></td>
+<td>0.05</td>
+</tr>
+<tr class="even">
+<td><code>target_modules</code></td>
+<td><code>q_proj, k_proj, v_proj, o_proj</code></td>
+</tr>
+</tbody>
+</table>
+<hr>
 </section>
-<section id="label-masking-loss-formulation" class="level2">
-<h2 class="anchored" data-anchor-id="label-masking-loss-formulation">Label Masking &amp; Loss Formulation</h2>
-<p>Each training example is formatted using the MedGemma chat template:</p>
-<pre><code>&lt;system_prompt&gt;
+</section>
+<section id="training-prompt-format-label-masking" class="level2">
+<h2 class="anchored" data-anchor-id="training-prompt-format-label-masking">4. Training Prompt Format &amp; Label Masking</h2>
+<p>Each training example is formatted using the MedGemma chat template, producing a sequence of the form:</p>
+<pre><code>&lt;bos&gt;&lt;start_of_turn&gt;user
+&lt;image&gt;
 Indication: {clinical_indication}
-Findings:
-{ground_truth_findings_text}</code></pre>
-<p>A <strong>completion mask</strong> sets <code>labels[:prompt_len] = -100</code> so that cross-entropy loss is computed only on the generated findings, not on the prompt tokens. This prevents the model from learning to predict the prompt instead of the report.</p>
+You are an expert radiologist. Write only the Findings section...
+&lt;end_of_turn&gt;
+&lt;start_of_turn&gt;model
+{ground_truth_findings_text}&lt;end_of_turn&gt;&lt;eos&gt;</code></pre>
+<p>A <strong>completion mask</strong> sets <code>labels[:prompt_len] = -100</code> so that cross-entropy loss is computed only on the generated findings tokens, not on the prompt tokens or the image embeddings. This prevents the model from learning to reconstruct the prompt.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><strong>Known prompt format limitation</strong>: Training applies the chat template with <code>Indication:</code> text embedded in the user turn. Inference in notebooks 05–06 uses a slightly different ordering where the system instruction precedes the indication. All ten test-set configurations are evaluated with the same inference format, so relative rankings are valid. Absolute BERTScore-F1 may sit 1–2% below the achievable ceiling.</p>
+</div>
+</div>
+<hr>
 </section>
-<section id="training-arguments" class="level2">
-<h2 class="anchored" data-anchor-id="training-arguments">Training Arguments</h2>
-<p>Key training hyperparameters (<code>params.yaml → training</code>, v3):</p>
+<section id="training-configuration" class="level2">
+<h2 class="anchored" data-anchor-id="training-configuration">5. Training Configuration</h2>
+<section id="hyperparameters-params.yaml-training" class="level3">
+<h3 class="anchored" data-anchor-id="hyperparameters-params.yaml-training">5.1 Hyperparameters (<code>params.yaml → training</code>)</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Hyperparameter</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>learning_rate</code></td>
+<td><span class="math inline">\(5 \times 10^{-5}\)</span></td>
+</tr>
+<tr class="even">
+<td><code>num_epochs</code></td>
+<td>2</td>
+</tr>
+<tr class="odd">
+<td><code>warmup_ratio</code></td>
+<td>0.06</td>
+</tr>
+<tr class="even">
+<td><code>weight_decay</code></td>
+<td>0.01</td>
+</tr>
+<tr class="odd">
+<td><code>batch_size</code></td>
+<td>2 (per GPU)</td>
+</tr>
+<tr class="even">
+<td><code>gradient_accumulation_steps</code></td>
+<td>8</td>
+</tr>
+<tr class="odd">
+<td><code>max_seq_length</code></td>
+<td>512</td>
+</tr>
+<tr class="even">
+<td>Optimizer</td>
+<td><code>paged_adamw_8bit</code></td>
+</tr>
+<tr class="odd">
+<td>Precision</td>
+<td><code>fp16</code> (T4 native tensor cores — bf16 is software-emulated on Turing)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Effective batch size:</strong></p>
 <ul>
-<li><code>learning_rate</code>: <span class="math inline">\(5 \times 10^{-5}\)</span></li>
-<li><code>num_epochs</code>: 2</li>
-<li><code>warmup_ratio</code>: 0.06</li>
-<li><code>batch_size</code>: 2</li>
-<li><code>gradient_accumulation_steps</code>: 8 (effective batch size = 16)</li>
-<li><code>max_seq_length</code>: 512</li>
-<li><code>optim</code>: paged_adamw_8bit</li>
+<li><strong>Kaggle 2×T4 (DDP):</strong> 2 GPUs × 2 per-GPU batch × 8 grad_acc = <strong>32</strong></li>
+<li><strong>Local single GPU:</strong> 1 × 2 × 8 = <strong>16</strong></li>
 </ul>
+<p>The Kaggle run uses <code>torchrun --nproc_per_node=2</code> for data-parallel training (each GPU handles independent mini-batches; gradients are all-reduced after each accumulation cycle). This is data parallelism (DDP), not pipeline parallelism — both GPUs hold a full copy of the model in 4-bit.</p>
+</section>
+<section id="hardware" class="level3">
+<h3 class="anchored" data-anchor-id="hardware">5.2 Hardware</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Environment</th>
+<th>Hardware</th>
+<th>Runtime</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Kaggle (actual training)</td>
+<td>2× NVIDIA Tesla T4 (16 GB VRAM each)</td>
+<td>~10–13 h total</td>
+</tr>
+<tr class="even">
+<td>Remote server (verification)</td>
+<td>NVIDIA RTX 4000 Ada (21 GB VRAM, cc=8.9)</td>
+<td>~6 h total</td>
+</tr>
+</tbody>
+</table>
+<p>Both runs are logged to Weights &amp; Biases under project <code>reportcxr</code>.</p>
+<hr>
+</section>
+</section>
+<section id="two-training-runs" class="level2">
+<h2 class="anchored" data-anchor-id="two-training-runs">6. Two Training Runs</h2>
+<p>Two QLoRA variants were trained and compared:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Run name</th>
+<th>Sampler</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>qlora_uniform_v3</code></td>
+<td>Uniform (no correction)</td>
+<td>Fine-tuned baseline — isolates fine-tuning effect</td>
+</tr>
+<tr class="even">
+<td><code>qlora_weighted_v4</code></td>
+<td>Importance-weighted (ESS-based)</td>
+<td>Shift-corrected — targets rare pathologies</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>v3</code>/<code>v4</code> naming reflects iteration: <code>v3</code> is the first clean uniform baseline without legacy issues; <code>v4</code> introduces the active <code>p_target</code> settings. Model selection within each run uses <strong>val BERTScore-F1</strong> as the primary metric (best epoch is saved to <code>checkpoints/qlora_{variant}/best_model/</code>).</p>
+<hr>
+</section>
+<section id="training-figures" class="level2">
+<h2 class="anchored" data-anchor-id="training-figures">7. Training Figures</h2>
+<div class="quarto-layout-panel" data-layout="[[1, 1], [1]]">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div id="fig-loss" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-loss-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<a href="../reports/figures/train_loss_comparison.png" class="lightbox" data-gallery="quarto-lightbox-gallery-1" title="Figure&nbsp;1: Training loss curves for both sampler variants over all steps."><img src="../reports/figures/train_loss_comparison.png" class="img-fluid figure-img"></a>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-loss-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1: Training loss curves for both sampler variants over all steps.
+</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div id="fig-sampler-weights" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-sampler-weights-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<a href="../reports/figures/train_sampler_weights_comparison.png" class="lightbox" data-gallery="quarto-lightbox-gallery-2" title="Figure&nbsp;2: Sampler weight distributions: uniform (left) vs importance-weighted (right), showing how rare-label studies are up-weighted."><img src="../reports/figures/train_sampler_weights_comparison.png" class="img-fluid figure-img"></a>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-sampler-weights-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2: Sampler weight distributions: uniform (left) vs importance-weighted (right), showing how rare-label studies are up-weighted.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 100.0%;justify-content: flex-start;">
+<div id="fig-per-label" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-per-label-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<a href="../reports/figures/train_per_label_f1_comparison.png" class="lightbox" data-gallery="quarto-lightbox-gallery-3" title="Figure&nbsp;3: Per-label CheXbert F1 at best checkpoint: zero-shot vs uniform fine-tune vs weighted fine-tune."><img src="../reports/figures/train_per_label_f1_comparison.png" class="img-fluid figure-img"></a>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-per-label-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;3: Per-label CheXbert F1 at best checkpoint: zero-shot vs uniform fine-tune vs weighted fine-tune.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<p><a href="#fig-loss" class="quarto-xref">Figure&nbsp;1</a> shows both runs converge smoothly over 2 epochs with no sign of loss spiking, confirming that <code>paged_adamw_8bit</code> + NF4 quantization is numerically stable at this learning rate.</p>
+<p><a href="#fig-sampler-weights" class="quarto-xref">Figure&nbsp;2</a> illustrates the effect of the <code>WeightedRandomSampler</code>: the importance-weighted run concentrates sampling mass onto rare-label studies (right distribution skewed toward higher weights), at the cost of an effective sample diversity reduction. The ESS of the weighted sampler was approximately <strong>850 / 2,403</strong> effective training examples — a 65% reduction in diversity in exchange for better rare-label coverage.</p>
+<p><a href="#fig-per-label" class="quarto-xref">Figure&nbsp;3</a> compares per-label F1 at the best val checkpoint for each condition. The weighted sampler shows consistent gains on the rarest classes (Edema, Consolidation, Pneumothorax) while maintaining parity on common ones.</p>
 
 
 <!-- -->
@@ -843,72 +1107,162 @@ Findings:
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "3. Model &amp; QLoRA Config"</span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="an">author:</span><span class="co"> "Diego Villalba (Applied Research Candidate)"</span></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="an">date:</span><span class="co"> "2026-06-25"</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="an">date:</span><span class="co"> "2026-06-26"</span></span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
 <span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>::: {.non-technical-summary}</span>
 <span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="fu">##### Section Summary (Non-Technical)</span></span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>This section describes the AI model itself and how we train it. We use Google's MedGemma, which consists of a frozen medical eye (image encoder) and a text generator (language decoder). We train only the text generator using a method called QLoRA, which inserts tiny adjustable elements into the model while keeping the main text book frozen in memory. We also use a masking technique to ensure the model is only graded on the clinical findings it generates, not on the inputs it was given.</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>This section describes the AI model itself and how we train it. We use Google's MedGemma, which consists of a frozen medical eye (image encoder) and a text generator (language decoder). We train only the text generator using a method called QLoRA, which inserts tiny adjustable elements into the model while keeping the main weights frozen in memory. We also use a masking technique to ensure the model is only graded on the clinical findings it generates, not on the inputs it was given.</span>
 <span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>:::</span>
 <span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="fu">## MedGemma Foundation Architecture</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="fu">## 1. Train / Val / Test Split</span></span>
 <span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>We utilize <span class="in">`google/medgemma-4b-it`</span> as our base model. This foundation architecture is composed of:</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>The 3,337 usable studies (see <span class="co">[</span><span class="ot">Section 2</span><span class="co">](02_data.qmd)</span>) are partitioned via multi-label stratified sampling (<span class="in">`scikit-multilearn`</span>) to preserve label frequency ratios across splits:</span>
 <span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="ss">1.  </span>**Vision Encoder**: A frozen medical SigLIP model that extracts visual representation vectors directly from chest radiograph projections.</span>
-<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="ss">2.  </span>**Language Decoder**: A Gemma 3 4B instruction-tuned causal language model, which receives concatenated vision tokens and clinical text prompts.</span>
-<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="in">```{mermaid}</span></span>
-<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>graph LR</span>
-<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>    CXR[<span class="ot">"</span><span class="st">CXR Image</span><span class="ot">"</span>] --&gt; SigLIP[<span class="ot">"</span><span class="st">SigLIP Encoder (Frozen)</span><span class="ot">"</span>]</span>
-<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>    Prompt[<span class="ot">"</span><span class="st">Clinical Indication Prompt</span><span class="ot">"</span>] --&gt; Tokenizer[<span class="ot">"</span><span class="st">Tokenizer</span><span class="ot">"</span>]</span>
-<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>    SigLIP --&gt; Concat[<span class="ot">"</span><span class="st">Concat Tokens</span><span class="ot">"</span>]</span>
-<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>    Tokenizer --&gt; Concat</span>
-<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>    Concat --&gt; Gemma[<span class="ot">"</span><span class="st">Gemma 3 4B Decoder (QLoRA)</span><span class="ot">"</span>]</span>
-<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>    Gemma --&gt; Report[<span class="ot">"</span><span class="st">Generated Findings</span><span class="ot">"</span>]</span>
-<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a><span class="fu">## Low-Rank Adaptation (QLoRA)</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Split <span class="pp">|</span> Studies <span class="pp">|</span> Purpose <span class="pp">|</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Train <span class="pp">|</span> **2,403** <span class="pp">|</span> QLoRA fine-tuning with <span class="in">`WeightedRandomSampler`</span> <span class="pp">|</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Val <span class="pp">|</span> **334** <span class="pp">|</span> Epoch-level model selection (BERTScore-F1 primary) <span class="pp">|</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Test <span class="pp">|</span> **600** <span class="pp">|</span> Final held-out evaluation; never seen during training <span class="pp">|</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>Split parameters (<span class="in">`params.yaml → split`</span>): <span class="in">`test_size=0.15`</span>, <span class="in">`val_size=0.10`</span>, <span class="in">`min_test_count=600`</span>, <span class="in">`random_state=42`</span>.</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a><span class="fu">## 2. MedGemma Foundation Architecture</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>We utilise <span class="in">`google/medgemma-4b-it`</span> as our base model. This foundation architecture is composed of:</span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>**Vision Encoder**: A frozen medical SigLIP model that extracts visual representation vectors directly from chest radiograph projections.</span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>**Language Decoder**: A Gemma 3 4B instruction-tuned causal language model, which receives concatenated vision tokens and clinical text prompts.</span>
 <span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>To train the model on a consumer GPU provided by Kaggle with limited VRAM (2 x Tesla T4 16GB), we employ **QLoRA (Quantized Low-Rank Adaptation)**. The base model weights are loaded in 4-bit NormalFloat (NF4) double quantization, while low-rank trainable adapter matrices are injected into the attention projection layers.</span>
-<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>Mathematically, the forward pass for a projection layer with input $x \in \mathbb{R}^d$ is given by:</span>
-<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>$$h = W_0 x + \Delta W x = W_0 x + \frac{s}{r} B A x$$</span>
-<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a>Where:</span>
-<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>$W_0 \in \mathbb{R}^{d \times k}$ represents the frozen base model weights in NF4 representation.</span>
-<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>$A \in \mathbb{R}^{r \times d}$ and $B \in \mathbb{R}^{k \times r}$ are the trainable LoRA adapter matrices.</span>
-<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>$r$ is the LoRA rank ($r = 16$).</span>
-<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>$s$ is the scaling factor ($\alpha = 32$, yielding $\frac{s}{r} = 2.0$).</span>
-<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a>The adapters are applied to the attention modules: $q<span class="sc">\_</span>proj$, $k<span class="sc">\_</span>proj$, $v<span class="sc">\_</span>proj$, and $o<span class="sc">\_</span>proj$. This reduces the trainable parameters to just **~17M (~0.4%)** of the 4B parameter model. The vision encoder is kept fully frozen ($requires<span class="sc">\_</span>grad=False$) to prevent overfitting on the relatively small dataset.</span>
-<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a><span class="fu">## Label Masking &amp; Loss Formulation</span></span>
-<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a>Each training example is formatted using the MedGemma chat template:</span>
-<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a><span class="in">&lt;system_prompt&gt;</span></span>
-<span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a><span class="in">Indication: {clinical_indication}</span></span>
-<span id="cb2-55"><a href="#cb2-55" aria-hidden="true" tabindex="-1"></a><span class="in">Findings:</span></span>
-<span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a><span class="in">{ground_truth_findings_text}</span></span>
-<span id="cb2-57"><a href="#cb2-57" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a><span class="in">```{mermaid}</span></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>graph LR</span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>    CXR[<span class="ot">"</span><span class="st">CXR Image</span><span class="ot">"</span>] --&gt; SigLIP[<span class="ot">"</span><span class="st">SigLIP Encoder (Frozen)</span><span class="ot">"</span>]</span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>    Prompt[<span class="ot">"</span><span class="st">Clinical Indication Prompt</span><span class="ot">"</span>] --&gt; Tokenizer[<span class="ot">"</span><span class="st">Tokenizer</span><span class="ot">"</span>]</span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a>    SigLIP --&gt; Concat[<span class="ot">"</span><span class="st">Concat Tokens</span><span class="ot">"</span>]</span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>    Tokenizer --&gt; Concat</span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a>    Concat --&gt; Gemma[<span class="ot">"</span><span class="st">Gemma 3 4B Decoder (QLoRA)</span><span class="ot">"</span>]</span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a>    Gemma --&gt; Report[<span class="ot">"</span><span class="st">Generated Findings</span><span class="ot">"</span>]</span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a>The SigLIP encoder is kept **fully frozen** (<span class="in">`requires_grad=False`</span>) throughout training. Only the LoRA adapter matrices injected into the Gemma decoder are trained.</span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a><span class="fu">## 3. Low-Rank Adaptation (QLoRA)</span></span>
+<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a>To train the model on Kaggle's free GPU tier (2× Tesla T4, 16 GB VRAM each), we employ **QLoRA (Quantized Low-Rank Adaptation)**. The base model weights are loaded in 4-bit NormalFloat (NF4) double quantization, while low-rank trainable adapter matrices are injected into the attention projection layers.</span>
+<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a>Mathematically, the forward pass for a projection layer with input $x \in \mathbb{R}^d$ is given by:</span>
+<span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-55"><a href="#cb2-55" aria-hidden="true" tabindex="-1"></a>$$h = W_0 x + \Delta W x = W_0 x + \frac{\alpha}{r} B A x$$</span>
+<span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-57"><a href="#cb2-57" aria-hidden="true" tabindex="-1"></a>Where:</span>
 <span id="cb2-58"><a href="#cb2-58" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a>A **completion mask** sets <span class="in">`labels[:prompt_len] = -100`</span> so that cross-entropy loss is computed only on the generated findings, not on the prompt tokens. This prevents the model from learning to predict the prompt instead of the report.</span>
-<span id="cb2-60"><a href="#cb2-60" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-61"><a href="#cb2-61" aria-hidden="true" tabindex="-1"></a><span class="fu">## Training Arguments</span></span>
-<span id="cb2-62"><a href="#cb2-62" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a>Key training hyperparameters (<span class="in">`params.yaml → training`</span>, v3):</span>
+<span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>$W_0 \in \mathbb{R}^{d \times k}$ represents the frozen base model weights in NF4 representation.</span>
+<span id="cb2-60"><a href="#cb2-60" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>$A \in \mathbb{R}^{r \times d}$ and $B \in \mathbb{R}^{k \times r}$ are the trainable LoRA adapter matrices ($B$ initialised to zero).</span>
+<span id="cb2-61"><a href="#cb2-61" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>$r$ is the LoRA rank ($r = 16$).</span>
+<span id="cb2-62"><a href="#cb2-62" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>$\alpha = 32$ is the scaling constant, yielding $\frac{\alpha}{r} = 2.0$.</span>
+<span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>Dropout $= 0.05$ is applied to the adapter input for regularisation.</span>
 <span id="cb2-64"><a href="#cb2-64" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span><span class="in">`learning_rate`</span>: $5 \times 10^{-5}$</span>
-<span id="cb2-66"><a href="#cb2-66" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span><span class="in">`num_epochs`</span>: 2</span>
-<span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span><span class="in">`warmup_ratio`</span>: 0.06</span>
-<span id="cb2-68"><a href="#cb2-68" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span><span class="in">`batch_size`</span>: 2</span>
-<span id="cb2-69"><a href="#cb2-69" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span><span class="in">`gradient_accumulation_steps`</span>: 8 (effective batch size = 16)</span>
-<span id="cb2-70"><a href="#cb2-70" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span><span class="in">`max_seq_length`</span>: 512</span>
-<span id="cb2-71"><a href="#cb2-71" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span><span class="in">`optim`</span>: paged_adamw_8bit</span>
+<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a>The adapters are applied to the four attention modules: <span class="in">`q_proj`</span>, <span class="in">`k_proj`</span>, <span class="in">`v_proj`</span>, and <span class="in">`o_proj`</span>. This reduces the trainable parameter count to just **~17M (~0.4%)** of the 4B parameter base model.</span>
+<span id="cb2-66"><a href="#cb2-66" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a><span class="fu">### LoRA Configuration (`params.yaml → lora`)</span></span>
+<span id="cb2-68"><a href="#cb2-68" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-69"><a href="#cb2-69" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Parameter <span class="pp">|</span> Value <span class="pp">|</span></span>
+<span id="cb2-70"><a href="#cb2-70" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|</span></span>
+<span id="cb2-71"><a href="#cb2-71" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`rank`</span> <span class="pp">|</span> 16 <span class="pp">|</span></span>
+<span id="cb2-72"><a href="#cb2-72" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`alpha`</span> <span class="pp">|</span> 32 <span class="pp">|</span></span>
+<span id="cb2-73"><a href="#cb2-73" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`dropout`</span> <span class="pp">|</span> 0.05 <span class="pp">|</span></span>
+<span id="cb2-74"><a href="#cb2-74" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`target_modules`</span> <span class="pp">|</span> <span class="in">`q_proj, k_proj, v_proj, o_proj`</span> <span class="pp">|</span></span>
+<span id="cb2-75"><a href="#cb2-75" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-76"><a href="#cb2-76" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb2-77"><a href="#cb2-77" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-78"><a href="#cb2-78" aria-hidden="true" tabindex="-1"></a><span class="fu">## 4. Training Prompt Format &amp; Label Masking</span></span>
+<span id="cb2-79"><a href="#cb2-79" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-80"><a href="#cb2-80" aria-hidden="true" tabindex="-1"></a>Each training example is formatted using the MedGemma chat template, producing a sequence of the form:</span>
+<span id="cb2-81"><a href="#cb2-81" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-82"><a href="#cb2-82" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb2-83"><a href="#cb2-83" aria-hidden="true" tabindex="-1"></a><span class="in">&lt;bos&gt;&lt;start_of_turn&gt;user</span></span>
+<span id="cb2-84"><a href="#cb2-84" aria-hidden="true" tabindex="-1"></a><span class="in">&lt;image&gt;</span></span>
+<span id="cb2-85"><a href="#cb2-85" aria-hidden="true" tabindex="-1"></a><span class="in">Indication: {clinical_indication}</span></span>
+<span id="cb2-86"><a href="#cb2-86" aria-hidden="true" tabindex="-1"></a><span class="in">You are an expert radiologist. Write only the Findings section...</span></span>
+<span id="cb2-87"><a href="#cb2-87" aria-hidden="true" tabindex="-1"></a><span class="in">&lt;end_of_turn&gt;</span></span>
+<span id="cb2-88"><a href="#cb2-88" aria-hidden="true" tabindex="-1"></a><span class="in">&lt;start_of_turn&gt;model</span></span>
+<span id="cb2-89"><a href="#cb2-89" aria-hidden="true" tabindex="-1"></a><span class="in">{ground_truth_findings_text}&lt;end_of_turn&gt;&lt;eos&gt;</span></span>
+<span id="cb2-90"><a href="#cb2-90" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb2-91"><a href="#cb2-91" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-92"><a href="#cb2-92" aria-hidden="true" tabindex="-1"></a>A **completion mask** sets <span class="in">`labels[:prompt_len] = -100`</span> so that cross-entropy loss is computed only on the generated findings tokens, not on the prompt tokens or the image embeddings. This prevents the model from learning to reconstruct the prompt.</span>
+<span id="cb2-93"><a href="#cb2-93" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-94"><a href="#cb2-94" aria-hidden="true" tabindex="-1"></a>::: {.callout-note}</span>
+<span id="cb2-95"><a href="#cb2-95" aria-hidden="true" tabindex="-1"></a>**Known prompt format limitation**: Training applies the chat template with <span class="in">`Indication:`</span> text embedded in the user turn. Inference in notebooks 05–06 uses a slightly different ordering where the system instruction precedes the indication. All ten test-set configurations are evaluated with the same inference format, so relative rankings are valid. Absolute BERTScore-F1 may sit 1–2% below the achievable ceiling.</span>
+<span id="cb2-96"><a href="#cb2-96" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb2-97"><a href="#cb2-97" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-98"><a href="#cb2-98" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb2-99"><a href="#cb2-99" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-100"><a href="#cb2-100" aria-hidden="true" tabindex="-1"></a><span class="fu">## 5. Training Configuration</span></span>
+<span id="cb2-101"><a href="#cb2-101" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-102"><a href="#cb2-102" aria-hidden="true" tabindex="-1"></a><span class="fu">### 5.1 Hyperparameters (`params.yaml → training`)</span></span>
+<span id="cb2-103"><a href="#cb2-103" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-104"><a href="#cb2-104" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Hyperparameter <span class="pp">|</span> Value <span class="pp">|</span></span>
+<span id="cb2-105"><a href="#cb2-105" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|</span></span>
+<span id="cb2-106"><a href="#cb2-106" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`learning_rate`</span> <span class="pp">|</span> $5 \times 10^{-5}$ <span class="pp">|</span></span>
+<span id="cb2-107"><a href="#cb2-107" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`num_epochs`</span> <span class="pp">|</span> 2 <span class="pp">|</span></span>
+<span id="cb2-108"><a href="#cb2-108" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`warmup_ratio`</span> <span class="pp">|</span> 0.06 <span class="pp">|</span></span>
+<span id="cb2-109"><a href="#cb2-109" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`weight_decay`</span> <span class="pp">|</span> 0.01 <span class="pp">|</span></span>
+<span id="cb2-110"><a href="#cb2-110" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`batch_size`</span> <span class="pp">|</span> 2 (per GPU) <span class="pp">|</span></span>
+<span id="cb2-111"><a href="#cb2-111" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`gradient_accumulation_steps`</span> <span class="pp">|</span> 8 <span class="pp">|</span></span>
+<span id="cb2-112"><a href="#cb2-112" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`max_seq_length`</span> <span class="pp">|</span> 512 <span class="pp">|</span></span>
+<span id="cb2-113"><a href="#cb2-113" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Optimizer <span class="pp">|</span> <span class="in">`paged_adamw_8bit`</span> <span class="pp">|</span></span>
+<span id="cb2-114"><a href="#cb2-114" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Precision <span class="pp">|</span> <span class="in">`fp16`</span> (T4 native tensor cores — bf16 is software-emulated on Turing) <span class="pp">|</span></span>
+<span id="cb2-115"><a href="#cb2-115" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-116"><a href="#cb2-116" aria-hidden="true" tabindex="-1"></a>**Effective batch size:**</span>
+<span id="cb2-117"><a href="#cb2-117" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-118"><a href="#cb2-118" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Kaggle 2×T4 (DDP):** 2 GPUs × 2 per-GPU batch × 8 grad_acc = **32**</span>
+<span id="cb2-119"><a href="#cb2-119" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>**Local single GPU:** 1 × 2 × 8 = **16**</span>
+<span id="cb2-120"><a href="#cb2-120" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-121"><a href="#cb2-121" aria-hidden="true" tabindex="-1"></a>The Kaggle run uses <span class="in">`torchrun --nproc_per_node=2`</span> for data-parallel training (each GPU handles independent mini-batches; gradients are all-reduced after each accumulation cycle). This is data parallelism (DDP), not pipeline parallelism — both GPUs hold a full copy of the model in 4-bit.</span>
+<span id="cb2-122"><a href="#cb2-122" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-123"><a href="#cb2-123" aria-hidden="true" tabindex="-1"></a><span class="fu">### 5.2 Hardware</span></span>
+<span id="cb2-124"><a href="#cb2-124" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-125"><a href="#cb2-125" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Environment <span class="pp">|</span> Hardware <span class="pp">|</span> Runtime <span class="pp">|</span></span>
+<span id="cb2-126"><a href="#cb2-126" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|</span></span>
+<span id="cb2-127"><a href="#cb2-127" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Kaggle (actual training) <span class="pp">|</span> 2× NVIDIA Tesla T4 (16 GB VRAM each) <span class="pp">|</span> ~10–13 h total <span class="pp">|</span></span>
+<span id="cb2-128"><a href="#cb2-128" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Remote server (verification) <span class="pp">|</span> NVIDIA RTX 4000 Ada (21 GB VRAM, cc=8.9) <span class="pp">|</span> ~6 h total <span class="pp">|</span></span>
+<span id="cb2-129"><a href="#cb2-129" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-130"><a href="#cb2-130" aria-hidden="true" tabindex="-1"></a>Both runs are logged to Weights &amp; Biases under project <span class="in">`reportcxr`</span>.</span>
+<span id="cb2-131"><a href="#cb2-131" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-132"><a href="#cb2-132" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb2-133"><a href="#cb2-133" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-134"><a href="#cb2-134" aria-hidden="true" tabindex="-1"></a><span class="fu">## 6. Two Training Runs</span></span>
+<span id="cb2-135"><a href="#cb2-135" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-136"><a href="#cb2-136" aria-hidden="true" tabindex="-1"></a>Two QLoRA variants were trained and compared:</span>
+<span id="cb2-137"><a href="#cb2-137" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-138"><a href="#cb2-138" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Run name <span class="pp">|</span> Sampler <span class="pp">|</span> Purpose <span class="pp">|</span></span>
+<span id="cb2-139"><a href="#cb2-139" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|</span></span>
+<span id="cb2-140"><a href="#cb2-140" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`qlora_uniform_v3`</span> <span class="pp">|</span> Uniform (no correction) <span class="pp">|</span> Fine-tuned baseline — isolates fine-tuning effect <span class="pp">|</span></span>
+<span id="cb2-141"><a href="#cb2-141" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> <span class="in">`qlora_weighted_v4`</span> <span class="pp">|</span> Importance-weighted (ESS-based) <span class="pp">|</span> Shift-corrected — targets rare pathologies <span class="pp">|</span></span>
+<span id="cb2-142"><a href="#cb2-142" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-143"><a href="#cb2-143" aria-hidden="true" tabindex="-1"></a>The <span class="in">`v3`</span>/<span class="in">`v4`</span> naming reflects iteration: <span class="in">`v3`</span> is the first clean uniform baseline without legacy issues; <span class="in">`v4`</span> introduces the active <span class="in">`p_target`</span> settings. Model selection within each run uses **val BERTScore-F1** as the primary metric (best epoch is saved to <span class="in">`checkpoints/qlora_{variant}/best_model/`</span>).</span>
+<span id="cb2-144"><a href="#cb2-144" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-145"><a href="#cb2-145" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb2-146"><a href="#cb2-146" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-147"><a href="#cb2-147" aria-hidden="true" tabindex="-1"></a><span class="fu">## 7. Training Figures</span></span>
+<span id="cb2-148"><a href="#cb2-148" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-149"><a href="#cb2-149" aria-hidden="true" tabindex="-1"></a>::: {layout="[<span class="co">[</span><span class="ot">1, 1</span><span class="co">]</span>, <span class="co">[</span><span class="ot">1</span><span class="co">]</span>]"}</span>
+<span id="cb2-150"><a href="#cb2-150" aria-hidden="true" tabindex="-1"></a><span class="al">![Training loss curves for both sampler variants over all steps.](../reports/figures/train_loss_comparison.png)</span>{#fig-loss}</span>
+<span id="cb2-151"><a href="#cb2-151" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-152"><a href="#cb2-152" aria-hidden="true" tabindex="-1"></a><span class="al">![Sampler weight distributions: uniform (left) vs importance-weighted (right), showing how rare-label studies are up-weighted.](../reports/figures/train_sampler_weights_comparison.png)</span>{#fig-sampler-weights}</span>
+<span id="cb2-153"><a href="#cb2-153" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-154"><a href="#cb2-154" aria-hidden="true" tabindex="-1"></a><span class="al">![Per-label CheXbert F1 at best checkpoint: zero-shot vs uniform fine-tune vs weighted fine-tune.](../reports/figures/train_per_label_f1_comparison.png)</span>{#fig-per-label}</span>
+<span id="cb2-155"><a href="#cb2-155" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb2-156"><a href="#cb2-156" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-157"><a href="#cb2-157" aria-hidden="true" tabindex="-1"></a>@fig-loss shows both runs converge smoothly over 2 epochs with no sign of loss spiking, confirming that <span class="in">`paged_adamw_8bit`</span> + NF4 quantization is numerically stable at this learning rate.</span>
+<span id="cb2-158"><a href="#cb2-158" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-159"><a href="#cb2-159" aria-hidden="true" tabindex="-1"></a>@fig-sampler-weights illustrates the effect of the <span class="in">`WeightedRandomSampler`</span>: the importance-weighted run concentrates sampling mass onto rare-label studies (right distribution skewed toward higher weights), at the cost of an effective sample diversity reduction. The ESS of the weighted sampler was approximately **850 / 2,403** effective training examples — a 65% reduction in diversity in exchange for better rare-label coverage.</span>
+<span id="cb2-160"><a href="#cb2-160" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-161"><a href="#cb2-161" aria-hidden="true" tabindex="-1"></a>@fig-per-label compares per-label F1 at the best val checkpoint for each condition. The weighted sampler shows consistent gains on the rarest classes (Edema, Consolidation, Pneumothorax) while maintaining parity on common ones.</span>
 </code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
 </div></div></div></div></div>
 </div> <!-- /content -->
@@ -925,6 +1279,38 @@ Findings:
 </div>
   </div>
 </footer>
+<script>var lightboxQuarto = GLightbox({"closeEffect":"zoom","descPosition":"bottom","loop":false,"openEffect":"zoom","selector":".lightbox"});
+(function() {
+  let previousOnload = window.onload;
+  window.onload = () => {
+    if (previousOnload) {
+      previousOnload();
+    }
+    lightboxQuarto.on('slide_before_load', (data) => {
+      const { slideIndex, slideNode, slideConfig, player, trigger } = data;
+      const href = trigger.getAttribute('href');
+      if (href !== null) {
+        const imgEl = window.document.querySelector(`a[href="${href}"] img`);
+        if (imgEl !== null) {
+          const srcAttr = imgEl.getAttribute("src");
+          if (srcAttr && srcAttr.startsWith("data:")) {
+            slideConfig.href = srcAttr;
+          }
+        }
+      } 
+    });
+  
+    lightboxQuarto.on('slide_after_load', (data) => {
+      const { slideIndex, slideNode, slideConfig, player, trigger } = data;
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(slideNode);
+      }
+    });
+  
+  };
+  
+})();
+          </script>
 
 
 

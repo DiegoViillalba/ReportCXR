@@ -7,9 +7,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Diego Villalba (Applied Research Candidate)">
-<meta name="dcterms.date" content="2026-06-25">
+<meta name="dcterms.date" content="2026-06-26">
 
-<title>Code Architecture Overview – ReportCXR</title>
+<title>Demo Deployment &amp; Light MLOps – ReportCXR</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -106,6 +106,35 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   }
 }</script>
 
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
 
 <link rel="stylesheet" href="../styles.css">
 </head>
@@ -248,8 +277,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#directory-structure" id="toc-directory-structure" class="nav-link active" data-scroll-target="#directory-structure">Directory Structure</a></li>
-  <li><a href="#modular-design-principles" id="toc-modular-design-principles" class="nav-link" data-scroll-target="#modular-design-principles">Modular Design Principles</a></li>
+  <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a></li>
+  <li><a href="#web-application-architecture" id="toc-web-application-architecture" class="nav-link" data-scroll-target="#web-application-architecture">1. Web Application Architecture</a></li>
+  <li><a href="#light-mlops-deployment-lifecycle" id="toc-light-mlops-deployment-lifecycle" class="nav-link" data-scroll-target="#light-mlops-deployment-lifecycle">2. Light MLOps &amp; Deployment Lifecycle</a>
+  <ul class="collapse">
+  <li><a href="#model-hub-serialization" id="toc-model-hub-serialization" class="nav-link" data-scroll-target="#model-hub-serialization">2.1 Model Hub Serialization</a></li>
+  <li><a href="#on-demand-compute-huggingface-zerogpu" id="toc-on-demand-compute-huggingface-zerogpu" class="nav-link" data-scroll-target="#on-demand-compute-huggingface-zerogpu">2.2 On-Demand Compute (HuggingFace ZeroGPU)</a></li>
+  <li><a href="#quantized-loading-on-the-edge" id="toc-quantized-loading-on-the-edge" class="nav-link" data-scroll-target="#quantized-loading-on-the-edge">2.3 Quantized Loading on the Edge</a></li>
+  </ul></li>
+  <li><a href="#demo-codebase-structure" id="toc-demo-codebase-structure" class="nav-link" data-scroll-target="#demo-codebase-structure">3. Demo Codebase Structure</a></li>
   </ul>
 </nav>
     </div>
@@ -258,7 +294,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<div class="quarto-title-block"><div><h1 class="title">Code Architecture Overview</h1><button type="button" class="btn code-tools-button" id="quarto-code-tools-source"><i class="bi"></i> Code</button></div></div>
+<div class="quarto-title-block"><div><h1 class="title">Demo Deployment &amp; Light MLOps</h1><button type="button" class="btn code-tools-button" id="quarto-code-tools-source"><i class="bi"></i> Code</button></div></div>
 </div>
 
 
@@ -275,7 +311,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">June 25, 2026</p>
+      <p class="date">June 26, 2026</p>
     </div>
   </div>
   
@@ -289,35 +325,57 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="section-summary-non-technical" class="level5 non-technical-summary">
 <h5 class="anchored" data-anchor-id="section-summary-non-technical">Section Summary (Non-Technical)</h5>
-<p>This page describes the organization of the code repository. We explain what each folder does, show how data flows through our modular Python files, and discuss why we avoid writing all of our logic in single, massive Jupyter Notebooks. Instead, we write clean, reusable Python scripts, using notebooks only to orchestrate and visualize results.</p>
+<p>This section documents how the trained AI model is deployed as a live web application on HuggingFace Spaces. Instead of running a heavy, expensive server 24/7, we deploy the model using a <strong>ZeroGPU</strong> architecture. This dynamically allocates high-performance graphic card resources (A10G GPUs) only when a user uploads an X-ray and requests a report. The model is also compressed (quantized) to run efficiently on HuggingFace, showcasing a lightweight, cost-effective deployment pipeline.</p>
 </section>
-<section id="directory-structure" class="level2">
-<h2 class="anchored" data-anchor-id="directory-structure">Directory Structure</h2>
-<p>The codebase is organized into modules to ensure a strict separation of concerns. All core logic resides in <code>src/</code>, while notebooks are strictly reserved for orchestration and visualization:</p>
-<pre><code>ReportCXR/
-│
-├── params.yaml                    # Single source of truth for all parameters
-├── dvc.yaml                       # Pipeline stages and dependency tracking
-├── pyproject.toml                 # Package configuration
-│
-├── src/
-│   ├── data/                      # Data downloading, processing, splitting
-│   ├── eda/                       # Distribution auditing
-│   ├── training/                  # Model loading, sampling, training loops
-│   ├── eval/                      # Metrics and evaluation scripts
-│   └── domain_shift_audit/        # Stress-testing infrastructure
-│
-├── notebooks/                     # Orchestration notebooks
-└── reports/                       # Generated figures, logs, baseline JSONs</code></pre>
+<section id="overview" class="level2">
+<h2 class="anchored" data-anchor-id="overview">Overview</h2>
+<p>The ReportCXR project includes a live web application demo deployed on HuggingFace Spaces:</p>
+<blockquote class="blockquote">
+<p><strong>Live Demo</strong>: <a href="https://huggingface.co/spaces/diegoi-io-0306/ReportCXR-Demo">ReportCXR-Demo on HuggingFace Spaces</a></p>
+<p><strong>Warning</strong>: <em>Research demo only. Not for clinical use.</em></p>
+</blockquote>
+<p>This web interface serves our best-performing rare-pathology model adapter: <code>weighted_v4</code> (trained using the class Effective Sample Size (ESS) WeightedRandomSampler).</p>
+<hr>
 </section>
-<section id="modular-design-principles" class="level2">
-<h2 class="anchored" data-anchor-id="modular-design-principles">Modular Design Principles</h2>
-<ul>
-<li><strong>Logic in Python Modules</strong>: We avoid monolithic notebooks. Scripts in <code>src/</code> are imported into notebooks. This allows for unit testing, easier git diffing, and cleaner refactoring.</li>
-<li><strong>Versioned Configuration</strong>: All numerical constants, paths, and hyperparameters are housed in <code>params.yaml</code>. Scripts read parameters at runtime, preventing silent configuration drift.</li>
-<li><strong>Pipeline Reproducibility</strong>: The <code>dvc.yaml</code> file defines explicit data lineage. This ensures that change in code or parameter will trigger only the necessary downstream stages.</li>
-<li><strong>Experiment Tracking</strong>: The HuggingFace trainer logs to Weights &amp; Biases automatically. This logs the complete history of training losses, learning rates, validation BERTScore, and CheXbert classification F1.</li>
-</ul>
+<section id="web-application-architecture" class="level2">
+<h2 class="anchored" data-anchor-id="web-application-architecture">1. Web Application Architecture</h2>
+<p>The demo is implemented using Gradio (v5.29.0) and HuggingFace Spaces ZeroGPU compute. It is divided into two distinct interactive tabs:</p>
+<ol type="1">
+<li><strong>Structured Report (Trained Format)</strong>: Generates a radiology Findings section from an X-ray and an optional Clinical Indication input. This format uses the exact same template and system prompt as our test evaluations: <code>You are an expert radiologist. Write only the Findings section...     Indication: {clinical_indication}     Findings:</code></li>
+<li><strong>Free Chat (Interactive Conversational)</strong>: Exploits MedGemma’s instruction-tuning by allowing users to ask open-ended questions about the uploaded image. The chat interface maintains the conversation history as context for follow-up questions.</li>
+</ol>
+<pre class="mermaid"><code>graph TD
+    User["User Interface (Gradio)"] --&gt;|Upload Image + Text| ZeroGPU["Gradio App Server (ZeroGPU)"]
+    ZeroGPU --&gt;|Load Base Model 4-bit NF4| HFHub["HuggingFace Hub (google/medgemma-4b-it)"]
+    ZeroGPU --&gt;|Apply LoRA Adapter| AdapterHF["HuggingFace Hub (diegoi-io-0306/reportcxr-medgemma-weighted-v4)"]
+    ZeroGPU --&gt;|Return Response| User</code></pre>
+<hr>
+</section>
+<section id="light-mlops-deployment-lifecycle" class="level2">
+<h2 class="anchored" data-anchor-id="light-mlops-deployment-lifecycle">2. Light MLOps &amp; Deployment Lifecycle</h2>
+<p>The deployment process follows a lightweight, serverless MLOps design:</p>
+<section id="model-hub-serialization" class="level3">
+<h3 class="anchored" data-anchor-id="model-hub-serialization">2.1 Model Hub Serialization</h3>
+<p>After finishing training, the QLoRA adapter weights (which represent the Low-Rank Adaptation matrices of rank <span class="math inline">\(r=16\)</span>) are saved and uploaded directly to the HuggingFace Hub repository: <a href="https://huggingface.co/diegoi-io-0306/reportcxr-medgemma-weighted-v4">diegoi-io-0306/reportcxr-medgemma-weighted-v4</a>. Because we only save the PEFT (Parameter-Efficient Fine-Tuning) adapter weights rather than the full 4B parameter model, the uploaded artifact size is extremely small (<strong>~68 MB</strong>), making deployment rapid and bandwidth-efficient.</p>
+</section>
+<section id="on-demand-compute-huggingface-zerogpu" class="level3">
+<h3 class="anchored" data-anchor-id="on-demand-compute-huggingface-zerogpu">2.2 On-Demand Compute (HuggingFace ZeroGPU)</h3>
+<p>To run a 4B parameter model with low latency, GPU acceleration is required. However, keeping a dedicated GPU server running 24/7 is financially expensive. We implement <strong>ZeroGPU</strong> serving: * We use the <code>@spaces.GPU</code> decorator inside the application code. * When a user clicks “Generate Report” or sends a chat message, HuggingFace’s scheduler dynamically routes the query to an available <strong>NVIDIA A10G GPU</strong> (24 GB VRAM) for the duration of the forward pass. * Once the generation is complete, the GPU resources are released back to the shared pool, ensuring cost-effective, serverless execution.</p>
+</section>
+<section id="quantized-loading-on-the-edge" class="level3">
+<h3 class="anchored" data-anchor-id="quantized-loading-on-the-edge">2.3 Quantized Loading on the Edge</h3>
+<p>To fit the model within HuggingFace’s environment, we load the base model in 4-bit precision using <code>BitsAndBytesConfig</code>: * <strong>Quantization</strong>: Loaded in 4-bit NormalFloat (NF4) with double quantization. * <strong>Precision</strong>: Compute data type set to <code>torch.bfloat16</code>. * <strong>VRAM Optimization</strong>: Quantization reduces the VRAM requirement of the Gemma decoder to under 4 GB, allowing it to load quickly and execute with a minimal memory footprint.</p>
+<hr>
+</section>
+</section>
+<section id="demo-codebase-structure" class="level2">
+<h2 class="anchored" data-anchor-id="demo-codebase-structure">3. Demo Codebase Structure</h2>
+<p>The demo deployment files are maintained under the <a href="file:///Users/diegovillaba/Code/ReportCXR/demo">demo/</a> folder:</p>
+<ol type="1">
+<li><strong><a href="file:///Users/diegovillaba/Code/ReportCXR/demo/app.py">demo/app.py</a></strong>: The main application entrypoint. It loads the base model and Peft adapter, defines the inference wrapper functions (with <code>@spaces.GPU</code> decoration), and constructs the Gradio block layout.</li>
+<li><strong><a href="file:///Users/diegovillaba/Code/ReportCXR/demo/requirements.txt">demo/requirements.txt</a></strong>: Specifies package dependencies needed for HuggingFace (e.g.&nbsp;<code>gradio</code>, <code>spaces</code>, <code>transformers</code>, <code>peft</code>, <code>bitsandbytes</code>, <code>accelerate</code>).</li>
+<li><strong><a href="file:///Users/diegovillaba/Code/ReportCXR/demo/README.md">demo/README.md</a></strong>: YAML metadata file configuring HuggingFace Space properties (Space title, SDK type, license, and hardware requirements).</li>
+</ol>
 
 
 <!-- -->
@@ -777,44 +835,79 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   });
   </script><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">Source Code</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="">
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "Code Architecture Overview"</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "Demo Deployment &amp; Light MLOps"</span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="an">author:</span><span class="co"> "Diego Villalba (Applied Research Candidate)"</span></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="an">date:</span><span class="co"> "2026-06-25"</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="an">date:</span><span class="co"> "2026-06-26"</span></span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
 <span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>::: {.non-technical-summary}</span>
 <span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="fu">##### Section Summary (Non-Technical)</span></span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>This page describes the organization of the code repository. We explain what each folder does, show how data flows through our modular Python files, and discuss why we avoid writing all of our logic in single, massive Jupyter Notebooks. Instead, we write clean, reusable Python scripts, using notebooks only to orchestrate and visualize results.</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>This section documents how the trained AI model is deployed as a live web application on HuggingFace Spaces. Instead of running a heavy, expensive server 24/7, we deploy the model using a **ZeroGPU** architecture. This dynamically allocates high-performance graphic card resources (A10G GPUs) only when a user uploads an X-ray and requests a report. The model is also compressed (quantized) to run efficiently on HuggingFace, showcasing a lightweight, cost-effective deployment pipeline.</span>
 <span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>:::</span>
 <span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="fu">## Directory Structure</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="fu">## Overview</span></span>
 <span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>The codebase is organized into modules to ensure a strict separation of concerns. All core logic resides in <span class="in">`src/`</span>, while notebooks are strictly reserved for orchestration and visualization:</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>The ReportCXR project includes a live web application demo deployed on HuggingFace Spaces:</span>
 <span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="in">ReportCXR/</span></span>
-<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="in">│</span></span>
-<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="in">├── params.yaml                    # Single source of truth for all parameters</span></span>
-<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="in">├── dvc.yaml                       # Pipeline stages and dependency tracking</span></span>
-<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="in">├── pyproject.toml                 # Package configuration</span></span>
-<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="in">│</span></span>
-<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="in">├── src/</span></span>
-<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="in">│   ├── data/                      # Data downloading, processing, splitting</span></span>
-<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="in">│   ├── eda/                       # Distribution auditing</span></span>
-<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a><span class="in">│   ├── training/                  # Model loading, sampling, training loops</span></span>
-<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a><span class="in">│   ├── eval/                      # Metrics and evaluation scripts</span></span>
-<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a><span class="in">│   └── domain_shift_audit/        # Stress-testing infrastructure</span></span>
-<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a><span class="in">│</span></span>
-<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="in">├── notebooks/                     # Orchestration notebooks</span></span>
-<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a><span class="in">└── reports/                       # Generated figures, logs, baseline JSONs</span></span>
-<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a><span class="fu">## Modular Design Principles</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="at">&gt; **Live Demo**: </span><span class="co">[</span><span class="ot">ReportCXR-Demo on HuggingFace Spaces</span><span class="co">](https://huggingface.co/spaces/diegoi-io-0306/ReportCXR-Demo)</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="at">&gt;</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="at">&gt; **Warning**: *Research demo only. Not for clinical use.*</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>This web interface serves our best-performing rare-pathology model adapter: <span class="in">`weighted_v4`</span> (trained using the class Effective Sample Size (ESS) WeightedRandomSampler).</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="fu">## 1. Web Application Architecture</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>The demo is implemented using Gradio (v5.29.0) and HuggingFace Spaces ZeroGPU compute. It is divided into two distinct interactive tabs:</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a><span class="ss">1.  </span>**Structured Report (Trained Format)**: Generates a radiology Findings section from an X-ray and an optional Clinical Indication input. This format uses the exact same template and system prompt as our test evaluations:</span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>    <span class="in">```</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="in">    You are an expert radiologist. Write only the Findings section...</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a><span class="in">    Indication: {clinical_indication}</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a><span class="in">    Findings:</span></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a><span class="in">    ```</span></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a><span class="ss">2.  </span>**Free Chat (Interactive Conversational)**: Exploits MedGemma’s instruction-tuning by allowing users to ask open-ended questions about the uploaded image. The chat interface maintains the conversation history as context for follow-up questions.</span>
 <span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**Logic in Python Modules**: We avoid monolithic notebooks. Scripts in <span class="in">`src/`</span> are imported into notebooks. This allows for unit testing, easier git diffing, and cleaner refactoring.</span>
-<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**Versioned Configuration**: All numerical constants, paths, and hyperparameters are housed in <span class="in">`params.yaml`</span>. Scripts read parameters at runtime, preventing silent configuration drift.</span>
-<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**Pipeline Reproducibility**: The <span class="in">`dvc.yaml`</span> file defines explicit data lineage. This ensures that change in code or parameter will trigger only the necessary downstream stages.</span>
-<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**Experiment Tracking**: The HuggingFace trainer logs to Weights &amp; Biases automatically. This logs the complete history of training losses, learning rates, validation BERTScore, and CheXbert classification F1.</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a><span class="in">```mermaid</span></span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>graph TD</span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>    User[<span class="ot">"</span><span class="st">User Interface (Gradio)</span><span class="ot">"</span>] --&gt;|Upload Image + Text| ZeroGPU[<span class="ot">"</span><span class="st">Gradio App Server (ZeroGPU)</span><span class="ot">"</span>]</span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a>    ZeroGPU --&gt;|Load Base Model <span class="dv">4</span>-bit NF4| HFHub[<span class="ot">"</span><span class="st">HuggingFace Hub (google/medgemma-4b-it)</span><span class="ot">"</span>]</span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>    ZeroGPU --&gt;|Apply LoRA Adapter| AdapterHF[<span class="ot">"</span><span class="st">HuggingFace Hub (diegoi-io-0306/reportcxr-medgemma-weighted-v4)</span><span class="ot">"</span>]</span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a>    ZeroGPU --&gt;|Return Response| User</span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a><span class="fu">## 2. Light MLOps &amp; Deployment Lifecycle</span></span>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a>The deployment process follows a lightweight, serverless MLOps design:</span>
+<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a><span class="fu">### 2.1 Model Hub Serialization</span></span>
+<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a>After finishing training, the QLoRA adapter weights (which represent the Low-Rank Adaptation matrices of rank $r=16$) are saved and uploaded directly to the HuggingFace Hub repository: <span class="co">[</span><span class="ot">diegoi-io-0306/reportcxr-medgemma-weighted-v4</span><span class="co">](https://huggingface.co/diegoi-io-0306/reportcxr-medgemma-weighted-v4)</span>.</span>
+<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a>Because we only save the PEFT (Parameter-Efficient Fine-Tuning) adapter weights rather than the full 4B parameter model, the uploaded artifact size is extremely small (**~68 MB**), making deployment rapid and bandwidth-efficient.</span>
+<span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a><span class="fu">### 2.2 On-Demand Compute (HuggingFace ZeroGPU)</span></span>
+<span id="cb2-55"><a href="#cb2-55" aria-hidden="true" tabindex="-1"></a>To run a 4B parameter model with low latency, GPU acceleration is required. However, keeping a dedicated GPU server running 24/7 is financially expensive. We implement **ZeroGPU** serving:</span>
+<span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>We use the <span class="in">`@spaces.GPU`</span> decorator inside the application code.</span>
+<span id="cb2-57"><a href="#cb2-57" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>When a user clicks "Generate Report" or sends a chat message, HuggingFace's scheduler dynamically routes the query to an available **NVIDIA A10G GPU** (24 GB VRAM) for the duration of the forward pass.</span>
+<span id="cb2-58"><a href="#cb2-58" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>Once the generation is complete, the GPU resources are released back to the shared pool, ensuring cost-effective, serverless execution.</span>
+<span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-60"><a href="#cb2-60" aria-hidden="true" tabindex="-1"></a><span class="fu">### 2.3 Quantized Loading on the Edge</span></span>
+<span id="cb2-61"><a href="#cb2-61" aria-hidden="true" tabindex="-1"></a>To fit the model within HuggingFace's environment, we load the base model in 4-bit precision using <span class="in">`BitsAndBytesConfig`</span>:</span>
+<span id="cb2-62"><a href="#cb2-62" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**Quantization**: Loaded in 4-bit NormalFloat (NF4) with double quantization.</span>
+<span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**Precision**: Compute data type set to <span class="in">`torch.bfloat16`</span>.</span>
+<span id="cb2-64"><a href="#cb2-64" aria-hidden="true" tabindex="-1"></a><span class="ss">*   </span>**VRAM Optimization**: Quantization reduces the VRAM requirement of the Gemma decoder to under 4 GB, allowing it to load quickly and execute with a minimal memory footprint.</span>
+<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-66"><a href="#cb2-66" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-68"><a href="#cb2-68" aria-hidden="true" tabindex="-1"></a><span class="fu">## 3. Demo Codebase Structure</span></span>
+<span id="cb2-69"><a href="#cb2-69" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-70"><a href="#cb2-70" aria-hidden="true" tabindex="-1"></a>The demo deployment files are maintained under the <span class="co">[</span><span class="ot">demo/</span><span class="co">](file:///Users/diegovillaba/Code/ReportCXR/demo)</span> folder:</span>
+<span id="cb2-71"><a href="#cb2-71" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-72"><a href="#cb2-72" aria-hidden="true" tabindex="-1"></a><span class="ss">1.  </span>**[demo/app.py](file:///Users/diegovillaba/Code/ReportCXR/demo/app.py)**: The main application entrypoint. It loads the base model and Peft adapter, defines the inference wrapper functions (with <span class="in">`@spaces.GPU`</span> decoration), and constructs the Gradio block layout.</span>
+<span id="cb2-73"><a href="#cb2-73" aria-hidden="true" tabindex="-1"></a><span class="ss">2.  </span>**[demo/requirements.txt](file:///Users/diegovillaba/Code/ReportCXR/demo/requirements.txt)**: Specifies package dependencies needed for HuggingFace (e.g. <span class="in">`gradio`</span>, <span class="in">`spaces`</span>, <span class="in">`transformers`</span>, <span class="in">`peft`</span>, <span class="in">`bitsandbytes`</span>, <span class="in">`accelerate`</span>).</span>
+<span id="cb2-74"><a href="#cb2-74" aria-hidden="true" tabindex="-1"></a><span class="ss">3.  </span>**[demo/README.md](file:///Users/diegovillaba/Code/ReportCXR/demo/README.md)**: YAML metadata file configuring HuggingFace Space properties (Space title, SDK type, license, and hardware requirements).</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
 </div></div></div></div></div>
 </div> <!-- /content -->
 <footer class="footer">
