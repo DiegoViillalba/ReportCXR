@@ -64,18 +64,26 @@ $$\text{Lift}(A \rightarrow B) = \frac{P(B \mid A)}{P(B)} = \frac{C_{A, B}}{\mu_
 
 Where $\mu_A$ represents the empirical prevalence of label $A$ in the dataset. Rules are sorted by confidence and filtered using thresholds (confidence $\ge 0.25$, lift $\ge 1.2$). The resulting joint statistics are saved to a heatmap.
 
-### 2.2 Keyword Triggering and Prompt Conditioning
-During test inference, we scan the incoming indication text for keywords related to the 14 target pathologies, using negation filtering (e.g., ignoring mentions preceded by "no evidence of" or "rule out"). 
+### 2.2 Two-Tier Hint Selection
 
-If a pathology $A$ is triggered, we fetch its highest-confidence associations and append them as a structured hint:
+The `build_conditioned_prompt` function applies a strict priority hierarchy to decide which hint to inject:
+
+**Primary — Empirical TF-IDF Prior:** We first retrieve the top-$K$ ($K=20$) training indications most similar to the query (cosine similarity threshold $\geq 0.05$) and compute the empirical label prevalence vector over that neighborhood:
+
+$$\hat{P}(B \mid q) = \frac{1}{K} \sum_{i \in \text{top-}K} \mathbf{1}[B_i = 1]$$
+
+Labels with $\hat{P}(B \mid q) \geq 0.30$ are injected as a structured prevalence hint. The `No Finding` label is explicitly excluded from the hint regardless of prevalence. If any label clears the threshold, this prior is used and the pipeline stops.
+
+**Fallback — Keyword Association Rules:** Only when the TF-IDF neighborhood produces no label above the prevalence threshold, we fall back to keyword matching. We scan the indication text for 13 pathology keyword dictionaries with negation filtering (prefixes such as "rule out", "no evidence of", "r/o" suppress the match within a 25-character context window). Triggered antecedents $A$ are then expanded via the mined rules: all consequents $B$ with confidence $\geq 0.25$ and lift $\geq 1.2$ are included in the hint:
 
 ```
 Clinical association context (training set statistics):
   - Atelectasis co-occurs with Lung Opacity in 45% of similar studies (lift=1.82).
 ```
 
-### 2.3 Empirical TF-IDF Prior Overrides
-To handle complex cases where keywords are insufficient, we implement an alternative prior estimator: we retrieve the top-$K$ ($K=20$) similar training indications via TF-IDF and compute the empirical label prevalence vector directly over this neighborhood. If this retrieval succeeds, the empirical priors are formatted as a direct prompt context, overriding the rule-based hints.
+### 2.3 Hint Coverage in Practice
+
+Because TF-IDF similarity over brief, unstandardized indication text is inherently noisy, many queries fall below the similarity threshold and are routed to keyword rules instead. Studies with no indication text receive no hint (`_hint_fired = False`). This two-tier design prioritizes the richer statistical signal of the neighborhood prior when retrieval quality is sufficient, while ensuring broad coverage via the deterministic keyword fallback.
 
 ---
 
